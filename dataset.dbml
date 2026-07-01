@@ -1,0 +1,160 @@
+Table Admin {
+  id integer [primary key]
+  username varchar
+  email varchar
+  password varchar
+}
+
+Table Users {
+  id integer [primary key]
+  name varchar
+  email varchar
+  phone varchar
+  password varchar
+  role varchar
+  profile_image image
+  created_at timestamp
+}
+
+Table Addresses {
+  id integer [primary key]
+  user_id integer [ref: < Users.id]
+  label varchar
+  address text
+  city varchar
+  area varchar
+  postal_code varchar
+  latitude decimal
+  longitude decimal
+}
+
+Table Restaurants {
+  id integer [primary key]
+  owner_id integer
+  name varchar
+  description text
+  phone varchar
+  email varchar
+  address text
+  opening_time time
+  closing_time time
+  delivery_fee integer
+  minimum_order integer
+  status boolean
+}
+
+Table Categories {
+  id integer [primary key]
+  category_name varchar
+  category_img image
+}
+
+Table MenuItems {
+  id integer [primary key]
+  restaurant_id integer
+  category_id integer 
+  item_name varchar
+  description text
+  price integer
+  item_img image
+  stock integer
+  is_available boolean
+}
+
+Table Cart {
+  id integer [primary key]
+  user_id integer
+  created_at timestamp
+}
+
+Table CartItems {
+  id integer [primary key]
+  cart_id integer
+  menu_item_id integer
+  quantity integer
+}
+
+Table Orders {
+  id integer [primary key]
+  user_id integer
+  restaurant_id integer
+  address_id integer
+  total_amount integer
+  delivery_fee integer
+  discount integer
+  payment_method varchar
+  payment_status varchar
+  order_status varchar
+  created_at timestamp
+}
+
+Table OrderItems {
+  id integer [primary key]
+  order_id integer
+  menu_item_id integer
+  quantity integer
+  unit_price integer
+  subtotal integer
+}
+
+Table Payments {
+  id integer [primary key]
+  order_id integer
+  transaction_id varchar
+  payment_method varchar
+  amount integer
+  status varchar
+  paid_at timestamp
+}
+
+Table DeliveryRiders {
+  id integer [primary key]
+  name varchar
+  phone varchar
+  vehicle_type varchar
+  status boolean
+}
+
+Table Deliveries {
+  id integer [primary key]
+  order_id integer
+  rider_id integer
+  assigned_at timestamp
+  delivered_at timestamp
+  status varchar
+}
+
+Table Reviews {
+  id integer [primary key]
+  user_id integer
+  restaurant_id integer
+  menu_item_id integer
+  rating integer
+  comment text
+  created_at timestamp
+}
+
+Table Coupons {
+  id integer [primary key]
+  code varchar
+  discount_type varchar
+  discount_value integer
+  minimum_order integer
+  expiry_date date
+  status boolean
+}
+
+Table Favorites {
+  id integer [primary key]
+  user_id integer
+  restaurant_id integer
+}
+
+Table Notifications {
+  id integer [primary key]
+  user_id integer
+  title varchar
+  message text
+  is_read boolean
+  created_at timestamp
+}
