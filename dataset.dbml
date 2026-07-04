@@ -18,7 +18,7 @@ Table Users {
 
 Table Addresses {
   id integer [primary key]
-  user_id integer [ref: < Users.id]
+  user_id integer [ref: > Users.id]
   label varchar
   address text
   city varchar
@@ -36,6 +36,8 @@ Table Restaurants {
   phone varchar
   email varchar
   address text
+  latitude decimal
+  longitude decimal
   opening_time time
   closing_time time
   delivery_fee integer
@@ -52,7 +54,7 @@ Table Categories {
 Table MenuItems {
   id integer [primary key]
   restaurant_id integer
-  category_id integer 
+  category_id integer [ref:> Categories.id ]
   item_name varchar
   description text
   price integer
@@ -69,15 +71,15 @@ Table Cart {
 
 Table CartItems {
   id integer [primary key]
-  cart_id integer
-  menu_item_id integer
+  cart_id integer [ref: > Cart.id]
+  menu_item_id integer [ref: -MenuItems.id]
   quantity integer
 }
 
 Table Orders {
   id integer [primary key]
-  user_id integer
-  restaurant_id integer
+  user_id integer [ref: > users.id]
+  restaurant_id integer [ref: > Resturents.id]
   address_id integer
   total_amount integer
   delivery_fee integer
