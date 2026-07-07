@@ -12,7 +12,7 @@ Table Users {
   phone varchar
   password varchar
   role varchar
-  profile_image image
+  profile_image varchar
   created_at timestamp
 }
 
@@ -30,7 +30,7 @@ Table Addresses {
 
 Table Restaurants {
   id integer [primary key]
-  owner_id integer
+  owner_id integer [ref: - Users.id]
   name varchar
   description text
   phone varchar
@@ -48,39 +48,40 @@ Table Restaurants {
 Table Categories {
   id integer [primary key]
   category_name varchar
-  category_img image
+  category_img varchar
 }
 
 Table MenuItems {
   id integer [primary key]
-  restaurant_id integer
-  category_id integer [ref:> Categories.id ]
+  restaurant_id integer [ref: > Restaurants.id]
+  category_id integer [ref: > Categories.id]
   item_name varchar
   description text
   price integer
-  item_img image
+  item_img varchar
   stock integer
   is_available boolean
 }
 
 Table Cart {
   id integer [primary key]
-  user_id integer
+  user_id integer [ref: > Users.id]
   created_at timestamp
 }
 
 Table CartItems {
   id integer [primary key]
   cart_id integer [ref: > Cart.id]
-  menu_item_id integer [ref: -MenuItems.id]
+  menu_item_id integer [ref: > MenuItems.id]
   quantity integer
 }
 
 Table Orders {
   id integer [primary key]
-  user_id integer [ref: > users.id]
-  restaurant_id integer [ref: > Resturents.id]
-  address_id integer
+  user_id integer [ref: > Users.id]
+  restaurant_id integer [ref: > Restaurants.id]
+  address_id integer [ref: - Addresses.id]
+  coupons_id integer [ref: - Coupons.id]
   total_amount integer
   delivery_fee integer
   discount integer
@@ -92,8 +93,8 @@ Table Orders {
 
 Table OrderItems {
   id integer [primary key]
-  order_id integer
-  menu_item_id integer
+  order_id integer [ref: > Orders.id]
+  menu_item_id integer [ref: > MenuItems.id]
   quantity integer
   unit_price integer
   subtotal integer
@@ -101,7 +102,7 @@ Table OrderItems {
 
 Table Payments {
   id integer [primary key]
-  order_id integer
+  order_id integer [ref: - Orders.id]
   transaction_id varchar
   payment_method varchar
   amount integer
@@ -119,8 +120,8 @@ Table DeliveryRiders {
 
 Table Deliveries {
   id integer [primary key]
-  order_id integer
-  rider_id integer
+  order_id integer [ref: - Orders.id]
+  rider_id integer [ref: > DeliveryRiders.id]
   assigned_at timestamp
   delivered_at timestamp
   status varchar
@@ -128,9 +129,9 @@ Table Deliveries {
 
 Table Reviews {
   id integer [primary key]
-  user_id integer
-  restaurant_id integer
-  menu_item_id integer
+  user_id integer [ref: > Users.id]
+  restaurant_id integer [ref: > Restaurants.id]
+  menu_item_id integer [ref: > MenuItems.id]
   rating integer
   comment text
   created_at timestamp
@@ -143,18 +144,19 @@ Table Coupons {
   discount_value integer
   minimum_order integer
   expiry_date date
-  status boolean
 }
 
-Table Favorites {
+Table UserCoupons {
   id integer [primary key]
-  user_id integer
-  restaurant_id integer
+  user_id integer [ref: > Users.id]
+  coupon_id integer [ref: > Coupons.id]
+  used boolean
 }
 
 Table Notifications {
   id integer [primary key]
-  user_id integer
+  user_id integer [ref: > Users.id]
+  order_id integer [ref: > Orders.id]
   title varchar
   message text
   is_read boolean
