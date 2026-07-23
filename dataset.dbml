@@ -1,33 +1,41 @@
-Table Admin {
-  id integer [primary key]
-  username varchar
-  email varchar
-  password varchar
+Enum Role {
+  ADMIN
+  CUSTOMER
+  RIDER
+  RESTAURANT_OWNER
 }
 
 Table Users {
   id integer [primary key]
   name varchar
-  email varchar
+  email varchar [unique, not null]
   phone varchar
-  password varchar
-  role varchar
+  password varchar [not null]
+  role Role [not null]
   profile_image varchar
   created_at timestamp
 }
 
-Table Addresses {
+Table UserAddresses {
   id integer [primary key]
   user_id integer [ref: > Users.id]
   label varchar
   address text
+  street varchar
+  apparment_name varchar
   city varchar
-  area varchar
   postal_code varchar
   latitude decimal
   longitude decimal
 }
-
+//sublass of user
+Table RiderProfiles {
+  user_id integer [primary key, ref: - Users.id] 
+  vehicle_type varchar
+  vehicle_number varchar
+  status boolean [default: false]
+}
+//belongs to owner(user)
 Table Restaurants {
   id integer [primary key]
   owner_id integer [ref: - Users.id]
@@ -40,7 +48,7 @@ Table Restaurants {
   longitude decimal
   opening_time time
   closing_time time
-  delivery_fee integer
+  //delivery_fee integer //should be variable
   minimum_order integer
   status boolean
 }
@@ -110,13 +118,7 @@ Table Payments {
   paid_at timestamp
 }
 
-Table DeliveryRiders {
-  id integer [primary key]
-  name varchar
-  phone varchar
-  vehicle_type varchar
-  status boolean
-}
+
 
 Table Deliveries {
   id integer [primary key]
