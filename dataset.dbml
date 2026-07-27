@@ -1,33 +1,43 @@
-Table Admin {
-  id integer [primary key]
-  username varchar
-  email varchar
-  password varchar
+Enum Role {
+  ADMIN
+  CUSTOMER
+  RIDER
+  RESTAURANT_OWNER
 }
 
 Table Users {
   id integer [primary key]
   name varchar
-  email varchar
+  email varchar [unique, not null]
   phone varchar
-  password varchar
-  role varchar
+  password varchar [not null]
+  role Role [not null]
   profile_image varchar
   created_at timestamp
 }
 
-Table Addresses {
+Table UserAddresses {
   id integer [primary key]
   user_id integer [ref: > Users.id]
   label varchar
   address text
+  street varchar
+  apparment_name varchar
   city varchar
-  area varchar
   postal_code varchar
   latitude decimal
   longitude decimal
 }
 
+//sublass of user
+Table Riders {
+  user_id integer [primary key, ref: - Users.id] 
+  vehicle_type varchar
+  vehicle_number varchar
+  status boolean [default: false]
+}
+
+//belongs to owner(user)
 Table Restaurants {
   id integer [primary key]
   owner_id integer [ref: - Users.id]
@@ -40,7 +50,7 @@ Table Restaurants {
   longitude decimal
   opening_time time
   closing_time time
-  delivery_fee integer
+  //delivery_fee integer //should be variable
   minimum_order integer
   status boolean
 }
@@ -66,6 +76,7 @@ Table MenuItems {
 Table Cart {
   id integer [primary key]
   user_id integer [ref: > Users.id]
+  coupons_id integer [ref: - Coupons.id]
   created_at timestamp
 }
 
@@ -80,13 +91,10 @@ Table Orders {
   id integer [primary key]
   user_id integer [ref: > Users.id]
   restaurant_id integer [ref: > Restaurants.id]
-  address_id integer [ref: - Addresses.id]
-  coupons_id integer [ref: - Coupons.id]
+  address_id integer [ref: - UserAddresses.id]
   total_amount integer
   delivery_fee integer
   discount integer
-  payment_method varchar
-  payment_status varchar
   order_status varchar
   created_at timestamp
 }
@@ -110,18 +118,10 @@ Table Payments {
   paid_at timestamp
 }
 
-Table DeliveryRiders {
-  id integer [primary key]
-  name varchar
-  phone varchar
-  vehicle_type varchar
-  status boolean
-}
-
 Table Deliveries {
   id integer [primary key]
   order_id integer [ref: - Orders.id]
-  rider_id integer [ref: > DeliveryRiders.id]
+  rider_id integer [ref: > Riders.user_id]
   assigned_at timestamp
   delivered_at timestamp
   status varchar
@@ -130,8 +130,8 @@ Table Deliveries {
 Table Reviews {
   id integer [primary key]
   user_id integer [ref: > Users.id]
+  order_id integer [ref: - Orders.id]
   restaurant_id integer [ref: > Restaurants.id]
-  menu_item_id integer [ref: > MenuItems.id]
   rating integer
   comment text
   created_at timestamp
