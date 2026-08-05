@@ -104,7 +104,6 @@ Table OrderItems {
   order_id integer [ref: > Orders.id]
   menu_item_id integer [ref: > MenuItems.id]
   quantity integer
-  unit_price integer
   subtotal integer
 }
 
