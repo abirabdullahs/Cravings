@@ -7,23 +7,23 @@ Enum Role {
 
 Table Users {
   id integer [primary key]
-  name varchar
+  name varchar [not null]
   email varchar [unique, not null]
   phone varchar
   password varchar [not null]
   role Role [not null]
   profile_image varchar
-  created_at timestamp
+  created_at timestamp [not null, default: `now()`]
 }
 
 Table UserAddresses {
   id integer [primary key]
-  user_id integer [ref: > Users.id]
+  user_id integer [ref: > Users.id, not null]
   label varchar
-  address text
+  address text [not null]
   street varchar
   apparment_name varchar
-  city varchar
+  city varchar [not null]
   postal_code varchar
   latitude decimal
   longitude decimal
@@ -31,133 +31,135 @@ Table UserAddresses {
 
 //sublass of user
 Table Riders {
-  user_id integer [primary key, ref: - Users.id] 
-  vehicle_type varchar
-  vehicle_number varchar
-  status boolean [default: false]
+  user_id integer [primary key, ref: - Users.id]
+  vehicle_type varchar [not null]
+  vehicle_number varchar [not null]
+  status boolean [not null, default: false]
 }
 
 //belongs to owner(user)
 Table Restaurants {
   id integer [primary key]
-  owner_id integer [ref: - Users.id]
-  name varchar
+  owner_id integer [ref: > Users.id, not null]
+  name varchar [not null]
   description text
   phone varchar
   email varchar
-  address text
+  address text [not null]
   latitude decimal
   longitude decimal
   opening_time time
   closing_time time
-  //delivery_fee integer //should be variable
-  minimum_order integer
-  status boolean
+  delivery_fee integer 
+  minimum_order integer [default: 0]
+  status boolean [not null, default: false]
 }
 
 Table Categories {
   id integer [primary key]
-  category_name varchar
+  category_name varchar [not null, unique]
   category_img varchar
 }
 
 Table MenuItems {
   id integer [primary key]
-  restaurant_id integer [ref: > Restaurants.id]
+  restaurant_id integer [ref: > Restaurants.id, not null]
   category_id integer [ref: > Categories.id]
-  item_name varchar
+  item_name varchar [not null]
   description text
-  price integer
+  price integer [not null]
   item_img varchar
-  stock integer
-  is_available boolean
+  stock integer [default: 0]
+  is_available boolean [not null, default: true]
 }
 
 Table Cart {
   id integer [primary key]
-  user_id integer [ref: > Users.id]
+  user_id integer [ref: > Users.id, not null]
+  restaurant_id integer [ref: > Restaurants.id, not null]
   coupons_id integer [ref: - Coupons.id]
-  created_at timestamp
+  created_at timestamp [not null, default: `now()`]
 }
 
 Table CartItems {
   id integer [primary key]
-  cart_id integer [ref: > Cart.id]
-  menu_item_id integer [ref: > MenuItems.id]
-  quantity integer
+  cart_id integer [ref: > Cart.id, not null]
+  menu_item_id integer [ref: > MenuItems.id, not null]
+  quantity integer [not null, default: 1]
 }
 
 Table Orders {
   id integer [primary key]
-  user_id integer [ref: > Users.id]
-  restaurant_id integer [ref: > Restaurants.id]
-  address_id integer [ref: - UserAddresses.id]
-  total_amount integer
-  delivery_fee integer
-  discount integer
-  order_status varchar
-  created_at timestamp
+  user_id integer [ref: > Users.id, not null]
+  restaurant_id integer [ref: > Restaurants.id, not null]
+  address_id integer [ref: - UserAddresses.id, not null]
+  total_amount integer [not null]
+  delivery_fee integer [default: 0]
+  discount integer [default: 0]
+  order_status varchar [not null, default: 'pending']
+  created_at timestamp [not null, default: `now()`]
 }
 
 Table OrderItems {
   id integer [primary key]
-  order_id integer [ref: > Orders.id]
-  menu_item_id integer [ref: > MenuItems.id]
-  quantity integer
-  subtotal integer
+  order_id integer [ref: > Orders.id, not null]
+  menu_item_id integer [ref: > MenuItems.id, not null]
+  unit_price integer [not null]
+  quantity integer [not null]
+  subtotal integer [not null]
 }
 
 Table Payments {
   id integer [primary key]
-  order_id integer [ref: - Orders.id]
+  order_id integer [ref: - Orders.id, not null]
   transaction_id varchar
-  payment_method varchar
-  amount integer
-  status varchar
+  payment_method varchar [not null]
+  amount integer [not null]
+  status varchar [not null, default: 'pending']
   paid_at timestamp
 }
 
 Table Deliveries {
   id integer [primary key]
-  order_id integer [ref: - Orders.id]
+  order_id integer [ref: - Orders.id, not null]
   rider_id integer [ref: > Riders.user_id]
   assigned_at timestamp
   delivered_at timestamp
-  status varchar
+  status varchar [not null, default: 'unassigned']
 }
 
 Table Reviews {
   id integer [primary key]
-  user_id integer [ref: > Users.id]
-  order_id integer [ref: - Orders.id]
-  restaurant_id integer [ref: > Restaurants.id]
-  rating integer
+  user_id integer [ref: > Users.id, not null]
+  order_id integer [ref: - Orders.id, not null]
+  restaurant_id integer [ref: > Restaurants.id, not null]
+  rating integer [not null]
   comment text
-  created_at timestamp
+  created_at timestamp [not null, default: `now()`]
 }
 
 Table Coupons {
   id integer [primary key]
-  code varchar
-  discount_type varchar
-  discount_value integer
-  minimum_order integer
+  code varchar [not null, unique]
+  discount_type varchar [not null]
+  discount_value integer [not null]
+  minimum_order integer [default: 0]
   expiry_date date
 }
 
 Table UserCoupons {
   id integer [primary key]
-  user_id integer [ref: > Users.id]
-  coupon_id integer [ref: > Coupons.id]
-  used boolean
+  user_id integer [ref: > Users.id, not null]
+  coupon_id integer [ref: > Coupons.id, not null]
+  used boolean [not null, default: false]
 }
 
 Table Notifications {
   id integer [primary key]
-  user_id integer [ref: > Users.id]
+  user_id integer [ref: > Users.id, not null]
   order_id integer [ref: > Orders.id]
-  title varchar
+  title varchar [not null]
   message text
-  is_read boolean
-  created_at timestamp
+  is_read boolean [not null, default: false]
+  created_at timestamp [not null, default: `now()`]
 }
