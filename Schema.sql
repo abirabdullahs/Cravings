@@ -3,7 +3,7 @@ CREATE TYPE role_enum AS ENUM (
   'ADMIN',
   'CUSTOMER',
   'RIDER',
-  'RESTAURANT_OWNER'
+  'OWNER'
 );
 
 -- 2. Base Entity Tables
@@ -12,11 +12,12 @@ CREATE TABLE users (
   name VARCHAR NOT NULL,
   email VARCHAR UNIQUE NOT NULL,
   phone VARCHAR,
-  password VARCHAR NOT NULL,
-  role role_enum NOT NULL,
+  password_hash VARCHAR NOT NULL,
+  role role_enum NOT NULL DEFAULT 'CUSTOMER',
   profile_image VARCHAR,
   created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
+
 
 CREATE TABLE categories (
   id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,

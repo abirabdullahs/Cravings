@@ -1,5 +1,5 @@
 import { pool } from "@/app/lib/db"
-import { Create_User, Find_User_By_Email } from "../query/auth.query"
+import { Create_User, Find_User_By_Email, Complete_User } from "../query/auth.query"
 import { User } from "../types/user";
 
 
@@ -12,12 +12,14 @@ export const findUserByEmail = async (email: string)=>{
 
 
 export const createUser = async (user: User) => {
-  const existinguser = await findUserByEmail(user.email);
-  if (existinguser) {
-    throw new Error("User already exists");
-  }
 
-  const data = [user.email, user.name, user.password, user.number, user.role];
+  const data = [user.email, user.name, user.password, user.phone, user.role];
   const result = await pool.query(Create_User, data);
+  return result.rows[0];
+}
+
+export const completeUser = async ({role, phone, id }: { phone: string; role: string, id: string }) => {
+  const data = [role, phone, id];
+  const result = await pool.query(Complete_User, data);
   return result.rows[0];
 }

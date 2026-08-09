@@ -9,7 +9,7 @@ export const POST = async(request: Request) => {
     return NextResponse.json(user, { status: 201 });
   }
   catch (error: any) {
-    return NextResponse.json({error: error.message }, { status: 500 });
+    return NextResponse.json({error: error.message }, { status: 409 });
   }
 
 }
