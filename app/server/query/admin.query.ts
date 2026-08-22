@@ -9,8 +9,8 @@ export const GET_RESTAURANT_PRODUCT_SALES = `
 SELECT p.id, p.name, p.price,
        COUNT(oi.id) AS total_sold,
        COALESCE(SUM(oi.subtotal), 0) AS total_revenue
-FROM products p
-LEFT JOIN order_items oi ON oi.product_id = p.id
+FROM menuItems p
+LEFT JOIN orderItems oi ON oi.menu_item_id = p.id
 LEFT JOIN orders o ON o.id = oi.order_id
 WHERE p.restaurant_id = $1
   AND (o.created_at IS NULL OR o.created_at >= NOW() - ($2 || ' days')::interval)

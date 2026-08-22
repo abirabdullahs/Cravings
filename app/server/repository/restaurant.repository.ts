@@ -1,18 +1,18 @@
 import { pool } from "@/app/lib/db";
-import { Find_Restaurants } from "../query/restaurant.query";
+import { FIND_RESTAURANTS } from "../query/customer.query";
 
 export const findRestaurants = async (filter: {
   search?: string;
   category?: string;
-  order: "ASC" | "DESC";
+  restaurantId?: string;
   limit?: number;
 }) => {
   const data = [
     filter.search ?? null,
     filter.category ?? null,
-    filter.order,
+    filter.restaurantId ?? null,
     filter.limit,
   ];
-  const result = await pool.query(Find_Restaurants, data);
+  const result = await pool.query(FIND_RESTAURANTS, data);
   return result.rows;
 };

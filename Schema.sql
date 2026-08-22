@@ -1,9 +1,44 @@
--- 1. Custom Enum Types
+-- User Roles
 CREATE TYPE role_enum AS ENUM (
-  'ADMIN',
-  'CUSTOMER',
-  'RIDER',
-  'RESTAURANT_OWNER'
+  'admin',
+  'customer',
+  'owner',
+  'rider'
+);
+
+-- Rider Real-Time Availability
+CREATE TYPE rider_status_enum AS ENUM (
+  'offline',
+  'idle',
+  'busy'
+);
+
+-- Order Lifecycle (Customer & Restaurant View)
+CREATE TYPE order_status_enum AS ENUM (
+  'pending',          -- Order created, payment/confirmation pending
+  'confirmed',        -- Order confirmed, sent to kitchen
+  'preparing',        -- Kitchen is cooking
+  'ready',            -- Food ready for pickup
+  'out_for_delivery', -- Rider picked up order and is en route
+  'delivered',        -- Order completed
+  'cancelled'         -- Order aborted
+);
+
+-- Delivery Lifecycle (Dispatch & Driver Tracking)
+CREATE TYPE delivery_status_enum AS ENUM (
+  'unassigned',       -- Waiting for driver acceptance
+  'accepted',         -- Driver claimed the job
+  'picked_up',        -- Driver collected food from store
+  'delivered',        -- Driver handed food to customer
+  'cancelled'         -- Delivery task aborted
+);
+
+-- Payment State
+CREATE TYPE payment_status_enum AS ENUM (
+  'pending',
+  'completed',
+  'failed',
+  'refunded'
 );
 
 -- 2. Base Entity Tables
@@ -12,15 +47,15 @@ CREATE TABLE users (
   name VARCHAR NOT NULL,
   email VARCHAR UNIQUE NOT NULL,
   phone VARCHAR,
-  password VARCHAR NOT NULL,
-  role role_enum NOT NULL,
+  password_hash VARCHAR NOT NULL,
+  role role_enum NOT NULL DEFAULT 'CUSTOMER',
   profile_image VARCHAR,
   created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE categories (
   id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  category_name VARCHAR UNIQUE NOT NULL,
+  name VARCHAR UNIQUE NOT NULL,
   category_img VARCHAR
 );
 
@@ -34,7 +69,7 @@ CREATE TABLE coupons (
 );
 
 -- 3. Dependent Tables (User level)
-CREATE TABLE user_addresses (
+CREATE TABLE userAddresses (
   id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   user_id INT NOT NULL,
   label VARCHAR,
@@ -52,11 +87,11 @@ CREATE TABLE riders (
   user_id INT PRIMARY KEY,
   vehicle_type VARCHAR NOT NULL,
   vehicle_number VARCHAR NOT NULL,
-  status BOOLEAN NOT NULL DEFAULT FALSE,
+  status rider_status_enum NOT NULL DEFAULT 'IDLE',
   CONSTRAINT fk_riders_user FOREIGN KEY (user_id) REFERENCES users (id) DEFERRABLE INITIALLY IMMEDIATE
 );
 
-CREATE TABLE user_coupons (
+CREATE TABLE userCoupons (
   id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   user_id INT NOT NULL,
   coupon_id INT NOT NULL,
@@ -80,11 +115,11 @@ CREATE TABLE restaurants (
   closing_time TIME,
   delivery_fee INT,
   minimum_order INT DEFAULT 0,
-  status BOOLEAN NOT NULL DEFAULT FALSE,
+  active_status BOOLEAN NOT NULL DEFAULT FALSE,
   CONSTRAINT fk_restaurants_owner FOREIGN KEY (owner_id) REFERENCES users (id) DEFERRABLE INITIALLY IMMEDIATE
 );
 
-CREATE TABLE menu_items (
+CREATE TABLE menuItems (
   id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   restaurant_id INT NOT NULL,
   category_id INT,
@@ -92,30 +127,31 @@ CREATE TABLE menu_items (
   description TEXT,
   price INT NOT NULL,
   item_img VARCHAR,
-  stock INT DEFAULT 0,
+  -- stock INT DEFAULT 0,
   is_available BOOLEAN NOT NULL DEFAULT TRUE,
   CONSTRAINT fk_menu_items_restaurant FOREIGN KEY (restaurant_id) REFERENCES restaurants (id) DEFERRABLE INITIALLY IMMEDIATE,
   CONSTRAINT fk_menu_items_category FOREIGN KEY (category_id) REFERENCES categories (id) DEFERRABLE INITIALLY IMMEDIATE
 );
 
 -- 5. Cart Management
-CREATE TABLE cart (
+CREATE TABLE carts (
   id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   user_id INT NOT NULL,
   restaurant_id INT NOT NULL,
-  coupons_id INT,
+  user_coupons_id INT,
   created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  CONSTRAINT unique_user_restaurant UNIQUE (user_id, restaurant_id),
   CONSTRAINT fk_cart_user FOREIGN KEY (user_id) REFERENCES users (id) DEFERRABLE INITIALLY IMMEDIATE,
   CONSTRAINT fk_cart_restaurant FOREIGN KEY (restaurant_id) REFERENCES restaurants (id) DEFERRABLE INITIALLY IMMEDIATE,
-  CONSTRAINT fk_cart_coupon FOREIGN KEY (coupons_id) REFERENCES coupons (id) DEFERRABLE INITIALLY IMMEDIATE
+  CONSTRAINT fk_cart_coupon FOREIGN KEY (user_coupons_id) REFERENCES user_coupons (id) DEFERRABLE INITIALLY IMMEDIATE
 );
 
-CREATE TABLE cart_items (
+CREATE TABLE cartItems (
   id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   cart_id INT NOT NULL,
   menu_item_id INT NOT NULL,
   quantity INT NOT NULL DEFAULT 1,
-  CONSTRAINT fk_cart_items_cart FOREIGN KEY (cart_id) REFERENCES cart (id) DEFERRABLE INITIALLY IMMEDIATE,
+  CONSTRAINT fk_cart_items_cart FOREIGN KEY (cart_id) REFERENCES cart (id) DEFERRABLE INITIALLY IMMEDIATE ON DELETE CASCADE,
   CONSTRAINT fk_cart_items_menu_item FOREIGN KEY (menu_item_id) REFERENCES menu_items (id) DEFERRABLE INITIALLY IMMEDIATE
 );
 
@@ -135,7 +171,7 @@ CREATE TABLE orders (
   CONSTRAINT fk_orders_address FOREIGN KEY (address_id) REFERENCES user_addresses (id) DEFERRABLE INITIALLY IMMEDIATE
 );
 
-CREATE TABLE order_items (
+CREATE TABLE orderItems (
   id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   order_id INT NOT NULL,
   menu_item_id INT NOT NULL,
@@ -153,8 +189,8 @@ CREATE TABLE payments (
   transaction_id VARCHAR,
   payment_method VARCHAR NOT NULL,
   amount INT NOT NULL,
-  status VARCHAR NOT NULL DEFAULT 'pending',
-  paid_at TIMESTAMP,
+  status VARCHAR NOT NULL DEFAULT 'PENDING',
+  paid_at TIMESTAMP DEFAULT NOW(),
   CONSTRAINT fk_payments_order FOREIGN KEY (order_id) REFERENCES orders (id) DEFERRABLE INITIALLY IMMEDIATE
 );
 
@@ -164,7 +200,7 @@ CREATE TABLE deliveries (
   rider_id INT,
   assigned_at TIMESTAMP,
   delivered_at TIMESTAMP,
-  status VARCHAR NOT NULL DEFAULT 'unassigned',
+  status VARCHAR NOT NULL DEFAULT 'UNASSIGNED',
   CONSTRAINT fk_deliveries_order FOREIGN KEY (order_id) REFERENCES orders (id) DEFERRABLE INITIALLY IMMEDIATE,
   CONSTRAINT fk_deliveries_rider FOREIGN KEY (rider_id) REFERENCES riders (user_id) DEFERRABLE INITIALLY IMMEDIATE
 );

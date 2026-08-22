@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
     const filter = {
       search: searchParams.get("search") || undefined,
       category: searchParams.get("category") || undefined,
-      order: searchParams.get("order") || undefined,
+      restaurantId: searchParams.get("restaurantId") || undefined,
       limit: Number(searchParams.get("limit")) || undefined
     };
     
