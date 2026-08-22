@@ -6,6 +6,35 @@ CREATE TYPE role_enum AS ENUM (
   'OWNER'
 );
 
+-- Order Status Lifecycle
+CREATE TYPE order_status_enum AS ENUM (
+  'PENDING',           -- Order placed, awaiting restaurant acceptance
+  'CONFIRMED',         -- Restaurant accepted the order
+  'PREPARING',         -- Kitchen is making the food
+  'READY_FOR_PICKUP',  -- Food is ready for rider to collect
+  'OUT_FOR_DELIVERY',  -- Rider picked up food and is on the way
+  'DELIVERED',         -- Order completed successfully
+  'CANCELLED'          -- Order cancelled by user, restaurant, or admin
+);
+
+-- Delivery Status Lifecycle
+CREATE TYPE delivery_status_enum AS ENUM (
+  'UNASSIGNED',        -- Searching for a nearby rider
+  'ASSIGNED',          -- Rider accepted/assigned to the delivery
+  'ARRIVED_AT_STORE',  -- Rider reached the restaurant
+  'PICKED_UP',         -- Rider collected order from restaurant
+  'DELIVERED',         -- Rider handed order to customer
+  'FAILED'             -- Delivery failed (customer unavailable, bad address, etc.)
+);
+
+-- Payment Status Lifecycle
+CREATE TYPE payment_status_enum AS ENUM (
+  'PENDING',           -- Payment initiated/awaiting cash on delivery
+  'COMPLETED',         -- Payment successfully processed
+  'FAILED',            -- Payment gateway error or card declined
+  'REFUNDED'           -- Order cancelled, money refunded
+);
+
 -- 2. Base Entity Tables
 CREATE TABLE users (
   id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -104,11 +133,12 @@ CREATE TABLE cart (
   id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   user_id INT NOT NULL,
   restaurant_id INT NOT NULL,
-  coupons_id INT,
+  user_coupons_id INT,
   created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  CONSTRAINT unique_user_restaurant UNIQUE (user_id, restaurant_id),
   CONSTRAINT fk_cart_user FOREIGN KEY (user_id) REFERENCES users (id) DEFERRABLE INITIALLY IMMEDIATE,
   CONSTRAINT fk_cart_restaurant FOREIGN KEY (restaurant_id) REFERENCES restaurants (id) DEFERRABLE INITIALLY IMMEDIATE,
-  CONSTRAINT fk_cart_coupon FOREIGN KEY (coupons_id) REFERENCES coupons (id) DEFERRABLE INITIALLY IMMEDIATE
+  CONSTRAINT fk_cart_coupon FOREIGN KEY (user_coupons_id) REFERENCES user_coupons (id) DEFERRABLE INITIALLY IMMEDIATE
 );
 
 CREATE TABLE cart_items (
@@ -116,7 +146,7 @@ CREATE TABLE cart_items (
   cart_id INT NOT NULL,
   menu_item_id INT NOT NULL,
   quantity INT NOT NULL DEFAULT 1,
-  CONSTRAINT fk_cart_items_cart FOREIGN KEY (cart_id) REFERENCES cart (id) DEFERRABLE INITIALLY IMMEDIATE,
+  CONSTRAINT fk_cart_items_cart FOREIGN KEY (cart_id) REFERENCES cart (id) DEFERRABLE INITIALLY IMMEDIATE ON DELETE CASCADE,
   CONSTRAINT fk_cart_items_menu_item FOREIGN KEY (menu_item_id) REFERENCES menu_items (id) DEFERRABLE INITIALLY IMMEDIATE
 );
 
@@ -154,8 +184,8 @@ CREATE TABLE payments (
   transaction_id VARCHAR,
   payment_method VARCHAR NOT NULL,
   amount INT NOT NULL,
-  status VARCHAR NOT NULL DEFAULT 'pending',
-  paid_at TIMESTAMP,
+  status VARCHAR NOT NULL DEFAULT 'PENDING',
+  paid_at TIMESTAMP DEFAULT NOW(),
   CONSTRAINT fk_payments_order FOREIGN KEY (order_id) REFERENCES orders (id) DEFERRABLE INITIALLY IMMEDIATE
 );
 
@@ -165,7 +195,7 @@ CREATE TABLE deliveries (
   rider_id INT,
   assigned_at TIMESTAMP,
   delivered_at TIMESTAMP,
-  status VARCHAR NOT NULL DEFAULT 'unassigned',
+  status VARCHAR NOT NULL DEFAULT 'UNASSIGNED',
   CONSTRAINT fk_deliveries_order FOREIGN KEY (order_id) REFERENCES orders (id) DEFERRABLE INITIALLY IMMEDIATE,
   CONSTRAINT fk_deliveries_rider FOREIGN KEY (rider_id) REFERENCES riders (user_id) DEFERRABLE INITIALLY IMMEDIATE
 );

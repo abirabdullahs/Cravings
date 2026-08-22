@@ -9,7 +9,7 @@ const Upsert_Cart_Item =
   DO UPDATE SET quantity = cartitems.quantity + EXCLUDED.quantity
   RETURNING *;`;
 
-// create a trigger to delete item when quantity <=0
+// create a trigger to delete item when quantity <=0  *done
 
 const Find_Cart_Items = 
  `SELECT id, cart_id, MI.name menu_item_name, MI.price, quantity, R.name restaurant_name FROM cartItems CI
