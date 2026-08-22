@@ -5,8 +5,8 @@ CREATE OR REPLACE FUNCTION fn_calculate_discount(
 ) RETURNS INT AS 
 $$
 BEGIN
-  IF(p_disc_type = "PERCENT") THEN RETURN p_total_amount * (p_disc_value/100);
-  ELSE IF(p_disc_type = "PRECISE") THEN RETURN p_disc_value;
+  IF(p_disc_type = 'PERCENT') THEN RETURN COALESCE(p_total_amount * (p_disc_value/100),0);
+  ELSE IF(p_disc_type = 'PRECISE') THEN RETURN COALESCE(p_disc_value,0);
   ELSE RETURN 0;
   END IF;
 END;
