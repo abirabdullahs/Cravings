@@ -1,7 +1,8 @@
 import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
 
-import { comparePassword, hashPassword } from "./app/server/utils/password";
+import { comparePassword } from "./app/server/utils/password";
+import {  debugLog } from "./lib/debug";
 import Credentials from "next-auth/providers/credentials";
 import {
   getUserByEmail,
@@ -42,11 +43,9 @@ export const { handlers, auth, signIn, signOut, unstable_update } = NextAuth({
         const email = credentials.email as string;
         const password = credentials.password as string;
 
-        const pwHash = hashPassword(password);
-
         user = await getUserByEmail(email);
 
-        if (!user || !comparePassword(password, user.password_hash)) {
+        if (!user || !(await comparePassword(password, user.password_hash))) {
           throw new Error("Invalid credentials.");
         }
 
@@ -67,13 +66,15 @@ export const { handlers, auth, signIn, signOut, unstable_update } = NextAuth({
               email: user.email as string,
               password: "passdummy",
               phone: "",
-              role: "CUSTOMER",
+              role: "customer",
             });
           }
           return true;
         } catch (error) {
-          console.error("Error saving Google user to DB:", error);
-          return true;
+          debugLog("auth.google.persistence_failed", {
+            error: error instanceof Error ? error.message : "unknown error",
+          });
+          return false;
         }
       }
       return true;
@@ -99,7 +100,7 @@ export const { handlers, auth, signIn, signOut, unstable_update } = NextAuth({
           token.id = String(dbUser.id ?? "");
           token.phone =
             dbUser.phone && dbUser.phone !== "0" ? dbUser.phone : "";
-          token.role = dbUser.role ?? "CUSTOMER";
+          token.role = dbUser.role ?? "customer";
         } else {
           // Fallback if DB insert hasn't finished yet
           token.phone = "";

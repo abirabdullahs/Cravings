@@ -1,26 +1,27 @@
 "use client";
 
 import { useState } from "react";
+import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { signIn } from "next-auth/react"; 
+
 
 export default function RegisterPage() {
-  const router = useRouter();
+    const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  async function handleSubmit(e: any) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
-    const formData = new FormData(e.target);
+    const formData = new FormData(e.currentTarget);
     const payload = {
       name: formData.get("name") as string,
       email: formData.get("email") as string,
       password: formData.get("password") as string,
       role: formData.get("role") as string,
-      number: formData.get("number") as string
+      phone: formData.get("number") as string,
     };
 
     try {
@@ -34,7 +35,8 @@ export default function RegisterPage() {
 
       if (!response.ok) {
         setError(data.error || "Failed to register.");
-      } 
+        return;
+      }
       const signInRes = await signIn("credentials", {
         email: payload.email,
         password: payload.password,
@@ -44,8 +46,14 @@ export default function RegisterPage() {
       if (signInRes?.error) {
         throw new Error("Account created, but failed to log in automatically.");
       }
-    } catch (err) {
-      setError("An unexpected network error occurred.");
+
+      router.push("/home");
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "An unexpected network error occurred.",
+      );
     } finally {
       setLoading(false);
     }
@@ -109,7 +117,11 @@ export default function RegisterPage() {
 
         <div>
           <label className="block text-sm font-medium">Account Role</label>
-          <select name="role" required className="w-full border p-2 rounded bg-black text-white">
+          <select
+            name="role"
+            required
+            className="w-full border p-2 rounded bg-black text-white"
+          >
             <option value="CUSTOMER">Customer</option>
             <option value="RIDER">Rider</option>
             <option value="RESTAURANT_OWNER">Restaurant Owner</option>

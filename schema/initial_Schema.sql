@@ -90,6 +90,7 @@ CREATE TABLE categories (
   id            INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   name          VARCHAR NOT NULL,
   category_img  VARCHAR,
+  restaurant_id INT REFERENCES restaurants (id) ON DELETE CASCADE,
 
   CONSTRAINT uq_categories_name UNIQUE (name)
 );
@@ -177,7 +178,8 @@ CREATE INDEX ix_user_coupons_user ON user_coupons (user_id);
 -- ============================================================
 -- 7. RESTAURANTS
 -- ============================================================
-CREATE TABLE restaurants (
+  CREATE TABLE restaurants (
+
   id             INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   owner_id       INT NOT NULL,
   name           VARCHAR NOT NULL,
@@ -185,6 +187,7 @@ CREATE TABLE restaurants (
   phone          VARCHAR,
   email          VARCHAR,
   address        TEXT NOT NULL,
+  area           VARCHAR,
   latitude       NUMERIC(9,6),
   longitude      NUMERIC(9,6),
   opening_time   TIME,
@@ -194,13 +197,25 @@ CREATE TABLE restaurants (
   active_status  BOOLEAN NOT NULL DEFAULT FALSE,
   created_at     TIMESTAMP NOT NULL DEFAULT NOW(),
   updated_at     TIMESTAMP NOT NULL DEFAULT NOW(),
+  cuisines       VARCHAR[] NOT NULL DEFAULT '{}',
+  rating         NUMERIC(2,1) DEFAULT 0.0,
+  image VARCHAR
+
+
 
   CONSTRAINT fk_restaurants_owner FOREIGN KEY (owner_id) REFERENCES users (id)
+
       DEFERRABLE INITIALLY IMMEDIATE,
+
   CONSTRAINT ck_restaurants_fees CHECK (delivery_fee >= 0 AND minimum_order >= 0)
+
 );
 
 CREATE INDEX ix_restaurants_owner ON restaurants (owner_id);
+
+
+
+CREATE INDEX ix_categories_restaurant ON categories (restaurant_id);
 
 CREATE TRIGGER trg_restaurants_updated_at
   BEFORE UPDATE ON restaurants

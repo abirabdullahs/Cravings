@@ -5,7 +5,7 @@ export const FIND_USER_BY_EMAIL = `
 `;
 
 export const INSERT_USER = `
-  INSERT INTO users (email, name, password, phone, role)
+  INSERT INTO users (email, name, password_hash, phone, role)
   VALUES ($1, $2, $3, $4, $5)
   RETURNING *;
 `;

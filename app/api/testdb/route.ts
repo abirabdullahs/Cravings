@@ -1,7 +1,5 @@
-import { pool } from "@/app/lib/db";
+import { pool } from "@/lib/db";
 import { NextResponse } from "next/server";
-
-
 
 export async function GET() {
   try {
@@ -10,9 +8,11 @@ export async function GET() {
       status: "Connected successfully!",
       time: res.rows[0].now,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
+    const details =
+      err instanceof Error ? err.message : "Unknown database error";
     return NextResponse.json(
-      { error: "Database connection failed", details: err.message },
+      { error: "Database connection failed", details },
       { status: 500 },
     );
   }

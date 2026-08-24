@@ -4,24 +4,25 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 
 export default function LoginPage() {
-  
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-
-  async function handleLogin(e:any) {
+  async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
-    const formData = new FormData(e.target);
+    const formData = new FormData(e.currentTarget);
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
 
     const res = await signIn("credentials", {
       email,
       password,
+      redirect: false,
     });
+
+    if (res?.error) setError("Email or password did not match. Try again.");
 
     setLoading(false);
   }
