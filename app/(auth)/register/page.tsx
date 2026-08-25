@@ -47,7 +47,7 @@ export default function RegisterPage() {
         throw new Error("Account created, but failed to log in automatically.");
       }
 
-      router.push("/home");
+      router.push("/");
     } catch (err: unknown) {
       setError(
         err instanceof Error
