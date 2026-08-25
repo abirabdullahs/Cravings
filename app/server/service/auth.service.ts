@@ -4,7 +4,19 @@ import {
   completeUser,
 } from "../repository/auth.repository";
 import { hashPassword } from "../utils/password";
-import { User } from "../types/user";
+
+const roles = new Set(["customer", "owner", "rider"]);
+
+function normalizeRole(value: string) {
+  const role =
+    value.toLowerCase() === "restaurant_owner" ? "owner" : value.toLowerCase();
+
+  if (!roles.has(role)) {
+    throw new Error("INVALID_ROLE");
+  }
+
+  return role;
+}
 
 export const getUserByEmail = (email: string) => {
   return findUserByEmail(email);
@@ -17,9 +29,15 @@ export const createAccount = async (user: {
   phone: string;
   role: string;
 }) => {
+  const role = normalizeRole(user.role);
+
+  if (!roles.has(role)) {
+    throw new Error("INVALID_ROLE");
+  }
+
   const existingUser = await findUserByEmail(user.email);
   if (existingUser) {
-    throw new Error("USER_EXISTS"); 
+    throw new Error("USER_EXISTS");
   }
 
   const data = await createUser({
@@ -27,7 +45,7 @@ export const createAccount = async (user: {
     name: user.name,
     password: await hashPassword(user.password),
     phone: user.phone,
-    role: user.role,
+    role,
   });
   return data;
 };
@@ -41,7 +59,6 @@ export const completeProfile = async ({
   phone: string;
   id: string;
 }) => {
-  
-  const data = await completeUser({ role, phone, id });
+  const data = await completeUser({ role: normalizeRole(role), phone, id });
   return data;
 };

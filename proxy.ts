@@ -2,10 +2,10 @@
 import { auth } from "@/auth";
 import { NextResponse } from "next/server";
 
-export const proxy = auth((req) => {
+export default auth((req) => {
   const isLoggedIn = !!req.auth?.user;
   const user = req.auth?.user;
-  const userRole = user?.role;
+  const userRole = user?.role?.toLowerCase();
   const { pathname } = req.nextUrl;
 
 
@@ -15,10 +15,11 @@ export const proxy = auth((req) => {
     !user?.role ||
     user.role.trim() === "";
 
-   console.log(user, isProfileIncomplete, "hey", pathname);
-
   // 1. Force uncompleted profiles to /complete-profile
   if (isLoggedIn && isProfileIncomplete) {
+    if(pathname === "/login" || pathname === "/register") {
+      return NextResponse.next();
+    }
     if (pathname !== "/complete-profile") {
       return NextResponse.redirect(new URL("/complete-profile", req.url));
     }
@@ -40,15 +41,15 @@ export const proxy = auth((req) => {
   }
 
   // 3. Role-based route protection
-  if (pathname.startsWith("/admin") && userRole !== "ADMIN") {
+  if (pathname.startsWith("/admin") && userRole !== "admin") {
     return NextResponse.redirect(new URL("/unauthorized", req.url));
   }
 
-  if (pathname.startsWith("/rider") && userRole !== "RIDER") {
+  if (pathname.startsWith("/rider") && userRole !== "rider") {
     return NextResponse.redirect(new URL("/unauthorized", req.url));
   }
 
-  if (pathname.startsWith("/restaurant") && userRole !== "OWNER") {
+  if (pathname.startsWith("/restaurant") && userRole !== "owner") {
     return NextResponse.redirect(new URL("/unauthorized", req.url));
   }
 

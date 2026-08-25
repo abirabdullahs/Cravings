@@ -51,17 +51,14 @@ RETURNING id, name, phone, profile_image
 
 
 
-export const FIND_RESTAURANTS =
-`SELECT id, name, rating, active_status, opening_time, image FROM RESTAURANTS R 
-WHERE ($1 IS NULL OR name ILIKE '%' || $1 || '%' OR description ILIKE '%' || $1 || '%') 
-AND ($2 IS NULL OR EXISTS (
-  SELECT 1 FROM menuItems M 
-  JOIN categories C ON M.category_id = C.id
-  WHERE R.id = M.restaurant_id
-  AND C.name = $2)) 
-AND ($3 IS NULL OR R.id = $3)
-ORDER BY active_status DESC, rating DESC 
-LIMIT $4`;
+export const FIND_RESTAURANTS = `SELECT id, name, rating, active_status, opening_time, image , minimum_order, delivery_fee, cuisines
+FROM RESTAURANTS R 
+WHERE ($1::text IS NULL OR name ILIKE '%' || $1 || '%' OR description ILIKE '%' || $1 || '%') 
+AND ($2::text IS NULL OR $2 = ANY(R.cuisines) )
+AND ($3::text IS NULL OR R.area = $3)
+AND ($4::int IS NULL OR R.id = $4)
+
+`;
 
 // export const Find_Restaurant = `SELECT id, name, rating, status, address, opening_time, closing_time, image FROM RESTAURANTS WHERE id = $1`;
 

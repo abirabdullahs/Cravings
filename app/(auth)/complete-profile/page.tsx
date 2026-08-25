@@ -1,11 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useSession } from "next-auth/react";
 
 export default function CompleteProfilePage() {
-  const { update } = useSession();
-
   const [phone, setPhone] = useState("");
   const [role, setRole] = useState("CUSTOMER");
   const [loading, setLoading] = useState(false);
@@ -34,9 +31,9 @@ export default function CompleteProfilePage() {
 
       // 2. Perform clean hard navigation (do NOT mix with router.push or router.refresh)
       window.location.href = "/";
-    } catch (err: any) {
-      setError(err.message);
-      setLoading(false); // Only reset loading state on error
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to update profile");
+      setLoading(false);
     }
   };
 

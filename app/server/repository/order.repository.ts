@@ -1,5 +1,9 @@
-import { pool } from "@/app/lib/db";
-import { CALL_CREATE_ORDER_PROCEDURE, CANCEL_DELIVERY_ON_ORDER_CANCEL, CANCEL_ORDER } from "../query/order.query";
+import { pool } from "@/lib/db";
+import {
+  CALL_CREATE_ORDER_PROCEDURE,
+  CANCEL_DELIVERY_ON_ORDER_CANCEL,
+  CANCEL_ORDER,
+} from "../query/order.query";
 
 export const createOrder = async ({
   userId,
@@ -14,12 +18,11 @@ export const createOrder = async ({
   deliveryFee: number;
   paymentMethod: string;
 }) => {
-  try{
+  try {
     await pool.query(CALL_CREATE_ORDER_PROCEDURE);
-  }catch(error){
+  } catch (error) {
     throw error;
   }
- 
 };
 
 export const cancelOrder = async (orderId: string) => {
