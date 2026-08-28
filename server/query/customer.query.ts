@@ -20,13 +20,13 @@ WHERE r.active_status = true
   AND p.name ILIKE '%' || $1 || '%'
 `;
 
-export const GET_RESTAURANT_DETAIL = `
+export const FIND_RESTAURANT_DETAILS = `
 SELECT c.id AS category_id, c.name AS category_name,
-       p.id AS product_id, p.name AS product_name, p.price, p.image, p.is_available
+       p.id , p.item_name, p.price, p.item_img, p.is_available
 FROM categories c
-JOIN menuItems p ON p.category_id = c.id
+JOIN menu_items p ON p.category_id = c.id
 WHERE c.restaurant_id = $1 AND p.is_available = true
-ORDER BY c.name, p.name
+ORDER BY c.name, p.item_name
 `;
 
 export const GET_BRANCHES_BY_NAME = `

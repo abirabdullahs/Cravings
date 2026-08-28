@@ -3,7 +3,7 @@ import {
   getOwnerRestaurant,
   modifyRestaurant,
   removeRestaurant,
-} from "@/app/server/service/restaurant.service";
+} from "@/server/service/restaurant.service";
 import { NextResponse } from "next/server";
 
 type Context = { params: Promise<{ restaurantId: string }> };

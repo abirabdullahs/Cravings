@@ -13,7 +13,7 @@ export default async function SearchPage({
   return (
     <div className="bg-background">
       <section className="border-b border-border">
-        <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
+        <div className="mx-auto px-2 pb-16 pt-8 sm:px-14">
           <p className="text-[11px] font-semibold uppercase tracking-wider text-primary">
             Search Results
           </p>
@@ -26,7 +26,6 @@ export default async function SearchPage({
               <>Our selection in {city}</>
             )}
           </h1>
-          
         </div>
       </section>
 

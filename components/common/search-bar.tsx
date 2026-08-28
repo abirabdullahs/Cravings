@@ -32,7 +32,7 @@ export function SearchBar({
     <form
       onSubmit={handleSubmit}
       className={cn(
-        "flex items-center gap-2 rounded-md border border-border bg-card pl-3 transition-colors focus-within:border-primary/60",
+        "flex items-center gap-2 rounded-sm border border-border bg-card pl-3 transition-colors focus-within:border-primary/60",
         buttonLabel ? "p-1.5 pl-4" : "px-3 py-2",
         className,
       )}
@@ -49,7 +49,7 @@ export function SearchBar({
       {buttonLabel ? (
         <button
           type="submit"
-          className="shrink-0 rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+          className="shrink-0 rounded-sm bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
         >
           {buttonLabel}
         </button>

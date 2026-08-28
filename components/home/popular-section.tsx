@@ -1,10 +1,10 @@
-import { restaurants } from "@/lib/restaurants"
-import { SectionHeading } from "@/components/common/section-heading"
-import { RestaurantCard } from "@/components/restaurant/restaurant-card"
+import { restaurants } from "@/lib/restaurants";
+import { SectionHeading } from "@/components/common/section-heading";
+import { RestaurantCard } from "@/components/restaurant/restaurant-card";
 
 export function PopularSection() {
   return (
-    <section className="mx-auto max-w-6xl px-4 pb-16 pt-8 sm:px-6">
+    <section className="px-2 pb-16 pt-8 sm:px-14">
       <SectionHeading
         title="Popular near you"
         action={{ label: "See all", href: "/search" }}
@@ -15,5 +15,5 @@ export function PopularSection() {
         ))}
       </div>
     </section>
-  )
+  );
 }

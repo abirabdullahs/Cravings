@@ -1,4 +1,4 @@
-import { completeProfile } from "@/app/server/service/auth.service";
+import { completeProfile } from "@/server/service/auth.service";
 import { auth, unstable_update } from "@/auth";
 import { NextResponse } from "next/server";
 
@@ -14,7 +14,7 @@ export async function POST(request: Request) {
       const id = session?.user?.id as string;
       const data = await completeProfile({ role, phone, id });
       await unstable_update({
-        user: {role, phone },
+        user: { role, phone },
       });
       return NextResponse.json(data, { status: 200 });
     }

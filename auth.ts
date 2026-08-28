@@ -1,13 +1,10 @@
 import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
 
-import { comparePassword } from "./app/server/utils/password";
-import {  debugLog } from "./lib/debug";
+import { comparePassword } from "./server/utils/password";
+import { debugLog } from "./lib/debug";
 import Credentials from "next-auth/providers/credentials";
-import {
-  getUserByEmail,
-  createAccount,
-} from "./app/server/service/auth.service";
+import { getUserByEmail, createAccount } from "./server/service/auth.service";
 
 export const { handlers, auth, signIn, signOut, unstable_update } = NextAuth({
   session: { strategy: "jwt" },

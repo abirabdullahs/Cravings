@@ -21,7 +21,7 @@ export function Chip({
       type="button"
       aria-pressed={selected}
       className={cn(
-        "inline-flex items-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+        "inline-flex items-center whitespace-nowrap rounded-sm  text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
         variant === "outline" &&
           "border px-4 py-2 " +
             (selected

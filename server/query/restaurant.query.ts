@@ -10,6 +10,10 @@ export const FIND_RESTAURANT_BY_OWNER = `
 SELECT * FROM restaurants WHERE id = $1 AND owner_id = $2
 `;
 
+export const FIND_RESTAURANT_BY_ID = `
+SELECT * FROM restaurants WHERE id = $1
+`;
+
 export const INSERT_RESTAURANT = `
 INSERT INTO restaurants
 	(owner_id, name, description, phone, email, address, opening_time,

@@ -1,4 +1,4 @@
-import { getRestaurants } from "@/app/server/service/restaurant.service";
+import { getRestaurants } from "@/server/service/restaurant.service";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {

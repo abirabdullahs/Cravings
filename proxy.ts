@@ -8,7 +8,6 @@ export default auth((req) => {
   const userRole = user?.role?.toLowerCase();
   const { pathname } = req.nextUrl;
 
-
   const isProfileIncomplete =
     !user?.phone ||
     user.phone.trim() === "" ||
@@ -17,7 +16,7 @@ export default auth((req) => {
 
   // 1. Force uncompleted profiles to /complete-profile
   if (isLoggedIn && isProfileIncomplete) {
-    if(pathname === "/login" || pathname === "/register") {
+    if (pathname === "/login" || pathname === "/register") {
       return NextResponse.next();
     }
     if (pathname !== "/complete-profile") {
@@ -26,16 +25,19 @@ export default auth((req) => {
     return NextResponse.next();
   }
 
- if (((isLoggedIn && !isProfileIncomplete) || !isLoggedIn) && pathname === "/complete-profile") {
-   return NextResponse.redirect(new URL("/", req.url));
- }
+  if (
+    ((isLoggedIn && !isProfileIncomplete) || !isLoggedIn) &&
+    pathname === "/complete-profile"
+  ) {
+    return NextResponse.redirect(new URL("/", req.url));
+  }
 
   // 2. Unauthenticated route protection
   if (
     !isLoggedIn &&
     (pathname.startsWith("/admin") ||
       pathname.startsWith("/rider") ||
-      pathname.startsWith("/restaurant"))
+      pathname === "/restaurant")
   ) {
     return NextResponse.redirect(new URL("/login", req.url));
   }
@@ -49,7 +51,7 @@ export default auth((req) => {
     return NextResponse.redirect(new URL("/unauthorized", req.url));
   }
 
-  if (pathname.startsWith("/restaurant") && userRole !== "owner") {
+  if (pathname === "/restaurant" && userRole !== "owner") {
     return NextResponse.redirect(new URL("/unauthorized", req.url));
   }
 

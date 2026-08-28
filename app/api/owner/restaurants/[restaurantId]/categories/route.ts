@@ -2,7 +2,7 @@ import { apiError, requireOwner } from "@/lib/auth-helper";
 import {
   addCategory,
   removeCategory,
-} from "@/app/server/service/restaurant.service";
+} from "@/server/service/restaurant.service";
 import { NextResponse } from "next/server";
 
 type Context = { params: Promise<{ restaurantId: string }> };
@@ -13,10 +13,8 @@ export async function POST(request: Request, { params }: Context) {
   try {
     const { restaurantId } = await params;
     const { name } = await request.json();
-    return NextResponse.json(
-      await addCategory(restaurantId, access.user.id, name),
-      { status: 201 },
-    );
+    const data = await addCategory(restaurantId, access.user.id, name);
+    return NextResponse.json(data, { status: 201 });
   } catch (error) {
     return apiError(error);
   }

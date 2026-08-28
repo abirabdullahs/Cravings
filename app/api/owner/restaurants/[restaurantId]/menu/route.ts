@@ -2,7 +2,7 @@ import { apiError, requireOwner } from "@/lib/auth-helper";
 import {
   addMenuItem,
   getRestaurantMenu,
-} from "@/app/server/service/restaurant.service";
+} from "@/server/service/restaurant.service";
 import { NextResponse } from "next/server";
 
 type Context = { params: Promise<{ restaurantId: string }> };
@@ -13,9 +13,7 @@ export async function GET(_: Request, { params }: Context) {
   try {
     const { restaurantId } = await params;
     const menu = await getRestaurantMenu(restaurantId, access.user.id);
-    return menu
-      ? NextResponse.json({ categories: menu[0], items: menu[1] })
-      : NextResponse.json({ error: "Not found" }, { status: 404 });
+    return NextResponse.json(menu);
   } catch (error) {
     return apiError(error);
   }

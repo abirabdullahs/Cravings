@@ -1,25 +1,33 @@
-import Image from "next/image"
-import Link from "next/link"
-import { ClockIcon } from "lucide-react"
-import type { Restaurant } from "@/lib/restaurants"
-import { Rating } from "@/components/common/rating"
-import { RestaurantBadgePill } from "@/components/common/restaurant-badge"
-import { cn } from "@/lib/utils"
+import Image from "next/image";
+import Link from "next/link";
+import { ClockIcon } from "lucide-react";
+import type { RestaurantSummary } from "@/types/restaurant";
+import { Rating } from "@/components/common/rating";
+import { RestaurantBadgePill } from "@/components/common/restaurant-badge";
+import { cn } from "@/lib/utils";
 
 type RestaurantCardProps = {
-  restaurant: Restaurant
-  className?: string
+  restaurant: RestaurantSummary;
+  className?: string;
   /** Image sizes hint for responsive loading */
-  sizes?: string
-}
+  sizes?: string;
+};
 
 export function RestaurantCard({
   restaurant,
   className,
   sizes = "(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw",
 }: RestaurantCardProps) {
-  const { id, name, image, rating,  deliveryFee, minOrder, isOpen, cuisines } =
-    restaurant
+  const {
+    id,
+    name,
+    imageUrl,
+    rating,
+    deliveryFee,
+    minimumOrder,
+    isActive,
+    cuisines,
+  } = restaurant;
 
   return (
     <Link
@@ -31,13 +39,13 @@ export function RestaurantCard({
     >
       <div className="relative aspect-[4/3] overflow-hidden">
         <Image
-          src={image || "/placeholder.svg"}
+          src={imageUrl || "/placeholder.svg"}
           alt={name}
           fill
           sizes={sizes}
           className={cn(
             "object-cover transition-transform duration-300 group-hover:scale-105",
-            !isOpen && "grayscale-[35%] brightness-90",
+            !isActive && "grayscale-[35%] brightness-90",
           )}
         />
         {/* {badge ? (
@@ -64,10 +72,11 @@ export function RestaurantCard({
             {deliveryFee} tk
           </span>
           <span>
-            Min. <span className="font-medium text-foreground">৳{minOrder}</span>
+            Min.{" "}
+            <span className="font-medium text-foreground">৳{minimumOrder}</span>
           </span>
         </div>
       </div>
     </Link>
-  )
+  );
 }

@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
-import { CUISINES, type Restaurant } from "@/lib/restaurants";
+import { CUISINES } from "@/lib/restaurants";
+import type { RestaurantSummary } from "@/types/restaurant";
 import { RestaurantCard } from "@/components/restaurant/restaurant-card";
 import {
   ResultsToolbar,
@@ -19,7 +20,7 @@ export function SearchResults({
   const [area, setArea] = useState("all");
   const [sort, setSort] = useState<SortKey>("recommended");
 
-  const [results, setResults] = useState<Restaurant[]>([]);
+  const [results, setResults] = useState<RestaurantSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const cuisineOptions = useMemo(
@@ -59,19 +60,9 @@ export function SearchResults({
         const res = await fetch(`/api/restaurants?${params.toString()}`);
         if (!res.ok) throw new Error("Failed to fetch restaurants");
 
-        const data = await res.json();
+        const data: RestaurantSummary[] = await res.json();
         if (isMounted) {
-          const formattedData = data.map((item:any) => ({
-            id: item.id,
-            name: item.name,
-            image: item.image_url,
-            rating: item.rating,
-            deliveryFee: item.delivery_fee,
-            minOrder: item.minimum_order,
-            isOpen: item.is_open,
-            cuisines: item.cuisines
-          }));
-          setResults(formattedData);
+          setResults(data);
         }
       } catch (err) {
         console.error("Error fetching restaurant data:", err);
@@ -89,8 +80,7 @@ export function SearchResults({
   }, [query, cuisine, area, sort]);
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
-     
+    <div className="mx-auto px-2 pb-16 pt-8 sm:px-14">
       <ResultsToolbar
         cuisine={cuisine}
         cuisineOptions={cuisineOptions}

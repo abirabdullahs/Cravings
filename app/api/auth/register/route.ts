@@ -1,4 +1,4 @@
-import { createAccount } from "@/app/server/service/auth.service";
+import { createAccount } from "@/server/service/auth.service";
 import { NextResponse } from "next/server";
 
 export const POST = async (request: Request) => {
