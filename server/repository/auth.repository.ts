@@ -4,7 +4,7 @@ import {
   INSERT_USER,
   COMPLETE_USER,
 } from "../query/auth.query";
-import { User } from "../types/user";
+import { User } from "../../types/user";
 
 export const findUserByEmail = async (email: string) => {
   const result = await pool.query(FIND_USER_BY_EMAIL, [email]);

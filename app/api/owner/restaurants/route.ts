@@ -2,7 +2,7 @@ import { apiError, requireOwner } from "@/lib/auth-helper";
 import {
   addRestaurant,
   getOwnerRestaurants,
-} from "@/app/server/service/restaurant.service";
+} from "@/server/service/restaurant.service";
 import { NextResponse } from "next/server";
 
 export async function GET() {

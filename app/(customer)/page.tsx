@@ -7,7 +7,7 @@ export default function HomePage() {
     <div className="bg-background">
       <Hero />
       <CuisineBrowser />
-      {/* <PopularSection /> */}
+      <PopularSection />
     </div>
   );
 }

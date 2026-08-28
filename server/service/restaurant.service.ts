@@ -7,22 +7,28 @@ import {
   deleteRestaurant,
   findCategories,
   findMenu,
+  findRestaurantDetails,
+  findRestaurantById,
   findRestaurantByOwner,
   findRestaurants,
   findRestaurantsByOwner,
   setAvailability,
   updateMenuItem,
-  updateRestaurant 
+  updateRestaurant,
 } from "../repository/restaurant.repository";
+import type {
+  MenuItemInput,
+  RestaurantInput,
+  RestaurantSearchFilter,
+  RestaurantMenu,
+} from "../../types/restaurant";
 
-export const getRestaurants = async (filter: {
-  search?: string;
-  cuisine?: string;
-  area?: string;
-  sort?: string;
-  restaurantId?: string;
-  limit?: number;
-}) => {
+async function requireOwnedRestaurant(restaurantId: string, ownerId: string) {
+  const restaurant = await findRestaurantByOwner(restaurantId, ownerId);
+  if (!restaurant) throw new Error("RESTAURANT_NOT_FOUND");
+}
+
+export const getRestaurants = async (filter: RestaurantSearchFilter) => {
   const { search, cuisine, area, sort, restaurantId, limit } = filter;
   const validatedFilter = {
     search: search?.trim() || undefined,
@@ -38,17 +44,17 @@ export const getRestaurants = async (filter: {
   return restaurants;
 };
 
-export type RestaurantInput = {
-  name: string;
-  description?: string;
-  phone?: string;
-  email?: string;
-  address: string;
-  openingTime?: string;
-  closingTime?: string;
-  deliveryFee?: number;
-  minimumOrder?: number;
-  activeStatus?: boolean;
+export const getRestaurantDetails = async (restaurantId: string) => {
+  const restaurant = await findRestaurantById(restaurantId);
+  if (!restaurant) throw new Error("RESTAURANT_NOT_FOUND");
+  const [categories, items] = await Promise.all([
+    findCategories(restaurantId),
+    findRestaurantDetails(restaurantId)
+  ]);
+  return {
+    restaurant,
+    menu: { categories, items},
+  };
 };
 
 function restaurantValues(ownerId: string, input: RestaurantInput) {
@@ -63,7 +69,7 @@ function restaurantValues(ownerId: string, input: RestaurantInput) {
     input.closingTime || null,
     Number(input.deliveryFee ?? 0),
     Number(input.minimumOrder ?? 0),
-    input.activeStatus ?? false,
+    input.isActive,
   ];
 }
 
@@ -87,111 +93,100 @@ export const modifyRestaurant = (
   restaurantId: string,
   ownerId: string,
   input: RestaurantInput,
-) =>
-  updateRestaurant([
+) => {
+  requireOwnedRestaurant(restaurantId, ownerId);
+  return updateRestaurant([
     restaurantId,
     ownerId,
     ...restaurantValues(ownerId, input).slice(1),
   ]);
+};
 
 export const removeRestaurant = (restaurantId: string, ownerId: string) =>
   deleteRestaurant(restaurantId, ownerId);
 
-export const getRestaurantMenu = (restaurantId: string, ownerId: string) =>
-  findRestaurantByOwner(restaurantId, ownerId).then((restaurant) =>
-    restaurant
-      ? Promise.all([findCategories(restaurantId), findMenu(restaurantId)])
-      : null,
-  );
+export const getRestaurantMenu = async (
+  restaurantId: string,
+  ownerId: string,
+): Promise<RestaurantMenu> => {
+  await requireOwnedRestaurant(restaurantId, ownerId);
+  const [categories, items] = await Promise.all([
+    findCategories(restaurantId),
+    findMenu(restaurantId),
+  ]);
+  return { categories, items };
+};
 
 export const addCategory = async (
   restaurantId: string,
   ownerId: string,
   name: string,
 ) => {
-  if (!(await findRestaurantByOwner(restaurantId, ownerId)))
-    throw new Error("RESTAURANT_NOT_FOUND");
+  await requireOwnedRestaurant(restaurantId, ownerId);
   if (!name.trim()) throw new Error("CATEGORY_NAME_REQUIRED");
   return insertCategory(restaurantId, name.trim());
 };
 
-export const removeCategory = (
+export const removeCategory = async (
   categoryId: string,
   restaurantId: string,
   ownerId: string,
-) =>
-  findRestaurantByOwner(restaurantId, ownerId).then(async (restaurant) => {
-    if (!restaurant) throw new Error("RESTAURANT_NOT_FOUND");
-    return deleteCategory(categoryId, restaurantId);
-  });
+) => {
+  await requireOwnedRestaurant(restaurantId, ownerId);
+  return deleteCategory(categoryId, restaurantId);
+};
 
 export const addMenuItem = async (
   restaurantId: string,
   ownerId: string,
-  input: {
-    categoryId?: number | null;
-    name: string;
-    description?: string;
-    price: number;
-    image?: string;
-  },
+  input: MenuItemInput,
 ) => {
-  if (!(await findRestaurantByOwner(restaurantId, ownerId)))
-    throw new Error("RESTAURANT_NOT_FOUND");
   if (!input.name?.trim() || Number(input.price) < 0)
     throw new Error("INVALID_MENU_ITEM");
+  await requireOwnedRestaurant(restaurantId, ownerId);
   return insertMenuItem([
     restaurantId,
     input.categoryId || null,
     input.name.trim(),
     input.description?.trim() || null,
     Number(input.price),
-    input.image?.trim() || null,
+    input.imageUrl.trim() || null,
   ]);
 };
 
-export const modifyMenuItem = (
+export const modifyMenuItem = async (
   itemId: string,
   restaurantId: string,
   ownerId: string,
-  input: {
-    categoryId?: number | null;
-    name: string;
-    description?: string;
-    price: number;
-    image?: string;
-  },
-) =>
-  findRestaurantByOwner(restaurantId, ownerId).then((restaurant) => {
-    if (!restaurant) throw new Error("RESTAURANT_NOT_FOUND");
-    return updateMenuItem([
-      itemId,
-      restaurantId,
-      input.name.trim(),
-      Number(input.price),
-      input.description?.trim() || null,
-      input.categoryId || null,
-      input.image?.trim() || null,
-    ]);
-  });
+  input: MenuItemInput,
+) => {
+  await requireOwnedRestaurant(restaurantId, ownerId);
+  return updateMenuItem([
+    itemId,
+    restaurantId,
+    input.name.trim(),
+    Number(input.price),
+    input.description?.trim() || null,
+    input.categoryId || null,
+    input.imageUrl.trim() || null,
+  ]);
+};
 
-export const setMenuAvailability = (
+export const setMenuAvailability = async (
   itemId: string,
   restaurantId: string,
   ownerId: string,
   available: boolean,
-) =>
-  findRestaurantByOwner(restaurantId, ownerId).then((restaurant) => {
-    if (!restaurant) throw new Error("RESTAURANT_NOT_FOUND");
-    return setAvailability(itemId, restaurantId, available);
-  });
+) => {
+  await requireOwnedRestaurant(restaurantId, ownerId);
+  return setAvailability(itemId, restaurantId, available);
+};
 
-export const removeMenuItem = (
+export const removeMenuItem = async (
   itemId: string,
   restaurantId: string,
   ownerId: string,
-) =>
-  findRestaurantByOwner(restaurantId, ownerId).then((restaurant) => {
-    if (!restaurant) throw new Error("RESTAURANT_NOT_FOUND");
-    return deleteMenuItem(itemId, restaurantId);
-  });
+) => {
+  await requireOwnedRestaurant(restaurantId, ownerId);
+  return deleteMenuItem(itemId, restaurantId);
+};

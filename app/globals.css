@@ -3,8 +3,8 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-serif: var(--font-playfair), ui-serif, Georgia, serif;
+  --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-fraunces), ui-serif, Georgia, serif;
   --color-footer: var(--footer);
   --color-footer-foreground: var(--footer-foreground);
   --color-footer-muted: var(--footer-muted);
@@ -57,7 +57,7 @@
   --card-foreground: #26221c;
   --popover: #ffffff;
   --popover-foreground: #26221c;
-  --primary: #a9773d;
+  --primary: #a37f43;
   --primary-foreground: #ffffff;
   --secondary: #ebe5d8;
   --secondary-foreground: #3a352d;
@@ -164,6 +164,13 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+  }
+  html,
+  body {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    overflow-x: clip;
   }
   body {
     @apply bg-background text-foreground;

@@ -23,7 +23,7 @@ const columns = [
 export function SiteFooter() {
   return (
     <footer className="bg-footer text-footer-foreground">
-      <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
+      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
         <div className="flex flex-col gap-10 md:flex-row md:justify-between">
           <div className="max-w-xs">
             <Logo variant="inverted" />
