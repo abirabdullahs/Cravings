@@ -4,6 +4,7 @@ import { Logo } from "@/components/brand/logo";
 import { LocationPill } from "@/components/common/location-pill";
 import { SearchBar } from "@/components/common/search-bar";
 import { getAuthenticatedUser } from "@/lib/auth-helper";
+import { LogoutButton } from "@/components/auth/logout-button";
 
 type SiteHeaderProps = {
   /** Prefills the header search input (used on the results page) */
@@ -15,11 +16,13 @@ export async function SiteHeader({
   searchValue = "",
   cartCount = 0,
 }: SiteHeaderProps) {
-  const { user } = await getAuthenticatedUser();
+  const user  = await getAuthenticatedUser();
   const role = user?.role?.toLowerCase();
   const isGuest = !user;
   const isCustomer = role === "customer";
   const isOwner = role === "owner";
+  const isRider = role === "rider";
+  const isAdmin = role === "admin";
   const canBrowse = isGuest || isCustomer;
 
   return (
@@ -50,7 +53,23 @@ export async function SiteHeader({
               href="/restaurant"
               className="hidden text-sm font-medium text-foreground transition-colors hover:text-primary sm:inline"
             >
-              Owner studio
+              Owner Studio
+            </Link>
+          )}
+          {isRider && (
+            <Link
+              href="/rider"
+              className="hidden text-sm font-medium text-foreground transition-colors hover:text-primary sm:inline"
+            >
+              Deliveries
+            </Link>
+          )}
+          {isAdmin && (
+            <Link
+              href="/admin"
+              className="hidden text-sm font-medium text-foreground transition-colors hover:text-primary sm:inline"
+            >
+              Admin Panel
             </Link>
           )}
           {isCustomer && (
@@ -69,6 +88,7 @@ export async function SiteHeader({
               Login
             </Link>
           )}
+          {!isGuest && <LogoutButton />}
         </nav>
       </div>
 

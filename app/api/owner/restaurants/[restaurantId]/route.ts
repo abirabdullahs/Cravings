@@ -1,4 +1,5 @@
-import { apiError, requireOwner } from "@/lib/auth-helper";
+import { requireOwner } from "@/lib/auth-helper";
+import { handleApiError } from "@/lib/errors/handleApiError";
 import {
   getOwnerRestaurant,
   modifyRestaurant,
@@ -9,47 +10,44 @@ import { NextResponse } from "next/server";
 type Context = { params: Promise<{ restaurantId: string }> };
 
 export async function GET(_: Request, { params }: Context) {
-  const access = await requireOwner();
-  if (access.response) return access.response;
+  const user = await requireOwner();
   try {
     const { restaurantId } = await params;
-    const restaurant = await getOwnerRestaurant(restaurantId, access.user.id);
+    const restaurant = await getOwnerRestaurant(restaurantId, user.id);
     return restaurant
       ? NextResponse.json(restaurant)
       : NextResponse.json({ error: "Not found" }, { status: 404 });
   } catch (error) {
-    return apiError(error);
+    handleApiError(error, "Unable to fetch restaurant");
   }
 }
 
 export async function PUT(request: Request, { params }: Context) {
-  const access = await requireOwner();
-  if (access.response) return access.response;
+  const user = await requireOwner();
   try {
     const { restaurantId } = await params;
     const restaurant = await modifyRestaurant(
       restaurantId,
-      access.user.id,
+      user.id,
       await request.json(),
     );
     return restaurant
       ? NextResponse.json(restaurant)
       : NextResponse.json({ error: "Not found" }, { status: 404 });
   } catch (error) {
-    return apiError(error);
+    handleApiError(error, "Unable to update restaurant");
   }
 }
 
 export async function DELETE(_: Request, { params }: Context) {
-  const access = await requireOwner();
-  if (access.response) return access.response;
+  const user = await requireOwner();
   try {
     const { restaurantId } = await params;
-    const count = await removeRestaurant(restaurantId, access.user.id);
+    const count = await removeRestaurant(restaurantId, user.id);
     return count
       ? NextResponse.json({ success: true })
       : NextResponse.json({ error: "Not found" }, { status: 404 });
   } catch (error) {
-    return apiError(error);
+    handleApiError(error, "Unable to delete restaurant");
   }
 }

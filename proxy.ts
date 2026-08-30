@@ -7,7 +7,6 @@ export default auth((req) => {
   const user = req.auth?.user;
   const userRole = user?.role?.toLowerCase();
   const { pathname } = req.nextUrl;
-
   const isProfileIncomplete =
     !user?.phone ||
     user.phone.trim() === "" ||
@@ -37,7 +36,7 @@ export default auth((req) => {
     !isLoggedIn &&
     (pathname.startsWith("/admin") ||
       pathname.startsWith("/rider") ||
-      pathname === "/restaurant")
+      pathname.startsWith("/owner"))
   ) {
     return NextResponse.redirect(new URL("/login", req.url));
   }

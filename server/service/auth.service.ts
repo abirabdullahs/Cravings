@@ -4,6 +4,8 @@ import {
   completeUser,
 } from "../repository/auth.repository";
 import { hashPassword } from "../utils/password";
+import { AppError } from "@/lib/errors/AppError";
+import { ErrorCode } from "@/lib/errors/errorCodes";
 
 const roles = new Set(["customer", "owner", "rider"]);
 
@@ -12,7 +14,7 @@ function normalizeRole(value: string) {
     value.toLowerCase() === "restaurant_owner" ? "owner" : value.toLowerCase();
 
   if (!roles.has(role)) {
-    throw new Error("INVALID_ROLE");
+    throw new AppError(ErrorCode.INVALID_ROLE);
   }
 
   return role;
@@ -32,12 +34,12 @@ export const createAccount = async (user: {
   const role = normalizeRole(user.role);
 
   if (!roles.has(role)) {
-    throw new Error("INVALID_ROLE");
+    throw new AppError(ErrorCode.INVALID_ROLE);
   }
 
   const existingUser = await findUserByEmail(user.email);
   if (existingUser) {
-    throw new Error("USER_EXISTS");
+    throw new AppError(ErrorCode.USER_EXISTS);
   }
 
   const data = await createUser({

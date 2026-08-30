@@ -1,3 +1,4 @@
+import { handleApiError } from "@/lib/errors/handleApiError";
 import { getRestaurants } from "@/server/service/restaurant.service";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -16,8 +17,6 @@ export async function GET(request: NextRequest) {
     const restaurants = await getRestaurants(filter);
     return NextResponse.json(restaurants);
   } catch (err: unknown) {
-    const message =
-      err instanceof Error ? err.message : "Unable to load restaurants";
-    return NextResponse.json({ error: message, err }, { status: 500 });
+    handleApiError(err, "Unable to load restaurants");
   }
 }

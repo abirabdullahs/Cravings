@@ -4,9 +4,24 @@ import { useState } from "react";
 
 export default function CompleteProfilePage() {
   const [phone, setPhone] = useState("");
-  const [role, setRole] = useState("CUSTOMER");
+  const [role, setRole] = useState("customer");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const getRoleBasedRedirect = (selectedRole: string): string => {
+    const normalizedRole = selectedRole.toLowerCase();
+    switch (normalizedRole) {
+      case "owner":
+        return "/restaurant";
+      case "rider":
+        return "/rider";
+      case "admin":
+        return "/admin";
+      case "customer":
+      default:
+        return "/";
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,11 +41,9 @@ export default function CompleteProfilePage() {
         throw new Error(data.error || "Failed to update profile");
       }
 
-      // // 1. Force Auth.js client context to update session state
-      // await update({ role, phone });
-
-      // 2. Perform clean hard navigation (do NOT mix with router.push or router.refresh)
-      window.location.href = "/";
+      // Redirect to role-based home page
+      const redirectPath = getRoleBasedRedirect(role);
+      window.location.href = redirectPath;
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to update profile");
       setLoading(false);
@@ -90,9 +103,9 @@ export default function CompleteProfilePage() {
                 onChange={(e) => setRole(e.target.value)}
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm text-gray-900"
               >
-                <option value="CUSTOMER">Customer (Order Food)</option>
-                <option value="OWNER">Restaurant Owner</option>
-                <option value="RIDER">Delivery Rider</option>
+                <option value="customer">Customer (Order Food)</option>
+                <option value="owner">Restaurant Owner</option>
+                <option value="rider">Delivery Rider</option>
               </select>
             </div>
           </div>

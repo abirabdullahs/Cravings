@@ -6,7 +6,7 @@ export default async function RestaurantLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user } = await getAuthenticatedUser();
+  const user = await getAuthenticatedUser();
 
   if (!user) redirect("/login");
 

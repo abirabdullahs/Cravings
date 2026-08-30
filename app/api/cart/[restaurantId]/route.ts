@@ -1,4 +1,5 @@
 import { getAuthenticatedUser } from "@/lib/auth-helper";
+import { handleApiError } from "@/lib/errors/handleApiError";
 import { addCartItem, getCartItems } from "@/server/service/cart.service";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -8,8 +9,7 @@ export async function POST(request: NextRequest, context: Context) {
   try {
     const { menuItemId, quantity } = await request.json();
     const { restaurantId } = await context.params;
-    const { user, errorResponse } = await getAuthenticatedUser();
-    if (errorResponse) return errorResponse;
+    const user = await getAuthenticatedUser();
 
     // require validation
     const data = await addCartItem({
@@ -20,16 +20,13 @@ export async function POST(request: NextRequest, context: Context) {
     });
     return NextResponse.json(data, { status: 200 });
   } catch (error: unknown) {
-    const message =
-      error instanceof Error ? error.message : "Unable to update cart";
-    return NextResponse.json({ error: message }, { status: 500 });
+    handleApiError(error, "Unable to update cart");
   }
 }
 
 export async function GET(request: NextRequest, context: Context) {
   try {
-    const { user, errorResponse } = await getAuthenticatedUser();
-    if (errorResponse) return errorResponse;
+    const user = await getAuthenticatedUser();
 
     const { restaurantId } = await context.params;
     const data = await getCartItems({
@@ -38,8 +35,6 @@ export async function GET(request: NextRequest, context: Context) {
     });
     return NextResponse.json(data, { status: 200 });
   } catch (error: unknown) {
-    const message =
-      error instanceof Error ? error.message : "Unable to fetch cart";
-    return NextResponse.json({ error: message }, { status: 500 });
+    handleApiError(error, "Unable to fetch cart");
   }
 }

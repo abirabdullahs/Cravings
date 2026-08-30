@@ -12,7 +12,12 @@ export const { handlers, auth, signIn, signOut, unstable_update } = NextAuth({
   providers: [
     Google({
       profile(profile) {
-        return { role: profile.role ?? "user", ...profile };
+        return {
+          id: profile.sub,
+          name: profile.name,
+          email: profile.email,
+          image: profile.picture,
+        };
       },
       clientId: process.env.AUTH_GOOGLE_ID!,
       clientSecret: process.env.AUTH_GOOGLE_SECRET!,

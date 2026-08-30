@@ -1,60 +1,47 @@
 import { auth } from "@/auth";
-import { NextResponse } from "next/server";
+import { AppError } from "@/lib/errors/AppError";
+import { ErrorCode } from "@/lib/errors/errorCodes";
 
-// 1. Base check: Works for ANY logged-in user (Customers, Owners, Riders)
+// 1. Base check: Works for ANY logged-in user (Customers, Owners, Riders, Admins)
 export async function getAuthenticatedUser() {
   const session = await auth();
 
   if (!session?.user?.id) {
-    return {
-      user: null,
-      errorResponse: NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 },
-      ),
-    };
+    throw new AppError(ErrorCode.UNAUTHORIZED);
   }
 
-  return {
-    user: session.user as { id: string; email?: string; role?: string },
-    errorResponse: null,
-  };
+  return session.user as { id: string; email?: string; role?: string };
 }
 
-// 2. Role check: Extends getAuthenticatedUser to guard owner-only routes
+// 2. Owner-only check
 export async function requireOwner() {
-  const { user, errorResponse } = await getAuthenticatedUser();
-  if (errorResponse) return { user: null, response: errorResponse };
+  const user = await getAuthenticatedUser();
 
   if (user.role?.toLowerCase() !== "owner") {
-    return {
-      user: null,
-      response: NextResponse.json(
-        { error: "Owner access required" },
-        { status: 403 },
-      ),
-    };
+    throw new AppError(ErrorCode.OWNER_ACCESS_REQUIRED);
   }
 
-  return { user, response: null };
+  return user;
 }
 
-// 3. Centralized API Error Response Handler
-export function apiError(error: unknown) {
-  const message =
-    error instanceof Error ? error.message : "Unexpected server error";
+// 3. Rider-only check
+export async function requireRider() {
+  const user = await getAuthenticatedUser();
 
-  const status =
-    message === "RESTAURANT_NOT_FOUND"
-      ? 404
-      : message === "NAME_AND_ADDRESS_REQUIRED" ||
-          message === "INVALID_MENU_ITEM" ||
-          message.endsWith("_REQUIRED")
-        ? 400
-        : 500;
+  if (user.role?.toLowerCase() !== "rider") {
+    throw new AppError(ErrorCode.RIDER_ACCESS_REQUIRED);
+  }
 
-  return NextResponse.json(
-    { error: message.replaceAll("_", " ").toLowerCase() },
-    { status },
-  );
+  return user;
+}
+
+// 4. Admin-only check
+export async function requireAdmin() {
+  const user = await getAuthenticatedUser();
+
+  if (user.role?.toLowerCase() !== "admin") {
+    throw new AppError(ErrorCode.ADMIN_ACCESS_REQUIRED);
+  }
+
+  return user;
 }

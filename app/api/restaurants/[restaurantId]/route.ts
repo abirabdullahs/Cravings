@@ -1,6 +1,6 @@
+import { handleApiError } from "@/lib/errors/handleApiError";
 import { getRestaurantDetails } from "@/server/service/restaurant.service";
-import { apiError } from "@/lib/auth-helper";
-
+import { NextResponse } from "next/server";
 type Context = { params: Promise<{ restaurantId: string }> };
 
 export async function GET(request: Request, { params }: Context) {
@@ -8,10 +8,10 @@ export async function GET(request: Request, { params }: Context) {
     const { restaurantId } = await params;
     const restaurant = await getRestaurantDetails(restaurantId);
 
-    return new Response(JSON.stringify(restaurant), {
+    return new NextResponse(JSON.stringify(restaurant), {
       headers: { "Content-Type": "application/json" },
     });
   } catch (err) {
-    return apiError(err);
+    handleApiError(err, "Unable to fetch restaurant");
   }
 }
