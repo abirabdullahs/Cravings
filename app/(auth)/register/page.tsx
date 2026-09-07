@@ -4,11 +4,25 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 
-
 export default function RegisterPage() {
-    const router = useRouter();
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const getRoleBasedRedirect = (role: string): string => {
+    const normalizedRole = role.toLowerCase();
+    switch (normalizedRole) {
+      case "owner":
+        return "/restaurant";
+      case "rider":
+        return "/rider";
+      case "admin":
+        return "/admin";
+      case "customer":
+      default:
+        return "/";
+    }
+  };
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -16,11 +30,12 @@ export default function RegisterPage() {
     setError(null);
 
     const formData = new FormData(e.currentTarget);
+    const role = formData.get("role") as string;
     const payload = {
       name: formData.get("name") as string,
       email: formData.get("email") as string,
       password: formData.get("password") as string,
-      role: formData.get("role") as string,
+      role: role.toLowerCase(),
       phone: formData.get("number") as string,
     };
 
@@ -40,14 +55,16 @@ export default function RegisterPage() {
       const signInRes = await signIn("credentials", {
         email: payload.email,
         password: payload.password,
-        redirect: false, // Prevent immediate auto-redirect to capture errors
+        redirect: false,
       });
 
       if (signInRes?.error) {
         throw new Error("Account created, but failed to log in automatically.");
       }
 
-      router.push("/home");
+      // Redirect to role-based home page
+      const redirectPath = getRoleBasedRedirect(role);
+      router.push(redirectPath);
     } catch (err: unknown) {
       setError(
         err instanceof Error
@@ -68,7 +85,7 @@ export default function RegisterPage() {
       )}
       <button
         type="button"
-        onClick={() => signIn("google", { callbackUrl: "/" })}
+        onClick={() => signIn("google", { callbackUrl: "/complete-profile" })}
         className="w-full bg-red-600 text-white p-2 rounded hover:bg-red-700 mt-2"
       >
         Sign in with Google
@@ -120,11 +137,11 @@ export default function RegisterPage() {
           <select
             name="role"
             required
-            className="w-full border p-2 rounded bg-black text-white"
+            className="w-full border p-2 rounded bg-white text-gray-900"
           >
-            <option value="CUSTOMER">Customer</option>
-            <option value="RIDER">Rider</option>
-            <option value="RESTAURANT_OWNER">Restaurant Owner</option>
+            <option value="customer">Customer</option>
+            <option value="rider">Delivery Rider</option>
+            <option value="owner">Restaurant Owner</option>
           </select>
         </div>
 

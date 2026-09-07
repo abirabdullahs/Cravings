@@ -2,13 +2,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toErrorMessage } from "@/lib/http";
 import { restaurantService } from "@/services/restaurantService";
-import {
-  MenuItem,
-  MenuItemInput,
-  RestaurantInput,
-  emptyMenuItemInput,
-  emptyRestaurantInput,
-} from "@/types/restaurant";
+import { MenuItem, MenuItemInput, RestaurantInput } from "@/types/restaurant";
 
 export function useRestaurantManager() {
   const queryClient = useQueryClient();

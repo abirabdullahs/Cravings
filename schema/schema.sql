@@ -103,7 +103,7 @@ CREATE TABLE categories (
   name VARCHAR NOT NULL,
   category_img VARCHAR,
   restaurant_id INT REFERENCES restaurants (id) ON DELETE CASCADE,
-  CONSTRAINT uq_categories_name UNIQUE (name)
+  CONSTRAINT uq_categories_name UNIQUE (name, restaurant_id)
 );
 
 CREATE INDEX ix_categories_restaurant ON categories (restaurant_id);

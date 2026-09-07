@@ -37,7 +37,7 @@ export default function LoginPage() {
 
       <button
         type="button"
-        onClick={() => signIn("google", { callbackUrl: "/" })}
+        onClick={() => signIn("google", { callbackUrl: "/complete-profile" })}
         className="w-full bg-red-600 text-white p-2 rounded hover:bg-red-700 mt-2"
       >
         Sign in with Google

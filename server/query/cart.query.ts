@@ -8,7 +8,7 @@ export const UPSERT_CART_ITEM = `INSERT INTO cart_items (menu_item_id, quantity,
   DO UPDATE SET quantity =  EXCLUDED.quantity
   RETURNING *;`;
 
-export const FIND_CART_ITEMS = `SELECT CI.id, CI.menu_item_id, cart_id, MI.item_name AS menu_item_name, MI.description, MI.price, quantity, R.name AS restaurant_name , MI.item_img AS image
+export const FIND_CART_ITEMS = `SELECT CI.id, CI.menu_item_id, cart_id, C.restaurant_id, MI.item_name AS menu_item_name, MI.description, MI.price, quantity, R.name AS restaurant_name , MI.item_img AS image
   FROM cart_items CI
   JOIN carts C ON C.id = CI.cart_id
   JOIN menu_items MI ON MI.id = CI.menu_item_id

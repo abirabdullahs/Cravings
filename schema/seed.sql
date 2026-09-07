@@ -3,14 +3,19 @@
 -- Clear target tables cleanly
 TRUNCATE TABLE menu_items, categories, restaurants RESTART IDENTITY CASCADE;
 
--- Assumes owner users exist with user.id = 2 and user.id = 3 in your users table
+-- Create the demo owners required by restaurants.owner_id when they are absent.
+INSERT INTO users (name, email, password_hash, role)
+VALUES
+  ('Sultan''s Dine Owner', 'owner1@cravings.local', '$2b$10$pxXnNI5FQdZt1XUZ.A/ix.DGclLuTdlNA5m0fNSs.mk6lp450Uz7i', 'owner'),
+  ('Chillox Owner', 'owner2@cravings.local', '$2b$10$pxXnNI5FQdZt1XUZ.A/ix.DGclLuTdlNA5m0fNSs.mk6lp450Uz7i', 'owner')
+ON CONFLICT (LOWER(email)) DO NOTHING;
 
 -- 1. Insert Restaurants
 INSERT INTO restaurants 
   (owner_id, name, description, phone, email, address, latitude, longitude, opening_time, closing_time, delivery_fee, minimum_order, active_status, cuisines,rating, image) 
 VALUES
   (
-    2,
+    (SELECT id FROM users WHERE LOWER(email) = 'owner1@cravings.local'),
     'Sultan''s Dine', 
     'Famous authentic Kacchi Biryani in Dhaka', 
     '01711111111', 
@@ -25,10 +30,10 @@ VALUES
     TRUE, 
     ARRAY['kacchi', 'biryani'],
     3,
-
+    '/food/sultans-dine.png'
   ),
   (
-    3, 
+    (SELECT id FROM users WHERE LOWER(email) = 'owner2@cravings.local'), 
     'Chillox', 
     'Juicy gourmet burgers and crispy fries', 
     '01722222222', 
@@ -43,11 +48,11 @@ VALUES
     TRUE, 
     ARRAY['burger', 'fried-chicken'],
     4,
-    public\food\chillox.png
+    '/food/chillox.png'
 
   ),
   (
-    2, 
+    (SELECT id FROM users WHERE LOWER(email) = 'owner1@cravings.local'), 
     'Kacchi Bhai', 
     'Traditional Kacchi with Borhani and Shahi Morog Polao', 
     '01733333333', 
@@ -61,10 +66,11 @@ VALUES
     250.00, 
     TRUE, 
     ARRAY['kacchi', 'biryani', 'bengali'],
-    4
+    4,
+    '/food/kacchi-bhai.png'
   ),
   (
-    3, 
+    (SELECT id FROM users WHERE LOWER(email) = 'owner2@cravings.local'), 
     'Ambala Sweets & Foods', 
     'Traditional Bengali breakfast and sweets', 
     '01744444444', 
@@ -78,7 +84,8 @@ VALUES
     150.00, 
     FALSE, 
     ARRAY['bengali', 'dessert'],
-    5
+    5,
+    '/food/ambala.png'
   );
 
 -- 2. Insert Categories

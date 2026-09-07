@@ -1,4 +1,5 @@
-import { apiError, requireOwner } from "@/lib/auth-helper";
+import { requireOwner } from "@/lib/auth-helper";
+import { handleApiError } from "@/lib/errors/handleApiError";
 import {
   removeMenuItem,
   setMenuAvailability,
@@ -9,8 +10,7 @@ import { NextResponse } from "next/server";
 type Context = { params: Promise<{ restaurantId: string; itemId: string }> };
 
 export async function PUT(request: Request, { params }: Context) {
-  const access = await requireOwner();
-  if (access.response) return access.response;
+  const user = await requireOwner();
   try {
     const { restaurantId, itemId } = await params;
     const body = await request.json();
@@ -19,35 +19,29 @@ export async function PUT(request: Request, { params }: Context) {
         await setMenuAvailability(
           itemId,
           restaurantId,
-          access.user.id,
+          user.id,
           body.available,
         ),
       );
     }
-    const item = await modifyMenuItem(
-      itemId,
-      restaurantId,
-      access.user.id,
-      body,
-    );
+    const item = await modifyMenuItem(itemId, restaurantId, user.id, body);
     return item
-      ? NextResponse.json(item)
+      ? NextResponse.json(item, { status: 200 })
       : NextResponse.json({ error: "Not found" }, { status: 404 });
   } catch (error) {
-    return apiError(error);
+    handleApiError(error, "Unable to update menu item");
   }
 }
 
 export async function DELETE(_: Request, { params }: Context) {
-  const access = await requireOwner();
-  if (access.response) return access.response;
+  const user = await requireOwner();
   try {
     const { restaurantId, itemId } = await params;
-    const count = await removeMenuItem(itemId, restaurantId, access.user.id);
+    const count = await removeMenuItem(itemId, restaurantId, user.id);
     return count
       ? NextResponse.json({ success: true })
       : NextResponse.json({ error: "Not found" }, { status: 404 });
   } catch (error) {
-    return apiError(error);
+    handleApiError(error, "Unable to delete menu item");
   }
 }

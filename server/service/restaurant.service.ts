@@ -22,10 +22,12 @@ import type {
   RestaurantSearchFilter,
   RestaurantMenu,
 } from "../../types/restaurant";
+import { AppError } from "@/lib/errors/AppError";
+import { ErrorCode } from "@/lib/errors/errorCodes";
 
 async function requireOwnedRestaurant(restaurantId: string, ownerId: string) {
   const restaurant = await findRestaurantByOwner(restaurantId, ownerId);
-  if (!restaurant) throw new Error("RESTAURANT_NOT_FOUND");
+  if (!restaurant) throw new AppError(ErrorCode.RESTAURANT_NOT_FOUND);
 }
 
 export const getRestaurants = async (filter: RestaurantSearchFilter) => {
@@ -46,7 +48,7 @@ export const getRestaurants = async (filter: RestaurantSearchFilter) => {
 
 export const getRestaurantDetails = async (restaurantId: string) => {
   const restaurant = await findRestaurantById(restaurantId);
-  if (!restaurant) throw new Error("RESTAURANT_NOT_FOUND");
+  if (!restaurant) throw new AppError(ErrorCode.RESTAURANT_NOT_FOUND);
   const [categories, items] = await Promise.all([
     findCategories(restaurantId),
     findRestaurantDetails(restaurantId)
@@ -81,7 +83,7 @@ export const addRestaurant = async (
   input: RestaurantInput,
 ) => {
   if (!input.name?.trim() || !input.address?.trim()) {
-    throw new Error("NAME_AND_ADDRESS_REQUIRED");
+    throw new AppError(ErrorCode.MISSING_FIELD,"Name and Adress are required");
   }
   return insertRestaurant(restaurantValues(ownerId, input));
 };
@@ -123,7 +125,7 @@ export const addCategory = async (
   name: string,
 ) => {
   await requireOwnedRestaurant(restaurantId, ownerId);
-  if (!name.trim()) throw new Error("CATEGORY_NAME_REQUIRED");
+  if (!name.trim()) throw new AppError(ErrorCode.MISSING_FIELD, "Category name is required");
   return insertCategory(restaurantId, name.trim());
 };
 

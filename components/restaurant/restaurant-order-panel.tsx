@@ -1,17 +1,22 @@
 "use client";
 
 import { MinusIcon, PlusIcon, ShoppingBagIcon } from "lucide-react";
+import Link from "next/link";
 import type { MenuItem } from "@/types/restaurant";
 
 type OrderLine = MenuItem & { quantity: number };
 
 type RestaurantOrderPanelProps = {
   items: OrderLine[];
+  cartId?: number;
+  restaurantId: number;
   onChange: (item: MenuItem, amount: number) => void;
 };
 
 export function RestaurantOrderPanel({
   items,
+  cartId,
+  restaurantId,
   onChange,
 }: RestaurantOrderPanelProps) {
   const subtotal = items.reduce(
@@ -47,7 +52,7 @@ export function RestaurantOrderPanel({
                   <div className="flex shrink-0 items-center gap-2 border border-border px-1.5 py-1">
                     <button
                       type="button"
-                      onClick={() => onChange(item, item.quantity-1)}
+                      onClick={() => onChange(item, item.quantity - 1)}
                       aria-label={`Remove one ${item.name}`}
                       className="text-muted-foreground hover:text-primary"
                     >
@@ -58,7 +63,7 @@ export function RestaurantOrderPanel({
                     </span>
                     <button
                       type="button"
-                      onClick={() => onChange(item, item.quantity+1)}
+                      onClick={() => onChange(item, item.quantity + 1)}
                       aria-label={`Add one ${item.name}`}
                       className="text-muted-foreground hover:text-primary"
                     >
@@ -82,12 +87,14 @@ export function RestaurantOrderPanel({
                 <span>৳{total}</span>
               </div>
             </div>
-            <button
-              type="button"
-              className="mt-5 w-full rounded-sm bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+            <Link
+              href={
+                restaurantId ? `/cart/restaurant/${restaurantId}` : `/cart/${cartId}`
+              }
+              className="mt-5 block w-full rounded-sm bg-primary px-4 py-3 text-center text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
             >
               Review order
-            </button>
+            </Link>
           </div>
         ) : (
           <div className="px-5 py-10 text-center">
