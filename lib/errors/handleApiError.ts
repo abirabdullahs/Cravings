@@ -12,7 +12,7 @@ export function handleApiError(
   }
 
   
-  console.error("❌ UNHANDLED BACKEND ERROR:", error);
+  console.error("UNHANDLED BACKEND ERROR:", error);
 
   const isDev = process.env.NODE_ENV === "development";
 

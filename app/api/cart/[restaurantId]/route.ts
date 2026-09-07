@@ -20,7 +20,7 @@ export async function POST(request: NextRequest, context: Context) {
     });
     return NextResponse.json(data, { status: 200 });
   } catch (error: unknown) {
-    handleApiError(error, "Unable to update cart");
+    return handleApiError(error, "Unable to update cart");
   }
 }
 
@@ -35,6 +35,6 @@ export async function GET(request: NextRequest, context: Context) {
     });
     return NextResponse.json(data, { status: 200 });
   } catch (error: unknown) {
-    handleApiError(error, "Unable to fetch cart");
+    return handleApiError(error, "Unable to fetch cart");
   }
 }

@@ -11,10 +11,14 @@ import type { CartItem } from "@/types/order";
 export function RestaurantDetailContent({
   menu,
   cartItems,
+  cartId,
+  restaurantId,
   onAddItem,
 }: {
   menu: RestaurantMenu;
   cartItems?: CartItem[];
+  cartId?: number;
+  restaurantId: number;
   onAddItem: (item: MenuItem, quantity: number) => void;
 }) {
   const [activeCategory, setActiveCategory] = useState<number | null>(null);
@@ -67,13 +71,11 @@ export function RestaurantDetailContent({
     setOrder((current) =>
       current
         .map((line) =>
-          line.id === item.id
-            ? { ...line, quantity: line.quantity }
-            : line,
+          line.id === item.id ? { ...line, quantity: amount } : line,
         )
         .filter((line) => line.quantity > 0),
     );
-    onAddItem(item, amount);
+    if (amount > 0) onAddItem(item, amount);
   }
 
   return (
@@ -127,7 +129,12 @@ export function RestaurantDetailContent({
             and may contain common allergens.
           </p>
         </div>
-        <RestaurantOrderPanel items={order} onChange={changeItem} />
+        <RestaurantOrderPanel
+          items={order}
+          cartId={cartId}
+          restaurantId={restaurantId}
+          onChange={changeItem}
+        />
       </div>
     </div>
   );

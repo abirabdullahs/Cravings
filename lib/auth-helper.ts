@@ -1,16 +1,39 @@
 import { auth } from "@/auth";
 import { AppError } from "@/lib/errors/AppError";
 import { ErrorCode } from "@/lib/errors/errorCodes";
+import { getUserByEmail } from "@/server/service/auth.service";
 
-// 1. Base check: Works for ANY logged-in user (Customers, Owners, Riders, Admins)
-export async function getAuthenticatedUser() {
+type AuthenticatedUser = { id: string; email?: string; role?: string };
+
+export async function getCurrentUser(): Promise<AuthenticatedUser | null> {
   const session = await auth();
 
   if (!session?.user?.id) {
+    return null;
+  }
+
+  return session.user as AuthenticatedUser;
+}
+
+// 1. Base check: Works for ANY logged-in user (Customers, Owners, Riders, Admins)
+export async function getAuthenticatedUser() {
+  const user = await getCurrentUser();
+
+  if (!user) {
     throw new AppError(ErrorCode.UNAUTHORIZED);
   }
 
-  return session.user as { id: string; email?: string; role?: string };
+  const databaseUser = user.email ? await getUserByEmail(user.email) : null;
+
+  if (!databaseUser) {
+    throw new AppError(ErrorCode.UNAUTHORIZED);
+  }
+
+  return {
+    id: String(databaseUser.id),
+    email: databaseUser.email,
+    role: databaseUser.role,
+  };
 }
 
 // 2. Owner-only check

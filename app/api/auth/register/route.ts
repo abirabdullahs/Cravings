@@ -32,7 +32,7 @@ export const POST = async (request: Request) => {
     }
     
     return NextResponse.json(
-      { error: "Unable to create account" },
+      { error: "Unable to create account" , message: (error as Error).message },
       { status: 500 },
     );
   }

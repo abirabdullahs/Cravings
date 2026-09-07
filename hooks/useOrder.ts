@@ -1,6 +1,17 @@
-"use client"
-import { create, fetchCartItems, fetchRestaurantDetails } from "@/services/orderService";
-import { CartItemInput } from "@/types/order";
+"use client";
+import {
+  create,
+  fetchAddresses,
+  fetchCartItems,
+  fetchRestaurantDetails,
+  placeOrder,
+} from "@/services/orderService";
+import type {
+  Cart,
+  CartItemInput,
+  CreateOrderInput,
+  UserAddress,
+} from "@/types/order";
 import { Restaurant, RestaurantMenu } from "@/types/restaurant";
 import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query";
 
@@ -13,10 +24,15 @@ export function useRestaurantDetails(restaurantId: number) {
   });
 }
 export function useCartItems(restaurantId: number | null) {
-  return useQuery({
+  return useQuery<Cart[]>({
     queryKey: ["cart", restaurantId],
-    queryFn: () => fetchCartItems( restaurantId ),
-    enabled: !!restaurantId,
+    queryFn: () => fetchCartItems(restaurantId),
+  });
+}
+export function useAddresses() {
+  return useQuery<UserAddress[]>({
+    queryKey: ["addresses"],
+    queryFn: fetchAddresses,
   });
 }
 // Hook for cart mutations
@@ -29,6 +45,12 @@ export function useOrder() {
       await queryClient.invalidateQueries({
         queryKey: ["cart"],
       });
+    },
+  });
+  const placeOrderMutation = useMutation({
+    mutationFn: (input: CreateOrderInput) => placeOrder(input),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["cart"] });
     },
   });
 
@@ -44,5 +66,8 @@ export function useOrder() {
         quantity,
       }),
     isCreating: createCartItemMutation.isPending,
+    placeOrder: (input: CreateOrderInput) =>
+      placeOrderMutation.mutateAsync(input),
+    isPlacingOrder: placeOrderMutation.isPending,
   };
 }

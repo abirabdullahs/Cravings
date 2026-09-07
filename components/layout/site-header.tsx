@@ -3,7 +3,7 @@ import { ShoppingBagIcon } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 import { LocationPill } from "@/components/common/location-pill";
 import { SearchBar } from "@/components/common/search-bar";
-import { getAuthenticatedUser } from "@/lib/auth-helper";
+import { getCurrentUser } from "@/lib/auth-helper";
 import { LogoutButton } from "@/components/auth/logout-button";
 
 type SiteHeaderProps = {
@@ -16,7 +16,7 @@ export async function SiteHeader({
   searchValue = "",
   cartCount = 0,
 }: SiteHeaderProps) {
-  const user  = await getAuthenticatedUser();
+  const user = await getCurrentUser();
   const role = user?.role?.toLowerCase();
   const isGuest = !user;
   const isCustomer = role === "customer";

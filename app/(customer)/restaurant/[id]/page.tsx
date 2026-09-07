@@ -15,7 +15,9 @@ export default function RestaurantPage({
 
   const { createCartItem } = useOrder();
   const { data, isLoading, isError } = useRestaurantDetails(Number(id));
-  const { data: cartItems } = useCartItems(Number(id));
+  const { data: cartData } = useCartItems(Number(id));
+  const cartItems = cartData?.[0]?.cartItems;
+  const cartId = cartData?.[0]?.id;
 
   if (isLoading) {
     return <div>Loading restaurant details...</div>;
@@ -39,6 +41,8 @@ export default function RestaurantPage({
         }
         menu={data.menu}
         cartItems={cartItems}
+        cartId={cartId}
+        restaurantId={data.restaurant.id}
         onAddItem={handleAddCartItem}
       />
     </main>
