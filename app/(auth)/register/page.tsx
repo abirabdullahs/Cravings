@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { signIn } from "next-auth/react";
+import { ArrowRightIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 export default function RegisterPage() {
@@ -77,82 +79,130 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="w-[25%] mx-auto mt-10 p-6 border rounded-lg shadow-md">
-      <h1 className="text-2xl font-bold mb-6">Create an Account</h1>
-
-      {error && (
-        <div className="p-3 mb-4 text-red-700 bg-red-100 rounded">{error}</div>
-      )}
-      <button
-        type="button"
-        onClick={() => signIn("google", { callbackUrl: "/complete-profile" })}
-        className="w-full bg-red-600 text-white p-2 rounded hover:bg-red-700 mt-2"
-      >
-        Sign in with Google
-      </button>
-
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium">Full Name</label>
-          <input
-            name="name"
-            type="text"
-            required
-            className="w-full border p-2 rounded"
-          />
+    <div className="mx-auto flex min-h-[calc(100vh-9rem)] w-full max-w-6xl items-center justify-center px-4 py-12 sm:px-6">
+      <div className="grid w-full max-w-4xl overflow-hidden rounded-lg border border-border bg-card shadow-sm md:grid-cols-[0.9fr_1.1fr]">
+        <div className="hidden flex-col justify-between bg-secondary/60 p-10 md:flex">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+              Join Cravings
+            </p>
+            <h1 className="mt-4 font-serif text-4xl font-bold tracking-tight text-foreground">
+              Your next favorite meal starts here.
+            </h1>
+            <p className="mt-4 max-w-xs text-sm leading-6 text-muted-foreground">
+              Create an account to explore Dhaka&apos;s kitchens and make every order feel personal.
+            </p>
+          </div>
+          <p className="text-sm font-medium text-foreground/70">Cravings<span className="text-primary">.</span></p>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium">Email Address</label>
-          <input
-            name="email"
-            type="email"
-            required
-            className="w-full border p-2 rounded"
-          />
-        </div>
+        <div className="p-6 sm:p-10">
+          <div className="mb-8">
+            <p className="text-sm font-medium text-primary md:hidden">Join Cravings</p>
+            <h2 className="mt-1 font-serif text-3xl font-bold tracking-tight text-foreground">
+              Create an account
+            </h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              A few details and you&apos;re ready to order.
+            </p>
+          </div>
 
-        <div>
-          <label className="block text-sm font-medium">Phone Number</label>
-          <input
-            name="number"
-            type="tel"
-            required
-            className="w-full border p-2 rounded"
-          />
-        </div>
+          {error && (
+            <div className="mb-5 rounded-md border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">
+              {error}
+            </div>
+          )}
 
-        <div>
-          <label className="block text-sm font-medium">Password</label>
-          <input
-            name="password"
-            type="password"
-            required
-            className="w-full border p-2 rounded"
-          />
-        </div>
+          <form onSubmit={handleSubmit} className="grid gap-5">
+            <div className="grid gap-5 sm:grid-cols-2">
+              <label className="grid gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Full name
+                <input
+                  name="name"
+                  type="text"
+                  required
+                  className="h-11 rounded-sm border border-border bg-background px-3 text-sm normal-case tracking-normal text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-ring/30"
+                />
+              </label>
 
-        <div>
-          <label className="block text-sm font-medium">Account Role</label>
-          <select
-            name="role"
-            required
-            className="w-full border p-2 rounded bg-white text-gray-900"
+              <label className="grid gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Phone number
+                <input
+                  name="number"
+                  type="tel"
+                  required
+                  className="h-11 rounded-sm border border-border bg-background px-3 text-sm normal-case tracking-normal text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-ring/30"
+                />
+              </label>
+            </div>
+
+            <label className="grid gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Email address
+              <input
+                name="email"
+                type="email"
+                required
+                className="h-11 rounded-sm border border-border bg-background px-3 text-sm normal-case tracking-normal text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-ring/30"
+              />
+            </label>
+
+            <div className="grid gap-5 sm:grid-cols-2">
+              <label className="grid gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Password
+                <input
+                  name="password"
+                  type="password"
+                  required
+                  className="h-11 rounded-sm border border-border bg-background px-3 text-sm normal-case tracking-normal text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-ring/30"
+                />
+              </label>
+
+              <label className="grid gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Account role
+                <select
+                  name="role"
+                  required
+                  className="h-11 rounded-sm border border-border bg-background px-3 text-sm normal-case tracking-normal text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-ring/30"
+                >
+                  <option value="customer">Customer</option>
+                  <option value="rider">Delivery Rider</option>
+                  <option value="owner">Restaurant Owner</option>
+                </select>
+              </label>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-sm bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {loading ? "Creating account..." : "Create account"}
+              {!loading && <ArrowRightIcon className="size-4" aria-hidden="true" />}
+            </button>
+          </form>
+
+          <div className="my-6 flex items-center gap-3 text-xs uppercase tracking-[0.16em] text-muted-foreground">
+            <span className="h-px flex-1 bg-border" />
+            or
+            <span className="h-px flex-1 bg-border" />
+          </div>
+
+          <button
+            type="button"
+            onClick={() => signIn("google", { callbackUrl: "/complete-profile" })}
+            className="h-11 w-full rounded-sm border border-border bg-background px-4 text-sm font-semibold text-foreground transition hover:border-primary hover:text-primary"
           >
-            <option value="customer">Customer</option>
-            <option value="rider">Delivery Rider</option>
-            <option value="owner">Restaurant Owner</option>
-          </select>
-        </div>
+            Continue with Google
+          </button>
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700 disabled:opacity-50"
-        >
-          {loading ? "Creating Account..." : "Register"}
-        </button>
-      </form>
+          <p className="mt-7 text-center text-sm text-muted-foreground">
+            Already have an account?{" "}
+            <Link href="/login" className="font-semibold text-primary hover:text-primary/80">
+              Sign in
+            </Link>
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
