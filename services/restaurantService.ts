@@ -8,6 +8,7 @@ import type {
   RestaurantInput,
   RestaurantMenu,
 } from "@/types/restaurant";
+import type { RestaurantOrder } from "@/types/order";
 
 export const restaurantService = {
   async list(): Promise<Restaurant[]> {
@@ -35,6 +36,22 @@ export const restaurantService = {
   async getMenu(restaurantId: number): Promise<RestaurantMenu> {
     return apiRequest<RestaurantMenu>(
       `/api/owner/restaurants/${restaurantId}/menu`,
+    );
+  },
+
+  async getOrders(restaurantId: number): Promise<RestaurantOrder[]> {
+    return apiRequest<RestaurantOrder[]>(
+      `/api/owner/restaurants/${restaurantId}/orders`,
+    );
+  },
+
+  async markOrderReady(restaurantId: number, orderId: number) {
+    return apiRequest<{ id: number; orderStatus: string }>(
+      `/api/owner/restaurants/${restaurantId}/orders`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({ orderId, status: "ready" }),
+      },
     );
   },
 
@@ -95,7 +112,4 @@ export const restaurantService = {
       { method: "DELETE" },
     );
   },
-
- 
-
 };

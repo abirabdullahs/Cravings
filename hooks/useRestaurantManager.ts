@@ -4,7 +4,7 @@ import { toErrorMessage } from "@/lib/http";
 import { restaurantService } from "@/services/restaurantService";
 import { MenuItem, MenuItemInput, RestaurantInput } from "@/types/restaurant";
 
-export function useRestaurantManager() {
+export function useRestaurantManager({ includeOrders = false } = {}) {
   const queryClient = useQueryClient();
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [error, setError] = useState("");
@@ -21,6 +21,20 @@ export function useRestaurantManager() {
     queryKey: menuKey,
     queryFn: () => restaurantService.getMenu(selectedRestaurant!.id),
     enabled: Boolean(selectedRestaurant),
+  });
+  const ordersKey = ["owner", "restaurants", selectedRestaurant?.id, "orders"];
+  const ordersQuery = useQuery({
+    queryKey: ordersKey,
+    queryFn: () => restaurantService.getOrders(selectedRestaurant!.id),
+    enabled: includeOrders && Boolean(selectedRestaurant),
+    refetchInterval: 10000,
+  });
+  const readyOrderMutation = useMutation({
+    mutationFn: (orderId: number) =>
+      restaurantService.markOrderReady(selectedRestaurant!.id, orderId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ordersKey }),
+    onError: (reason) =>
+      setError(toErrorMessage(reason, "Could not update order")),
   });
 
   const invalidateMenu = () =>
@@ -108,13 +122,18 @@ export function useRestaurantManager() {
     selectedRestaurant,
     categories: menuQuery.data?.categories ?? [],
     items: menuQuery.data?.items ?? [],
+    orders: ordersQuery.data ?? [],
+    markOrderReady: (orderId: number) =>
+      readyOrderMutation.mutateAsync(orderId),
     error:
       error ||
       (restaurantsQuery.error
         ? toErrorMessage(restaurantsQuery.error, "Could not load restaurants")
         : menuQuery.error
           ? toErrorMessage(menuQuery.error, "Could not load menu")
-          : ""),
+          : ordersQuery.error
+            ? toErrorMessage(ordersQuery.error, "Could not load orders")
+            : ""),
     busy,
     setSelectedId,
     setError,

@@ -17,3 +17,9 @@ export const COMPLETE_USER = `
   WHERE id = $3
   RETURNING *;
 `;
+
+export const INSERT_RIDER_PROFILE = `
+  INSERT INTO riders (user_id)
+  VALUES ($1)
+  RETURNING *;
+`;

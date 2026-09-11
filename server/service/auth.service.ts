@@ -2,6 +2,7 @@ import {
   createUser,
   findUserByEmail,
   completeUser,
+  createRiderProfile,
 } from "../repository/auth.repository";
 import { hashPassword } from "../utils/password";
 import { AppError } from "@/lib/errors/AppError";
@@ -49,6 +50,10 @@ export const createAccount = async (user: {
     phone: user.phone,
     role,
   });
+
+  if(role === "rider") {
+    await createRiderProfile(data.id);
+  }
   return data;
 };
 

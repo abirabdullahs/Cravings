@@ -9,7 +9,7 @@ import {
 } from "@/types/order";
 import { Restaurant, RestaurantMenu } from "@/types/restaurant";
 
-export const create = async (input: CartItemInput): Promise<CartItem> => {
+export const createCartItem = async (input: CartItemInput): Promise<CartItem> => {
   return apiRequest<CartItem>(`/api/cart/${input.restaurantId}`, {
     method: "POST",
     body: JSON.stringify(input),
@@ -31,8 +31,8 @@ export const fetchCartItems = async (
   );
 };
 
-export const fetchAddresses = async (): Promise<UserAddress[]> =>
-  apiRequest<UserAddress[]>("/api/addresses");
+// export const fetchAddresses = async (): Promise<UserAddress[]> =>
+//   apiRequest<UserAddress[]>("/api/addresses");
 
 export const placeOrder = async (
   input: CreateOrderInput,

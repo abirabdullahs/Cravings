@@ -23,13 +23,15 @@ export interface CartItemInput {
 }
 
 export interface UserAddress {
-  id: number;
+  id?: number;
   label?: string;
   address: string;
   street?: string;
   apartmentName?: string;
   city: string;
   postalCode?: string;
+  longitude?: number | null;
+  latitude?: number | null;
 }
 
 export interface CreateOrderInput {
@@ -46,4 +48,13 @@ export interface CreatedOrder {
   deliveryFee: number;
   discount: number;
   status: string;
+}
+
+export interface RestaurantOrder {
+  id: number;
+  customerName: string;
+  orderStatus: string;
+  createdAt: string;
+  totalItems: number;
+  totalAmount?: number;
 }

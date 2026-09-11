@@ -3,7 +3,13 @@ import { AppError } from "@/lib/errors/AppError";
 import { ErrorCode } from "@/lib/errors/errorCodes";
 import { getUserByEmail } from "@/server/service/auth.service";
 
-type AuthenticatedUser = { id: string; email?: string; role?: string };
+export type AuthenticatedUser = {
+  id: string;
+  email?: string;
+  role?: string;
+  name?: string | null;
+  profileImage?: string | null;
+};
 
 export async function getCurrentUser(): Promise<AuthenticatedUser | null> {
   const session = await auth();

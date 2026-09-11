@@ -1,35 +1,103 @@
 export const CALL_CREATE_ORDER_PROCEDURE = `
 CALL creation_of_order($1, $2, $3, $4, $5, NULL);
 `;
-//all orders of one user
 export const GET_USER_ORDERS = `
 SELECT 
-  O.id, 
-  R.name restaurant_name, 
-  O.total_amount, 
-  O.status, 
-  O.created_at,
-  COUNT(OI.id) total_items
-FROM orders O
-JOIN restaurants R ON R.id = O.restaurant_id
-LEFT JOIN order_items OI ON OI.order_id = O.id
-WHERE O.user_id = $1
-GROUP BY O.id, R.name
-ORDER BY O.created_at DESC
+  o.id, 
+  r.name AS restaurant_name, 
+  o.total_amount, 
+  o.order_status, 
+  o.created_at,
+  COUNT(oi.id)::int AS total_items
+FROM orders o
+JOIN restaurants r ON r.id = o.restaurant_id
+LEFT JOIN order_items oi ON oi.order_id = o.id
+WHERE o.user_id = $1
+GROUP BY o.id, r.name
+ORDER BY o.created_at DESC;
 `;
-//orders of one restaurant
 
-//order detail of one
-export const FIND_ORDER_DETAIL = 
- `SELECT o.id, r.name AS restaurant_name, mi.name AS menu_item_name, oi.quantity, oi.unit_price, oi.subtotal  
-  FROM orders O JOIN restaurants R ON R.id = O.restaurant_id
-  LEFT JOIN orderItems OI ON O.id = OI.order_id
-  JOIN menuItems MI ON MI.id = OI.menu_item_id
-  WHERE O.id = $1
-  ;`;
+export const GET_RESTAURANT_ORDERS = `
+SELECT 
+  o.id, 
+  u.name AS customer_name, 
+  o.total_amount, 
+  o.order_status, 
+  o.created_at,
+  COUNT(oi.id)::int AS total_items
+FROM orders o
+JOIN users u ON u.id = o.user_id
+LEFT JOIN order_items oi ON oi.order_id = o.id
+WHERE o.restaurant_id = $1
+  AND o.order_status IN ('pending', 'confirmed', 'preparing', 'ready')
+GROUP BY o.id, u.name
+ORDER BY o.created_at DESC;
+`;
+
+export const MARK_ORDER_READY = `
+UPDATE orders
+SET order_status = 'ready'
+WHERE id = $1
+  AND restaurant_id = $2
+  AND order_status IN ('pending', 'confirmed', 'preparing')
+RETURNING id, order_status;
+`;
+
+export const FIND_ORDER_DETAIL = `
+SELECT 
+  o.id AS order_id, 
+  r.name AS restaurant_name, 
+  mi.item_name AS menu_item_name, 
+  oi.quantity, 
+  oi.unit_price, 
+  oi.subtotal
+FROM orders o
+JOIN restaurants r ON r.id = o.restaurant_id
+LEFT JOIN order_items oi ON o.id = oi.order_id
+JOIN menu_items mi ON mi.id = oi.menu_item_id
+WHERE o.id = $1;
+`;
+
+export const GET_ORDER_RECEIPT = `
+SELECT
+  oi.id,
+  mi.item_name AS name,
+  oi.quantity,
+  oi.unit_price,
+  oi.subtotal
+FROM orders o
+JOIN order_items oi ON oi.order_id = o.id
+JOIN menu_items mi ON mi.id = oi.menu_item_id
+WHERE o.id = $1 AND o.user_id = $2
+ORDER BY oi.id;
+`;
+
+export const GET_ORDER_TRACKING_FOR_CUSTOMER = `
+SELECT
+  o.id AS order_id,
+  o.order_status,
+  d.status AS delivery_status,
+  d.assigned_at,
+  r.name AS restaurant_name,
+  r.address AS restaurant_address,
+  r.phone AS restaurant_phone,
+  ua.address AS dropoff_address,
+  rider_user.name AS rider_name,
+  rider_user.phone AS rider_phone,
+  o.total_amount,
+  p.payment_method,
+  (SELECT COUNT(*)::int FROM order_items oi WHERE oi.order_id = o.id) AS item_count
+FROM orders o
+JOIN restaurants r ON r.id = o.restaurant_id
+JOIN user_addresses ua ON ua.id = o.address_id
+LEFT JOIN deliveries d ON d.order_id = o.id
+LEFT JOIN users rider_user ON rider_user.id = d.rider_id
+LEFT JOIN payments p ON p.order_id = o.id
+WHERE o.id = $1 AND o.user_id = $2
+`;
 
 //cancel order by user
-export const CANCEL_ORDER = `UPDATE orders SET status = 'CANCELLED' WHERE id = $1 AND user_id = $2 RETURNING *;`;
+export const CANCEL_ORDER = `UPDATE orders SET order_status = 'cancelled' WHERE id = $1 AND user_id = $2 RETURNING *;`;
 export const CANCEL_DELIVERY_ON_ORDER_CANCEL = `
 UPDATE deliveries
 SET status = 'cancelled'

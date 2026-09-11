@@ -12,7 +12,7 @@ CREATE TYPE rider_status_enum AS ENUM (
 );
 
 CREATE TYPE order_status_enum AS ENUM (
-  'pending',
+  -- 'pending',
   'confirmed',
   'preparing',
   'ready',
@@ -24,6 +24,7 @@ CREATE TYPE order_status_enum AS ENUM (
 CREATE TYPE delivery_status_enum AS ENUM (
   'unassigned',
   'accepted',
+  'arrived_at_store',
   'picked_up',
   'delivered',
   'cancelled'

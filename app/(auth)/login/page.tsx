@@ -1,5 +1,4 @@
 "use client";
-
 import { useState } from "react";
 import Link from "next/link";
 import { getSession, signIn } from "next-auth/react";
@@ -46,6 +45,7 @@ export default function LoginPage() {
       }
 
       const session = await getSession();
+      router.refresh();
       router.push(getRoleBasedRedirect(session?.user?.role ?? "customer"));
     } catch {
       setError("Unable to sign in right now. Please try again.");

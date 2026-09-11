@@ -63,8 +63,7 @@ export default function RegisterPage() {
       if (signInRes?.error) {
         throw new Error("Account created, but failed to log in automatically.");
       }
-
-      // Redirect to role-based home page
+      router.refresh();
       const redirectPath = getRoleBasedRedirect(role);
       router.push(redirectPath);
     } catch (err: unknown) {

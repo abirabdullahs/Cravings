@@ -1,6 +1,12 @@
 import { AppError } from "@/lib/errors/AppError";
 import { ErrorCode } from "@/lib/errors/errorCodes";
-import { createOrder } from "../repository/order.repository";
+import {
+  createOrder,
+  findOrderTrackingForCustomer,
+  findOrderReceipt,
+  findRestaurantOrders,
+  markOrderReady,
+} from "../repository/order.repository";
 
 const paymentMethods = new Set([
   "card",
@@ -40,3 +46,17 @@ export const placeOrder = async ({
     paymentMethod,
   });
 };
+
+export const getOrderTrackingForCustomer = async (
+  orderId: number,
+  customerId: number,
+) => await findOrderTrackingForCustomer(orderId, customerId);
+
+export const getOrderReceipt = (orderId: number, customerId: number) =>
+  findOrderReceipt(orderId, customerId);
+
+export const getActiveRestaurantOrders = (restaurantId: number) =>
+  findRestaurantOrders(restaurantId);
+
+export const setOrderReady = (orderId: number, restaurantId: number) =>
+  markOrderReady(orderId, restaurantId);

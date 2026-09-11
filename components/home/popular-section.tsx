@@ -1,7 +1,6 @@
-import { restaurants } from "@/lib/restaurants";
 import { SectionHeading } from "@/components/common/section-heading";
 import { RestaurantCard } from "@/components/restaurant/restaurant-card";
-
+import { restaurants } from "@/lib/restaurants"
 export function PopularSection() {
   return (
     <section className="px-2 pb-16 pt-8 sm:px-14">

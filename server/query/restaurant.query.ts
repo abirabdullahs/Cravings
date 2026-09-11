@@ -92,21 +92,21 @@ GROUP BY restaurant_id
 
 export const RESTAURANT_ACCEPT_ORDER = `
 UPDATE orders
-SET status = 'preparing'
+SET order_status = 'preparing'
 WHERE id = $1 AND restaurant_id = $2
-RETURNING id, status;
+RETURNING id, order_status;
 `;
 
 export const RESTAURANT_MARK_READY = `
 UPDATE orders
-SET status = 'ready'
+SET order_status = 'ready'
 WHERE id = $1 AND restaurant_id = $2
-RETURNING id, status;
+RETURNING id, order_status;
 `;
 
 export const RESTAURANT_CANCEL_ORDER = `
 UPDATE orders
-SET status = 'cancelled'
+SET order_status = 'cancelled'
 WHERE id = $1 AND restaurant_id = $2
-RETURNING id, status;
+RETURNING id, order_status;
 `;

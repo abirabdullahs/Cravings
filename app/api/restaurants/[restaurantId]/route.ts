@@ -8,10 +8,8 @@ export async function GET(request: Request, { params }: Context) {
     const { restaurantId } = await params;
     const restaurant = await getRestaurantDetails(restaurantId);
 
-    return new NextResponse(JSON.stringify(restaurant), {
-      headers: { "Content-Type": "application/json" },
-    });
+    return NextResponse.json(restaurant, { status: 200 });
   } catch (err) {
-    handleApiError(err, "Unable to fetch restaurant");
+    return handleApiError(err, "Unable to fetch restaurant");
   }
 }

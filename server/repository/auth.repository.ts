@@ -3,6 +3,7 @@ import {
   FIND_USER_BY_EMAIL,
   INSERT_USER,
   COMPLETE_USER,
+  INSERT_RIDER_PROFILE,
 } from "../query/auth.query";
 import { User } from "../../types/user";
 
@@ -28,5 +29,12 @@ export const completeUser = async ({
 }) => {
   const data = [role, phone, id];
   const result = await pool.query(COMPLETE_USER, data);
+  return result.rows[0];
+};
+
+
+
+export const createRiderProfile = async (riderId: number) => {
+  const result = await pool.query(INSERT_RIDER_PROFILE, [riderId]);
   return result.rows[0];
 };

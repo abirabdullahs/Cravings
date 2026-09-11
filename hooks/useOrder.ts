@@ -1,7 +1,6 @@
 "use client";
 import {
-  create,
-  fetchAddresses,
+  createCartItem,
   fetchCartItems,
   fetchRestaurantDetails,
   placeOrder,
@@ -29,18 +28,13 @@ export function useCartItems(restaurantId: number | null) {
     queryFn: () => fetchCartItems(restaurantId),
   });
 }
-export function useAddresses() {
-  return useQuery<UserAddress[]>({
-    queryKey: ["addresses"],
-    queryFn: fetchAddresses,
-  });
-}
+
 // Hook for cart mutations
 export function useOrder() {
   const queryClient = useQueryClient();
 
   const createCartItemMutation = useMutation({
-    mutationFn: (input: CartItemInput) => create(input),
+    mutationFn: (input: CartItemInput) => createCartItem(input),
     onSuccess: async () => {
       await queryClient.invalidateQueries({
         queryKey: ["cart"],
