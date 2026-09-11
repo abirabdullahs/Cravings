@@ -36,6 +36,12 @@ CREATE TYPE payment_status_enum AS ENUM (
   'refunded'
 );
 
+CREATE TYPE role_request_status_enum AS ENUM (
+  'PENDING',
+  'APPROVED',
+  'REJECTED'
+);
+
 CREATE TYPE discount_type_enum AS ENUM (
   'percentage',
   'fixed_amount'
@@ -302,6 +308,31 @@ CREATE TABLE reviews (
 );
 
 CREATE INDEX ix_reviews_restaurant ON reviews (restaurant_id);
+
+CREATE TABLE role_requests (
+  id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  user_id INT NOT NULL,
+  source_role role_enum NOT NULL DEFAULT 'customer',
+  requested_role role_enum NOT NULL,
+  status role_request_status_enum NOT NULL DEFAULT 'PENDING',
+  details TEXT,
+  review_note TEXT,
+  rejection_reason TEXT,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  reviewed_at TIMESTAMP,
+  reviewed_by INT,
+  updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  CONSTRAINT fk_role_requests_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE DEFERRABLE INITIALLY IMMEDIATE,
+  CONSTRAINT fk_role_requests_reviewer FOREIGN KEY (reviewed_by) REFERENCES users (id) ON DELETE SET NULL DEFERRABLE INITIALLY IMMEDIATE,
+  CONSTRAINT chk_role_request_requested_role CHECK (requested_role IN ('owner', 'rider'))
+);
+
+CREATE INDEX ix_role_requests_user ON role_requests (user_id, status, created_at);
+CREATE INDEX ix_role_requests_status ON role_requests (status, requested_role);
+
+CREATE TRIGGER trg_role_requests_updated_at
+  BEFORE UPDATE ON role_requests
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 CREATE TABLE notifications (
   id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
