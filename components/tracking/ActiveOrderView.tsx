@@ -30,15 +30,14 @@ const NEXT_STEP: Partial<
 };
 
 function useElapsedMinutes(since: string | null) {
-  const [minutes, setMinutes] = useState(() => elapsedSince(since));
+  const [, setTick] = useState(0);
 
   useEffect(() => {
-    setMinutes(elapsedSince(since));
-    const interval = setInterval(() => setMinutes(elapsedSince(since)), 30000);
+    const interval = setInterval(() => setTick((value) => value + 1), 30000);
     return () => clearInterval(interval);
   }, [since]);
 
-  return minutes;
+  return elapsedSince(since);
 }
 
 function elapsedSince(iso: string | null): number {

@@ -35,6 +35,8 @@ export function AddressFormDialog({
 
   useEffect(() => {
     if (isOpen) {
+      // This effect intentionally resets local draft state when the dialog opens or its source changes.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFormData(
         initialAddress ? { ...EMPTY_FORM, ...initialAddress } : EMPTY_FORM,
       );

@@ -1,0 +1,266 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Image from "next/image";
+
+type Role = "admin" | "owner" | "rider" | "customer";
+
+type UserProfile = {
+  id: number;
+  name: string;
+  email: string;
+  phone: string;
+  profile_image?: string | null;
+  role: Role;
+  created_at: string;
+  account_status?: string;
+  address?: string;
+  requested_role?: string;
+  history: Array<{ title: string; detail: string; timestamp?: string }>;
+};
+
+export default function ProfilePage() {
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [form, setForm] = useState({ name: "", phone: "", profile_image: "" });
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const response = await fetch("/api/profile");
+        if (!response.ok) {
+          throw new Error("Unable to load profile");
+        }
+        const payload = await response.json();
+        setProfile(payload.profile);
+        setForm({
+          name: payload.profile.name ?? "",
+          phone: payload.profile.phone ?? "",
+          profile_image: payload.profile.profile_image ?? "",
+        });
+      } catch (loadError) {
+        setError(
+          loadError instanceof Error
+            ? loadError.message
+            : "Unable to load profile",
+        );
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    void load();
+  }, []);
+
+  async function saveProfile(event: React.FormEvent) {
+    event.preventDefault();
+    setSaving(true);
+    setError("");
+    try {
+      const response = await fetch("/api/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(form),
+      });
+      if (!response.ok) {
+        throw new Error("Unable to update profile");
+      }
+      const payload = await response.json();
+      setProfile(payload.profile);
+    } catch (saveError) {
+      setError(
+        saveError instanceof Error
+          ? saveError.message
+          : "Unable to update profile",
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (loading) {
+    return <div className="mx-auto max-w-6xl px-4 py-8">Loading profile…</div>;
+  }
+
+  if (!profile) {
+    return (
+      <div className="mx-auto max-w-6xl px-4 py-8 text-red-600">
+        {error || "Profile unavailable"}
+      </div>
+    );
+  }
+
+  const roleTitle =
+    profile.role === "owner"
+      ? "Restaurant Owner"
+      : profile.role === "rider"
+        ? "Rider"
+        : profile.role === "admin"
+          ? "Admin"
+          : "Customer";
+
+  return (
+    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
+      <div className="mb-8 flex flex-wrap items-center justify-between gap-4 border-b border-border pb-7">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
+            {roleTitle} profile
+          </p>
+          <h1 className="mt-2 font-serif text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+            My profile
+          </h1>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="rounded-full border border-border px-3 py-1 text-xs font-semibold uppercase tracking-wide">
+            {profile.role}
+          </span>
+          <span className="rounded-full border border-emerald-600/70 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-emerald-600">
+            {profile.account_status ?? "active"}
+          </span>
+        </div>
+      </div>
+
+      {error && (
+        <p className="mb-6 rounded border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+          {error}
+        </p>
+      )}
+
+      <section className="grid gap-8 lg:grid-cols-[320px_1fr]">
+        <aside className="rounded border border-border bg-card p-6">
+          <div className="flex flex-col items-center">
+            <Image
+              className="h-28 w-28 rounded-full border border-border object-cover"
+              src={profile.profile_image || "/placeholder-user.jpg"}
+              alt={`${profile.name} profile photo`}
+              width={112}
+              height={112}
+            />
+            <h2 className="mt-4 font-serif text-2xl font-bold">
+              {profile.name}
+            </h2>
+            <p className="text-sm text-muted-foreground">{profile.email}</p>
+            <div className="mt-4 flex flex-wrap gap-2 text-xs">
+              <span className="rounded px-2 py-1 bg-secondary">
+                {roleTitle}
+              </span>
+              <span className="rounded px-2 py-1 bg-secondary">
+                Joined {new Date(profile.created_at).toLocaleDateString()}
+              </span>
+            </div>
+          </div>
+          <dl className="mt-8 space-y-3 text-sm">
+            <div className="flex justify-between gap-4 border-b border-border pb-2">
+              <dt className="text-muted-foreground">Phone</dt>
+              <dd className="font-semibold">{profile.phone || "Not set"}</dd>
+            </div>
+            <div className="flex justify-between gap-4 border-b border-border pb-2">
+              <dt className="text-muted-foreground">Address</dt>
+              <dd className="font-semibold text-right">
+                {profile.address || "No saved address"}
+              </dd>
+            </div>
+            <div className="flex justify-between gap-4 border-b border-border pb-2">
+              <dt className="text-muted-foreground">Account status</dt>
+              <dd className="font-semibold">
+                {profile.account_status ?? "active"}
+              </dd>
+            </div>
+          </dl>
+        </aside>
+
+        <main className="space-y-8">
+          <section className="rounded border border-border bg-card p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="font-serif text-2xl font-bold">Edit profile</h2>
+            </div>
+            <form onSubmit={saveProfile} className="grid gap-4 md:grid-cols-2">
+              <label className="block">
+                <span className="mb-2 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Full name
+                </span>
+                <input
+                  className="w-full border border-border bg-background px-3 py-2"
+                  value={form.name}
+                  onChange={(event) =>
+                    setForm({ ...form, name: event.target.value })
+                  }
+                />
+              </label>
+              <label className="block">
+                <span className="mb-2 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Phone
+                </span>
+                <input
+                  className="w-full border border-border bg-background px-3 py-2"
+                  value={form.phone}
+                  onChange={(event) =>
+                    setForm({ ...form, phone: event.target.value })
+                  }
+                />
+              </label>
+              <label className="block md:col-span-2">
+                <span className="mb-2 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Profile image URL
+                </span>
+                <input
+                  className="w-full border border-border bg-background px-3 py-2"
+                  value={form.profile_image}
+                  onChange={(event) =>
+                    setForm({ ...form, profile_image: event.target.value })
+                  }
+                />
+              </label>
+              <div className="md:col-span-2">
+                <button
+                  disabled={saving}
+                  className="rounded bg-primary px-4 py-2 font-semibold text-primary-foreground"
+                >
+                  {saving ? "Saving..." : "Save profile"}
+                </button>
+              </div>
+            </form>
+          </section>
+
+          <section className="rounded border border-border bg-card p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="font-serif text-2xl font-bold">
+                Latest history / recent activity
+              </h2>
+              <span className="text-xs uppercase tracking-wide text-muted-foreground">
+                {profile.role}
+              </span>
+            </div>
+            <div className="space-y-3">
+              {profile.history.length === 0 && (
+                <p className="text-sm text-muted-foreground">
+                  No recent activity found.
+                </p>
+              )}
+              {profile.history.map((item, index) => (
+                <div
+                  key={index}
+                  className="flex items-start justify-between border-b border-border py-3 last:border-0"
+                >
+                  <div>
+                    <div className="font-semibold">{item.title}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {item.detail}
+                    </div>
+                  </div>
+                  {item.timestamp && (
+                    <span className="text-xs text-muted-foreground">
+                      {new Date(item.timestamp).toLocaleDateString()}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+        </main>
+      </section>
+    </div>
+  );
+}

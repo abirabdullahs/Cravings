@@ -10,17 +10,19 @@ interface IncomingOrderCardProps {
 }
 
 function useMinutesAgo(iso: string) {
-  const [minutes, setMinutes] = useState(() => minutesSince(iso));
+  const [, setTick] = useState(0);
   useEffect(() => {
-    setMinutes(minutesSince(iso));
-    const interval = setInterval(() => setMinutes(minutesSince(iso)), 30000);
+    const interval = setInterval(() => setTick((value) => value + 1), 30000);
     return () => clearInterval(interval);
   }, [iso]);
-  return minutes;
+  return minutesSince(iso);
 }
 
 function minutesSince(iso: string): number {
-  return Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
+  return Math.max(
+    0,
+    Math.round((Date.now() - new Date(iso).getTime()) / 60000),
+  );
 }
 
 // NOTE: the original design had pickup/dropoff addresses, distance, ETA,
@@ -60,7 +62,9 @@ export function IncomingOrderCard({
         </span>
       </div>
 
-      <p className="mt-2 text-xs text-muted-foreground">Order #{opportunity.orderId}</p>
+      <p className="mt-2 text-xs text-muted-foreground">
+        Order #{opportunity.orderId}
+      </p>
 
       <div className="mt-5 flex gap-3">
         <button

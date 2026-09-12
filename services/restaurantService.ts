@@ -1,5 +1,4 @@
 import { apiRequest } from "@/lib/http";
-import { getRestaurantDetails } from "@/server/service/restaurant.service";
 import type {
   MenuCategory,
   MenuItem,

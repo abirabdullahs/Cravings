@@ -5,12 +5,7 @@ import {
   fetchRestaurantDetails,
   placeOrder,
 } from "@/services/orderService";
-import type {
-  Cart,
-  CartItemInput,
-  CreateOrderInput,
-  UserAddress,
-} from "@/types/order";
+import type { Cart, CartItemInput, CreateOrderInput } from "@/types/order";
 import { Restaurant, RestaurantMenu } from "@/types/restaurant";
 import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query";
 

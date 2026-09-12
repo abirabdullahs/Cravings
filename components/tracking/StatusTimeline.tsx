@@ -1,5 +1,5 @@
 import { Check } from "lucide-react";
-import { DELIVERY_STEPS, type DeliveryStep } from "@/types/delivery-tracking";
+import { DELIVERY_STEPS } from "@/types/delivery-tracking";
 
 export interface TimelineStep {
   key: string;

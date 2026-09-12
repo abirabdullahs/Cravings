@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { MapPinIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AddressFormDialog } from "./AddressFormDialog";
@@ -24,14 +24,11 @@ export function AddressSelectionModal({
   const { addresses, loading, addAddress, isAdding } = useAddressManager();
   const [isFormOpen, setIsFormOpen] = useState(false);
 
-  const [mounted, setMounted] = useState(false);
-
-  // Ensures code only runs on the client side to avoid SSR hydration mismatches
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // ... keep your state & handlers unchanged (formData, errors, handleSubmit, etc.)
+  const mounted = useSyncExternalStore(
+    () => () => undefined,
+    () => true,
+    () => false,
+  );
 
   if (!isOpen || !mounted) return null;
 
@@ -110,7 +107,8 @@ export function AddressSelectionModal({
         }}
         isLoading={isAdding}
       />
-    </>, document.body
+    </>,
+    document.body,
   );
 }
 

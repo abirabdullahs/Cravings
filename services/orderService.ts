@@ -5,11 +5,12 @@ import {
   CartItemInput,
   CreateOrderInput,
   CreatedOrder,
-  UserAddress,
 } from "@/types/order";
 import { Restaurant, RestaurantMenu } from "@/types/restaurant";
 
-export const createCartItem = async (input: CartItemInput): Promise<CartItem> => {
+export const createCartItem = async (
+  input: CartItemInput,
+): Promise<CartItem> => {
   return apiRequest<CartItem>(`/api/cart/${input.restaurantId}`, {
     method: "POST",
     body: JSON.stringify(input),

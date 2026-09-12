@@ -3,7 +3,6 @@ import Link from "next/link";
 import { ClockIcon } from "lucide-react";
 import type { RestaurantSummary } from "@/types/restaurant";
 import { Rating } from "@/components/common/rating";
-import { RestaurantBadgePill } from "@/components/common/restaurant-badge";
 import { cn } from "@/lib/utils";
 
 type RestaurantCardProps = {
