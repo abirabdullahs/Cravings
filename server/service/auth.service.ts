@@ -50,6 +50,7 @@ export const createAccount = async (user: {
   password: string;
   phone: string;
   role: string;
+  verificationData?: Record<string, unknown>;
 }) => {
   const requestedRole = normalizeRole(user.role);
 
@@ -78,6 +79,7 @@ export const createAccount = async (user: {
       currentRole: "customer",
       requestedRole,
       details: `Role request submitted for ${requestedRole}. Pending admin approval.`,
+      verificationData: user.verificationData ?? {},
     });
   }
 
@@ -144,10 +146,29 @@ export const submitRoleRequest = async ({
   });
 };
 
+type RoleRequestRow = {
+  id?: string | number;
+  user_id?: string | number;
+  source_role?: string;
+  requested_role?: string;
+  requestedRole?: string;
+  status?: string;
+  details?: string;
+  verification_data?: Record<string, unknown>;
+  created_at?: string;
+  reviewed_at?: string | null;
+  review_note?: string;
+  rejection_reason?: string;
+  requester_name?: string;
+  requester_email?: string;
+  requester_phone?: string;
+  source_role_from_user?: string;
+};
+
 export const listRequests = async (filters?: { status?: string; requestedRole?: string }) => {
   const rows = await listRoleRequests();
-  return rows.filter((row: any) => {
-    if (filters?.status && String(row.status).toUpperCase() !== String(filters.status).toUpperCase()) {
+  return rows.filter((row: RoleRequestRow) => {
+    if (filters?.status && String(row.status ?? "").toUpperCase() !== String(filters.status).toUpperCase()) {
       return false;
     }
     if (filters?.requestedRole && String(row.requested_role ?? row.requestedRole ?? "").toLowerCase() !== String(filters.requestedRole).toLowerCase()) {

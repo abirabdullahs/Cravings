@@ -90,7 +90,6 @@ export default function ProfilePage() {
 
   const roleTitle = profile.role === "owner" ? "Restaurant Owner" : profile.role === "rider" ? "Rider" : profile.role === "admin" ? "Admin" : "Customer";
   const applicationStatus = profile.application?.status?.toUpperCase();
-  const requestedRole = profile.application?.requested_role ?? profile.requested_role ?? profile.role;
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">

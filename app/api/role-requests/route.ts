@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 import { NextResponse } from "next/server";
-import { submitRoleRequest, listRequests, reviewRoleRequest } from "@/server/service/auth.service";
+import { submitRoleRequest, listRequests } from "@/server/service/auth.service";
 
 export async function POST(request: Request) {
   const session = await auth();

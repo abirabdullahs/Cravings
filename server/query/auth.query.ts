@@ -46,6 +46,7 @@ export const LIST_ROLE_REQUESTS = `
     rr.requested_role,
     rr.status,
     rr.details,
+    rr.verification_data,
     rr.created_at,
     rr.reviewed_at,
     rr.review_note,
