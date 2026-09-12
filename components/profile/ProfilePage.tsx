@@ -15,7 +15,16 @@ type UserProfile = {
   account_status?: string;
   address?: string;
   requested_role?: string;
-  history: Array<{ title: string; detail: string; timestamp?: string }>; 
+  application?: {
+    id: number;
+    status: string;
+    requested_role: string;
+    source_role: string;
+    verification_data?: Record<string, unknown>;
+    rejection_reason?: string;
+    created_at?: string;
+  } | null;
+  history: Array<{ title: string; detail: string; timestamp?: string }>;
 };
 
 export default function ProfilePage() {
@@ -80,6 +89,8 @@ export default function ProfilePage() {
   }
 
   const roleTitle = profile.role === "owner" ? "Restaurant Owner" : profile.role === "rider" ? "Rider" : profile.role === "admin" ? "Admin" : "Customer";
+  const applicationStatus = profile.application?.status?.toUpperCase();
+  const requestedRole = profile.application?.requested_role ?? profile.requested_role ?? profile.role;
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
@@ -95,6 +106,37 @@ export default function ProfilePage() {
       </div>
 
       {error && <p className="mb-6 rounded border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
+
+      {profile.application && (
+        <section className="mb-6 rounded border border-border bg-card p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-primary">Role application</span>
+              <div className="mt-2 font-serif text-2xl font-bold">
+                {applicationStatus === "PENDING" && "Application Under Review. Rider/Owner features will unlock once approved."}
+                {applicationStatus === "REJECTED" && "Application rejected"}
+                {applicationStatus === "APPROVED" && "Role application approved"}
+              </div>
+            </div>
+            <span className="rounded-full border border-border px-3 py-1 text-xs font-semibold uppercase tracking-wide">{profile.application.status}</span>
+          </div>
+          {applicationStatus === "REJECTED" && profile.application.rejection_reason && (
+            <div className="mt-3 rounded border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+              Rejection reason: {profile.application.rejection_reason}
+            </div>
+          )}
+          {profile.application.verification_data && Object.keys(profile.application.verification_data).length > 0 && (
+            <div className="mt-4 grid gap-2 sm:grid-cols-2">
+              {Object.entries(profile.application.verification_data).map(([key, value]) => (
+                <div key={key} className="rounded border border-border bg-background px-3 py-2 text-sm">
+                  <span className="block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{key}</span>
+                  <span className="block text-foreground">{String(value)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       <section className="grid gap-8 lg:grid-cols-[320px_1fr]">
         <aside className="rounded border border-border bg-card p-6">

@@ -8,6 +8,7 @@ import {
   updateRoleRequestStatus,
   approveRoleRequest,
   updateUserProfile,
+  findRoleRequestByUser,
   getRoleRequestById,
 } from "../repository/auth.repository";
 import { hashPassword } from "../utils/password";
@@ -87,12 +88,26 @@ export const completeProfile = async ({
   role,
   phone,
   id,
+  verificationData,
 }: {
   role: string;
   phone: string;
   id: string;
+  verificationData?: Record<string, unknown>;
 }) => {
-  const data = await completeUser({ role: normalizeRole(role), phone, id });
+  const normalizedRole = normalizeRole(role);
+  const data = await completeUser({ role: normalizedRole === "owner" || normalizedRole === "rider" ? "customer" : normalizedRole, phone, id });
+
+  if (normalizedRole === "owner" || normalizedRole === "rider") {
+    await createRoleRequest({
+      userId: String(id),
+      currentRole: "customer",
+      requestedRole: normalizedRole,
+      details: `Role request submitted for ${normalizedRole}. Pending admin approval.`,
+      verificationData,
+    });
+  }
+
   return data;
 };
 
@@ -101,11 +116,13 @@ export const submitRoleRequest = async ({
   currentRole,
   requestedRole,
   details,
+  verificationData,
 }: {
   userId: string;
   currentRole: string;
   requestedRole: string;
   details?: string;
+  verificationData?: Record<string, unknown>;
 }) => {
   const normalizedRequestedRole = normalizeRole(requestedRole);
   const normalizedCurrentRole = normalizeRole(currentRole);
@@ -123,6 +140,7 @@ export const submitRoleRequest = async ({
     currentRole: normalizedCurrentRole,
     requestedRole: normalizedRequestedRole,
     details,
+    verificationData,
   });
 };
 
@@ -137,6 +155,10 @@ export const listRequests = async (filters?: { status?: string; requestedRole?: 
     }
     return true;
   });
+};
+
+export const getRoleRequestForUser = async (userId: string) => {
+  return await findRoleRequestByUser(userId);
 };
 
 export const getRequestById = async (id: string) => {
