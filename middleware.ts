@@ -13,18 +13,17 @@ export async function middleware(request: NextRequest) {
 
   const role = String(session.user.role ?? "customer").toLowerCase();
   const userId = String(session.user.id ?? "");
+  const isRiderRoute = pathname.startsWith("/rider");
+  const isRestaurantRoute = pathname.startsWith("/restaurant");
 
-  if (pathname.startsWith("/rider") && role !== "rider") {
+  const expectedRole = isRiderRoute ? "rider" : isRestaurantRoute ? "owner" : "";
+  if (expectedRole && role !== expectedRole) {
     return NextResponse.redirect(new URL("/unauthorized", request.url));
   }
 
-  if (pathname.startsWith("/restaurant") && role !== "owner") {
-    return NextResponse.redirect(new URL("/unauthorized", request.url));
-  }
-
-  if (pathname.startsWith("/rider") || pathname.startsWith("/restaurant")) {
+  if (expectedRole) {
     const requestRow = await findRoleRequestByUser(userId);
-    const approved = requestRow?.status === "APPROVED" && requestRow?.requested_role === (pathname.startsWith("/rider") ? "rider" : "owner");
+    const approved = requestRow?.status === "APPROVED" && requestRow?.requested_role === expectedRole;
     if (!approved) {
       return NextResponse.redirect(new URL("/unauthorized", request.url));
     }

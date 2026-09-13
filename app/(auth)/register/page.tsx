@@ -37,13 +37,13 @@ export default function RegisterPage() {
     const roleToSubmit = String(role ?? "customer").toLowerCase();
     const verificationData = roleToSubmit === "owner" || roleToSubmit === "rider"
       ? {
-          nid: String(formData.get("nid") ?? ""),
-          vehicleType: String(formData.get("vehicleType") ?? ""),
-          vehiclePlate: String(formData.get("vehiclePlate") ?? ""),
-          licenseNumber: String(formData.get("licenseNumber") ?? ""),
-          restaurantName: String(formData.get("restaurantName") ?? ""),
-          businessAddress: String(formData.get("businessAddress") ?? ""),
-          tradeLicense: String(formData.get("tradeLicense") ?? ""),
+          nid_number: String(formData.get("nid") ?? ""),
+          vehicle_type: String(formData.get("vehicleType") ?? ""),
+          vehicle_plate: String(formData.get("vehiclePlate") ?? ""),
+          license_number: String(formData.get("licenseNumber") ?? ""),
+          restaurant_name: String(formData.get("restaurantName") ?? ""),
+          business_address: String(formData.get("businessAddress") ?? ""),
+          trade_license: String(formData.get("tradeLicense") ?? ""),
         }
       : {};
 

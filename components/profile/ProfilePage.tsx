@@ -31,6 +31,7 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [resubmitting, setResubmitting] = useState(false);
   const [error, setError] = useState("");
   const [form, setForm] = useState({ name: "", phone: "", profile_image: "" });
 
@@ -80,6 +81,55 @@ export default function ProfilePage() {
     }
   }
 
+  async function resubmitRoleRequest() {
+    if (!profile?.application?.requested_role) {
+      return;
+    }
+
+    setResubmitting(true);
+    setError("");
+    try {
+      const response = await fetch("/api/role-requests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          requestedRole: profile.application.requested_role,
+          details: "Role request resubmitted for review.",
+          verificationData: profile.application.verification_data ?? {},
+        }),
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({ error: "Unable to resubmit request" }));
+        throw new Error(payload.error || "Unable to resubmit request");
+      }
+
+      const payload = await response.json();
+      setProfile((current) => current ? {
+        ...current,
+        application: {
+          ...(current.application ?? {
+            id: 0,
+            status: "PENDING",
+            requested_role: profile.application.requested_role,
+            source_role: profile.role,
+            verification_data: profile.application.verification_data ?? {},
+            rejection_reason: "",
+            created_at: new Date().toISOString(),
+          }),
+          ...payload.request,
+          status: payload.request?.status ?? "PENDING",
+          verification_data: payload.request?.verification_data ?? profile.application.verification_data ?? {},
+          rejection_reason: payload.request?.rejection_reason ?? "",
+        },
+      } : current);
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : "Unable to resubmit request");
+    } finally {
+      setResubmitting(false);
+    }
+  }
+
   if (loading) {
     return <div className="mx-auto max-w-6xl px-4 py-8">Loading profile…</div>;
   }
@@ -122,6 +172,18 @@ export default function ProfilePage() {
           {applicationStatus === "REJECTED" && profile.application.rejection_reason && (
             <div className="mt-3 rounded border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
               Rejection reason: {profile.application.rejection_reason}
+            </div>
+          )}
+          {applicationStatus === "REJECTED" && (
+            <div className="mt-3 flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={() => void resubmitRoleRequest()}
+                disabled={resubmitting}
+                className="rounded bg-primary px-4 py-2 text-xs font-bold uppercase tracking-wide text-primary-foreground disabled:opacity-50"
+              >
+                {resubmitting ? "Resubmitting..." : "Re-submit application"}
+              </button>
             </div>
           )}
           {profile.application.verification_data && Object.keys(profile.application.verification_data).length > 0 && (

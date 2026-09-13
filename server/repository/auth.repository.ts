@@ -72,6 +72,10 @@ export const findActiveRoleRequestByUser = async (userId: string) => {
   return result.rows[0];
 };
 
+export const findRoleRequestByUser = async (userId: string) => {
+  return await findActiveRoleRequestByUser(userId);
+};
+
 export const listRoleRequests = async () => {
   const result = await pool.query(LIST_ROLE_REQUESTS);
   return result.rows;
