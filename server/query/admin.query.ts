@@ -42,6 +42,36 @@ FROM users
 WHERE role = 'rider'
 `;
 
+export const GET_ADMIN_USERS = `
+SELECT u.id, u.name, u.email, u.phone, u.role, u.created_at,
+       COUNT(DISTINCT o.id)::int AS order_count,
+       COUNT(DISTINCT uc.id)::int AS coupon_count,
+       COUNT(DISTINCT rr.id)::int AS role_request_count
+FROM users u
+LEFT JOIN orders o ON o.user_id = u.id
+LEFT JOIN user_coupons uc ON uc.user_id = u.id
+LEFT JOIN role_requests rr ON rr.user_id = u.id
+WHERE ($1::text = '' OR u.role::text = $1)
+  AND ($2::text = '' OR u.name ILIKE '%' || $2 || '%' OR u.email ILIKE '%' || $2 || '%' OR COALESCE(u.phone, '') ILIKE '%' || $2 || '%')
+GROUP BY u.id
+ORDER BY u.created_at DESC
+LIMIT $3 OFFSET $4
+`;
+
+export const GET_ADMIN_USER_DETAILS = `
+SELECT u.id, u.name, u.email, u.phone, u.role, u.created_at,
+       COUNT(DISTINCT o.id)::int AS order_count,
+       COALESCE(SUM(CASE WHEN o.order_status <> 'cancelled' THEN o.total_amount ELSE 0 END), 0) AS total_spend,
+       COUNT(DISTINCT uc.id)::int AS coupon_count,
+       COUNT(DISTINCT rr.id)::int AS role_request_count
+FROM users u
+LEFT JOIN orders o ON o.user_id = u.id
+LEFT JOIN user_coupons uc ON uc.user_id = u.id
+LEFT JOIN role_requests rr ON rr.user_id = u.id
+WHERE u.id = $1
+GROUP BY u.id
+`;
+
 export const GET_WEEKLY_PLATFORM_PROFIT = `
 SELECT DATE_TRUNC('week', created_at) AS week,
        COUNT(*) AS order_count,

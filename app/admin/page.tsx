@@ -9,6 +9,7 @@ type Report = { products: { id: number; name: string; total_sold: string; total_
 type ReviewRequest = { id: number; user_id: number; source_role: string; requested_role: string; status: string; details: string | null; verification_data?: Record<string, unknown>; created_at: string; reviewed_at?: string | null; review_note?: string | null; rejection_reason?: string | null; requester_name?: string; requester_email?: string; requester_phone?: string | null };
 type Coupon = { id: number; code: string; discount_type: string; discount_value: string; minimum_order: string; expiry_date: string | null; assigned_count: number };
 type Customer = { id: number; name: string; email: string };
+type AdminUser = { id: number; name: string; email: string; phone: string | null; role: string; created_at: string; order_count: number; coupon_count: number; role_request_count: number };
 
 const money = (value: string | number) => `৳${Number(value || 0).toLocaleString()}`;
 
@@ -24,6 +25,11 @@ export default function AdminDashboard() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [couponForm, setCouponForm] = useState({ code: "", discountType: "percentage", discountValue: "", minimumOrder: "0", expiryDate: "", assignMode: "all", userIds: [] as number[] });
   const [couponSaving, setCouponSaving] = useState(false);
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [userRole, setUserRole] = useState("");
+  const [userSearch, setUserSearch] = useState("");
+  const [userLoading, setUserLoading] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -51,6 +57,24 @@ export default function AdminDashboard() {
     }
     void load();
   }, [range]);
+
+  useEffect(() => {
+    async function loadUsers() {
+      setUserLoading(true);
+      try {
+        const query = new URLSearchParams({ role: userRole, search: userSearch });
+        const response = await fetch(`/api/admin/users?${query}`);
+        if (!response.ok) throw new Error("Could not load users");
+        setUsers((await response.json()).users ?? []);
+      } catch (loadError) {
+        setError(loadError instanceof Error ? loadError.message : "Could not load users");
+      } finally {
+        setUserLoading(false);
+      }
+    }
+    const timer = window.setTimeout(() => void loadUsers(), 250);
+    return () => window.clearTimeout(timer);
+  }, [userRole, userSearch]);
 
   async function openRestaurant(restaurant: Restaurant) {
     setSelectedRestaurant(restaurant);
@@ -137,6 +161,14 @@ export default function AdminDashboard() {
           ))}
         </div>
       </section>}
+      <section className="mt-10">
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+          <div><h2 className="font-serif text-2xl font-bold">Users</h2><p className="mt-1 text-sm text-muted-foreground">Search customers, owners, riders, and admins.</p></div>
+          <div className="flex gap-2"><input value={userSearch} onChange={(event) => setUserSearch(event.target.value)} placeholder="Search name, email, phone" className="h-10 w-64 border border-border bg-card px-3 text-sm" /><select value={userRole} onChange={(event) => setUserRole(event.target.value)} className="h-10 border border-border bg-card px-3 text-sm"><option value="">All roles</option><option value="customer">Customers</option><option value="owner">Owners</option><option value="rider">Riders</option><option value="admin">Admins</option></select></div>
+        </div>
+        <div className="overflow-x-auto border border-border bg-card"><table className="w-full min-w-190 text-left text-sm"><thead className="border-b border-border bg-secondary/50 text-xs uppercase tracking-wide text-muted-foreground"><tr><th className="px-4 py-3">User</th><th className="px-4 py-3">Role</th><th className="px-4 py-3">Orders</th><th className="px-4 py-3">Coupons</th><th className="px-4 py-3">Joined</th></tr></thead><tbody>{users.map((user) => <tr key={user.id} onClick={() => setSelectedUser(user)} className="cursor-pointer border-b border-border last:border-0 hover:bg-secondary/40"><td className="px-4 py-4"><strong>{user.name}</strong><span className="mt-1 block text-xs text-muted-foreground">{user.email} · {user.phone || "No phone"}</span></td><td className="px-4 py-4"><span className="rounded-full border border-border px-2 py-1 text-xs font-semibold uppercase">{user.role}</span></td><td className="px-4 py-4">{user.order_count}</td><td className="px-4 py-4">{user.coupon_count}</td><td className="px-4 py-4">{new Date(user.created_at).toLocaleDateString()}</td></tr>)}{!userLoading && !users.length && <tr><td colSpan={5} className="p-6 text-center text-sm text-muted-foreground">No users found.</td></tr>}</tbody></table>{userLoading && <p className="p-4 text-sm text-muted-foreground">Loading users...</p>}</div>
+        {selectedUser && <div className="mt-4 border border-border bg-card p-5"><div className="flex items-start justify-between gap-4"><div><h3 className="font-serif text-xl font-bold">{selectedUser.name}</h3><p className="mt-1 text-sm text-muted-foreground">{selectedUser.email} · {selectedUser.phone || "No phone"}</p></div><button onClick={() => setSelectedUser(null)} className="text-sm text-muted-foreground hover:text-foreground">Close</button></div><div className="mt-4 grid gap-3 sm:grid-cols-4"><Metric label="Role" value={selectedUser.role} /><Metric label="Orders" value={selectedUser.order_count} /><Metric label="Coupons" value={selectedUser.coupon_count} /><Metric label="Role requests" value={selectedUser.role_request_count} /></div></div>}
+      </section>
       <section className="mt-10 grid gap-8 lg:grid-cols-[360px_1fr]">
         <div className="border border-border bg-card p-6"><h2 className="font-serif text-2xl font-bold">Create coupon</h2><form onSubmit={createCoupon} className="mt-5 space-y-4"><input required placeholder="Coupon code" value={couponForm.code} onChange={(event) => setCouponForm({ ...couponForm, code: event.target.value })} className="w-full border border-border bg-background px-3 py-2 text-sm uppercase" /><div className="grid grid-cols-2 gap-3"><select value={couponForm.discountType} onChange={(event) => setCouponForm({ ...couponForm, discountType: event.target.value })} className="border border-border bg-background px-3 py-2 text-sm"><option value="percentage">Percentage</option><option value="fixed_amount">Fixed amount</option></select><input required min="0.01" step="0.01" type="number" placeholder="Value" value={couponForm.discountValue} onChange={(event) => setCouponForm({ ...couponForm, discountValue: event.target.value })} className="border border-border bg-background px-3 py-2 text-sm" /></div><div className="grid grid-cols-2 gap-3"><input min="0" step="0.01" type="number" placeholder="Minimum order" value={couponForm.minimumOrder} onChange={(event) => setCouponForm({ ...couponForm, minimumOrder: event.target.value })} className="border border-border bg-background px-3 py-2 text-sm" /><input type="date" value={couponForm.expiryDate} onChange={(event) => setCouponForm({ ...couponForm, expiryDate: event.target.value })} className="border border-border bg-background px-3 py-2 text-sm" /></div><select value={couponForm.assignMode} onChange={(event) => setCouponForm({ ...couponForm, assignMode: event.target.value, userIds: [] })} className="w-full border border-border bg-background px-3 py-2 text-sm"><option value="all">Assign to all customers</option><option value="specific">Assign to specific customers</option></select>{couponForm.assignMode === "specific" && <select required multiple value={couponForm.userIds.map(String)} onChange={(event) => setCouponForm({ ...couponForm, userIds: Array.from(event.target.selectedOptions, (option) => Number(option.value)) })} className="h-28 w-full border border-border bg-background px-3 py-2 text-sm">{customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.name} · {customer.email}</option>)}</select>}<button disabled={couponSaving} className="w-full rounded bg-primary px-4 py-2 text-sm font-bold text-primary-foreground disabled:opacity-50">{couponSaving ? "Creating..." : "Create and assign coupon"}</button></form></div>
         <div><div className="mb-4 flex items-center justify-between"><h2 className="font-serif text-2xl font-bold">Coupons</h2><span className="text-sm text-muted-foreground">{coupons.length} defined</span></div><div className="border border-border bg-card">{coupons.map((coupon) => <div key={coupon.id} className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-4 last:border-0"><div><strong>{coupon.code}</strong><p className="mt-1 text-xs text-muted-foreground">{coupon.discount_type === "percentage" ? `${coupon.discount_value}% off` : `৳${coupon.discount_value} off`} · Minimum ৳{coupon.minimum_order}</p></div><div className="text-right text-xs text-muted-foreground"><div>{coupon.assigned_count} customers</div><div>{coupon.expiry_date ? `Expires ${new Date(coupon.expiry_date).toLocaleDateString()}` : "No expiry"}</div></div></div>)}{!coupons.length && <p className="p-4 text-sm text-muted-foreground">No coupons defined yet.</p>}</div></div>
