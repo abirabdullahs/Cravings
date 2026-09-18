@@ -11,6 +11,14 @@ GROUP BY r.id, u.name, u.phone
 ORDER BY r.name
 `;
 
+export const UPDATE_RESTAURANT_STATUS_BY_ADMIN = `
+UPDATE restaurants
+SET active_status = $2,
+    updated_at = NOW()
+WHERE id = $1
+RETURNING id, active_status
+`;
+
 export const GET_RESTAURANT_PRODUCT_SALES = `
 SELECT p.id, p.name, p.price,
        COUNT(oi.id) AS total_sold,
