@@ -136,8 +136,8 @@ export const GET_ADMIN_ORDER_DETAILS = `
 SELECT o.id, o.total_amount, o.delivery_fee, o.discount, o.order_status, o.created_at,
        u.name AS customer_name, u.email AS customer_email, u.phone AS customer_phone,
        r.name AS restaurant_name, r.address AS restaurant_address,
-       p.status AS payment_status, p.payment_method, p.transaction_id,
-       d.status AS delivery_status, rider.name AS rider_name, rider.phone AS rider_phone
+      p.status AS payment_status, p.payment_method, p.transaction_id,
+      d.status AS delivery_status, d.rider_id, rider.name AS rider_name, rider.phone AS rider_phone
 FROM orders o
 JOIN users u ON u.id = o.user_id
 JOIN restaurants r ON r.id = o.restaurant_id
@@ -153,6 +153,23 @@ FROM order_items oi
 JOIN menu_items mi ON mi.id = oi.menu_item_id
 WHERE oi.order_id = $1
 ORDER BY oi.id
+`;
+
+export const UPDATE_ADMIN_ORDER_STATUS = `
+UPDATE orders
+SET order_status = $2, updated_at = NOW()
+WHERE id = $1
+RETURNING id, order_status
+`;
+
+export const ASSIGN_ADMIN_ORDER_RIDER = `
+UPDATE deliveries
+SET rider_id = $2,
+    status = CASE WHEN $2 IS NULL THEN 'unassigned'::delivery_status_enum ELSE 'accepted'::delivery_status_enum END,
+    assigned_at = CASE WHEN $2 IS NULL THEN NULL ELSE COALESCE(assigned_at, NOW()) END,
+    updated_at = NOW()
+WHERE order_id = $1
+RETURNING order_id, rider_id, status
 `;
 
 export const GET_WEEKLY_PLATFORM_PROFIT = `
