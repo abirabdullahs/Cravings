@@ -14,6 +14,7 @@ type AdminOrder = { id: number; total_amount: string; delivery_fee: string; disc
 type AdminOrderDetail = AdminOrder & { customer_phone: string | null; restaurant_address: string; transaction_id: string | null; rider_phone: string | null };
 type AdminOrderItem = { id: number; item_name: string; quantity: number; unit_price: string; subtotal: string };
 type AdminReview = { id: number; rating: number; comment: string | null; created_at: string; customer_name: string; customer_email: string; restaurant_name: string; order_id: number };
+type AdminAnalytics = { total_orders: number; completed_orders: number; cancelled_orders: number; active_customers: number; average_order_value: string; total_discounts: string; cancellation_rate: number };
 
 const money = (value: string | number) => `৳${Number(value || 0).toLocaleString()}`;
 
@@ -45,6 +46,7 @@ export default function AdminDashboard() {
   const [notificationSaving, setNotificationSaving] = useState(false);
   const [reviews, setReviews] = useState<AdminReview[]>([]);
   const [reviewRating, setReviewRating] = useState("0");
+  const [analytics, setAnalytics] = useState<AdminAnalytics | null>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -56,6 +58,7 @@ export default function AdminDashboard() {
           fetch(`/api/admin/profit?range=${range}`),
           fetch("/api/admin/requests"),
           fetch("/api/admin/coupons"),
+          fetch(`/api/admin/analytics?range=${range}`),
         ]);
         if (!responses.every((response) => response.ok)) throw new Error("Could not load admin data");
         setRestaurants((await responses[0].json()).restaurants);
@@ -66,6 +69,7 @@ export default function AdminDashboard() {
         const couponPayload = await responses[4].json();
         setCoupons(couponPayload.coupons ?? []);
         setCustomers(couponPayload.users ?? []);
+        setAnalytics(await responses[5].json());
       } catch (loadError) {
         setError(loadError instanceof Error ? loadError.message : "Could not load admin data");
       }
@@ -217,6 +221,7 @@ export default function AdminDashboard() {
       </div>
       {error && <p className="mb-6 border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"><Metric label="Restaurants" value={restaurants.length} /><Metric label="Riders" value={riders.length} /><Metric label="Product sales" value={money(profit?.totals.product_sales ?? 0)} /><Metric label="Platform profit" value={money(profit?.totals.platform_profit ?? 0)} /></div>
+      <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-5"><Metric label="Orders" value={analytics?.total_orders ?? 0} /><Metric label="Completed" value={analytics?.completed_orders ?? 0} /><Metric label="Active customers" value={analytics?.active_customers ?? 0} /><Metric label="Average order" value={money(analytics?.average_order_value ?? 0)} /><Metric label="Cancellation rate" value={`${Number(analytics?.cancellation_rate ?? 0).toFixed(1)}%`} /></div>
       <div className="mt-10 grid gap-10 lg:grid-cols-[1fr_300px]">
         <section><div className="mb-4 flex items-center justify-between"><h2 className="font-serif text-2xl font-bold">Restaurants</h2><span className="text-sm text-muted-foreground">{restaurants.length} listed</span></div><div className="overflow-x-auto border border-border bg-card"><table className="w-full min-w-190 text-left text-sm"><thead className="border-b border-border bg-secondary/50 text-xs uppercase tracking-wide text-muted-foreground"><tr><th className="px-4 py-3">Restaurant</th><th className="px-4 py-3">Owner</th><th className="px-4 py-3">Products</th><th className="px-4 py-3">Orders</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Action</th></tr></thead><tbody>{restaurants.map((restaurant) => <tr key={restaurant.id} onClick={() => void openRestaurant(restaurant)} className="cursor-pointer border-b border-border last:border-0 hover:bg-secondary/40"><td className="px-4 py-4"><strong>{restaurant.name}</strong><span className="mt-1 block text-xs text-muted-foreground">{restaurant.address}</span></td><td className="px-4 py-4">{restaurant.owner_name}<span className="mt-1 block text-xs text-muted-foreground">{restaurant.owner_phone || "No phone"}</span></td><td className="px-4 py-4">{restaurant.product_count}</td><td className="px-4 py-4">{restaurant.order_count}</td><td className="px-4 py-4">{restaurant.active_status ? "Active" : "Inactive"}</td><td className="px-4 py-4"><button onClick={(event) => { event.stopPropagation(); void toggleRestaurant(restaurant); }} className="text-xs font-bold text-primary hover:underline">{restaurant.active_status ? "Deactivate" : "Activate"}</button></td></tr>)}</tbody></table></div></section>
         <section><h2 className="mb-4 font-serif text-2xl font-bold">Riders</h2><div className="border border-border bg-card">{riders.map((rider) => <div key={rider.id} className="border-b border-border px-4 py-4 text-sm last:border-0"><div className="flex items-center justify-between gap-3"><span className="font-semibold">{rider.name}</span><select value={rider.status} onChange={(event) => void updateRiderStatus(rider.id, event.target.value as Rider["status"])} className="border border-border bg-background px-2 py-1 text-xs uppercase"><option value="offline">Offline</option><option value="idle">Available</option><option value="busy">Busy</option></select></div><span className="mt-1 block text-xs text-muted-foreground">{rider.phone || "No phone"} · {rider.vehicle_type} · {rider.vehicle_number}</span></div>)}{!riders.length && <p className="p-4 text-sm text-muted-foreground">No riders found.</p>}</div></section>

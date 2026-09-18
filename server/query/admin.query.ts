@@ -56,6 +56,18 @@ ORDER BY rv.created_at DESC
 LIMIT $2
 `;
 
+export const GET_ADMIN_ANALYTICS = `
+SELECT
+  COUNT(*)::int AS total_orders,
+  COUNT(*) FILTER (WHERE order_status = 'delivered')::int AS completed_orders,
+  COUNT(*) FILTER (WHERE order_status = 'cancelled')::int AS cancelled_orders,
+  COUNT(DISTINCT user_id)::int AS active_customers,
+  COALESCE(AVG(total_amount) FILTER (WHERE order_status <> 'cancelled'), 0) AS average_order_value,
+  COALESCE(SUM(discount) FILTER (WHERE order_status <> 'cancelled'), 0) AS total_discounts
+FROM orders
+WHERE created_at >= NOW() - ($1::int * INTERVAL '1 day')
+`;
+
 export const GET_ALL_RIDERS = `
 SELECT u.id, u.name, u.phone, r.vehicle_type, r.vehicle_number, r.status
 FROM users u
