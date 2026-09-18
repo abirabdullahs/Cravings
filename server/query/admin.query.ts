@@ -44,6 +44,18 @@ ORDER BY rv.created_at DESC
 LIMIT 100
 `;
 
+export const GET_ADMIN_REVIEWS = `
+SELECT rv.id, rv.rating, rv.comment, rv.created_at,
+       u.name AS customer_name, u.email AS customer_email,
+       r.name AS restaurant_name, rv.order_id
+FROM reviews rv
+JOIN users u ON u.id = rv.user_id
+JOIN restaurants r ON r.id = rv.restaurant_id
+WHERE ($1::int = 0 OR rv.rating = $1)
+ORDER BY rv.created_at DESC
+LIMIT $2
+`;
+
 export const GET_ALL_RIDERS = `
 SELECT u.id, u.name, u.phone, r.vehicle_type, r.vehicle_number, r.status
 FROM users u

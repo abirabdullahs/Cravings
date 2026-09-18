@@ -13,6 +13,7 @@ type AdminUser = { id: number; name: string; email: string; phone: string | null
 type AdminOrder = { id: number; total_amount: string; delivery_fee: string; discount: string; order_status: string; created_at: string; customer_name: string; customer_email: string; restaurant_name: string; payment_status: string | null; payment_method: string | null; delivery_status: string | null; rider_name: string | null };
 type AdminOrderDetail = AdminOrder & { customer_phone: string | null; restaurant_address: string; transaction_id: string | null; rider_phone: string | null };
 type AdminOrderItem = { id: number; item_name: string; quantity: number; unit_price: string; subtotal: string };
+type AdminReview = { id: number; rating: number; comment: string | null; created_at: string; customer_name: string; customer_email: string; restaurant_name: string; order_id: number };
 
 const money = (value: string | number) => `৳${Number(value || 0).toLocaleString()}`;
 
@@ -40,6 +41,8 @@ export default function AdminDashboard() {
   const [orderLoading, setOrderLoading] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<AdminOrderDetail | null>(null);
   const [selectedOrderItems, setSelectedOrderItems] = useState<AdminOrderItem[]>([]);
+  const [reviews, setReviews] = useState<AdminReview[]>([]);
+  const [reviewRating, setReviewRating] = useState("0");
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -102,6 +105,19 @@ export default function AdminDashboard() {
     }
     void loadOrders();
   }, [orderStatus, paymentStatus, deliveryStatus]);
+
+  useEffect(() => {
+    async function loadReviews() {
+      try {
+        const response = await fetch(`/api/admin/reviews?rating=${reviewRating}`);
+        if (!response.ok) throw new Error("Could not load reviews");
+        setReviews((await response.json()).reviews ?? []);
+      } catch (loadError) {
+        setError(loadError instanceof Error ? loadError.message : "Could not load reviews");
+      }
+    }
+    void loadReviews();
+  }, [reviewRating]);
 
   async function openOrder(orderId: number) {
     const response = await fetch(`/api/admin/orders/${orderId}`);
@@ -225,6 +241,10 @@ export default function AdminDashboard() {
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3"><div><h2 className="font-serif text-2xl font-bold">Orders</h2><p className="mt-1 text-sm text-muted-foreground">Monitor order, payment, and delivery progress.</p></div><div className="flex flex-wrap gap-2"><select value={orderStatus} onChange={(event) => setOrderStatus(event.target.value)} className="h-10 border border-border bg-card px-3 text-sm"><option value="">All order statuses</option><option value="pending">Pending</option><option value="confirmed">Confirmed</option><option value="preparing">Preparing</option><option value="ready">Ready</option><option value="out_for_delivery">Out for delivery</option><option value="delivered">Delivered</option><option value="cancelled">Cancelled</option></select><select value={paymentStatus} onChange={(event) => setPaymentStatus(event.target.value)} className="h-10 border border-border bg-card px-3 text-sm"><option value="">All payments</option><option value="pending">Payment pending</option><option value="completed">Paid</option><option value="failed">Failed</option><option value="refunded">Refunded</option></select><select value={deliveryStatus} onChange={(event) => setDeliveryStatus(event.target.value)} className="h-10 border border-border bg-card px-3 text-sm"><option value="">All deliveries</option><option value="unassigned">Unassigned</option><option value="accepted">Accepted</option><option value="picked_up">Picked up</option><option value="delivered">Delivered</option><option value="cancelled">Cancelled</option></select></div></div>
         <div className="overflow-x-auto border border-border bg-card"><table className="w-full min-w-240 text-left text-sm"><thead className="border-b border-border bg-secondary/50 text-xs uppercase tracking-wide text-muted-foreground"><tr><th className="px-4 py-3">Order</th><th className="px-4 py-3">Customer</th><th className="px-4 py-3">Restaurant</th><th className="px-4 py-3">Amount</th><th className="px-4 py-3">Order status</th><th className="px-4 py-3">Payment</th><th className="px-4 py-3">Delivery</th></tr></thead><tbody>{orders.map((order) => <tr key={order.id} onClick={() => void openOrder(order.id)} className="cursor-pointer border-b border-border last:border-0 hover:bg-secondary/40"><td className="px-4 py-4 font-semibold">#{order.id}<span className="mt-1 block text-xs font-normal text-muted-foreground">{new Date(order.created_at).toLocaleString()}</span></td><td className="px-4 py-4">{order.customer_name}<span className="mt-1 block text-xs text-muted-foreground">{order.customer_email}</span></td><td className="px-4 py-4">{order.restaurant_name}</td><td className="px-4 py-4">{money(order.total_amount)}</td><td className="px-4 py-4"><span className="rounded-full border border-border px-2 py-1 text-xs font-semibold uppercase">{order.order_status}</span></td><td className="px-4 py-4">{order.payment_status || "Not recorded"}</td><td className="px-4 py-4">{order.delivery_status || "Not recorded"}</td></tr>)}{!orderLoading && !orders.length && <tr><td colSpan={7} className="p-6 text-center text-sm text-muted-foreground">No orders found.</td></tr>}</tbody></table>{orderLoading && <p className="p-4 text-sm text-muted-foreground">Loading orders...</p>}</div>
         {selectedOrder && <div className="mt-4 border border-border bg-card p-5"><div className="flex items-start justify-between gap-4"><div><h3 className="font-serif text-xl font-bold">Order #{selectedOrder.id}</h3><p className="mt-1 text-sm text-muted-foreground">{selectedOrder.customer_name} · {selectedOrder.customer_email} · {selectedOrder.restaurant_name}</p></div><button onClick={() => setSelectedOrder(null)} className="text-sm text-muted-foreground hover:text-foreground">Close</button></div><div className="mt-4 grid gap-3 sm:grid-cols-4"><Metric label="Total" value={money(selectedOrder.total_amount)} /><Metric label="Order status" value={selectedOrder.order_status} /><Metric label="Payment" value={selectedOrder.payment_status || "Unknown"} /><Metric label="Delivery" value={selectedOrder.delivery_status || "Unknown"} /></div><div className="mt-5 grid gap-6 lg:grid-cols-2"><div><h4 className="mb-2 font-semibold">Items</h4>{selectedOrderItems.map((item) => <div key={item.id} className="flex justify-between border-b border-border py-2 text-sm"><span>{item.item_name} × {item.quantity}</span><span>{money(item.subtotal)}</span></div>)}</div><div className="text-sm"><h4 className="mb-2 font-semibold">Payment and delivery</h4><p>Method: {selectedOrder.payment_method || "Not recorded"}</p><p>Transaction: {selectedOrder.transaction_id || "Not recorded"}</p><p>Rider: {selectedOrder.rider_name || "Unassigned"}</p><p>Phone: {selectedOrder.rider_phone || "Not available"}</p></div></div></div>}
+      </section>
+      <section className="mt-10">
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-3"><div><h2 className="font-serif text-2xl font-bold">Reviews</h2><p className="mt-1 text-sm text-muted-foreground">Monitor customer feedback across the platform.</p></div><select value={reviewRating} onChange={(event) => setReviewRating(event.target.value)} className="h-10 border border-border bg-card px-3 text-sm"><option value="0">All ratings</option><option value="1">1 star</option><option value="2">2 stars</option><option value="3">3 stars</option><option value="4">4 stars</option><option value="5">5 stars</option></select></div>
+        <div className="grid gap-3 md:grid-cols-2">{reviews.map((review) => <article key={review.id} className="border border-border bg-card p-4"><div className="flex items-start justify-between gap-3"><div><strong>{review.restaurant_name}</strong><p className="mt-1 text-xs text-muted-foreground">{review.customer_name} · Order #{review.order_id}</p></div><span className="font-semibold text-primary">{review.rating}/5</span></div><p className="mt-3 text-sm text-foreground">{review.comment || "No comment"}</p><p className="mt-3 text-xs text-muted-foreground">{new Date(review.created_at).toLocaleString()} · {review.customer_email}</p></article>)}{!reviews.length && <p className="border border-border bg-card p-6 text-sm text-muted-foreground">No reviews found.</p>}</div>
       </section>
       <section className="mt-10">
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
