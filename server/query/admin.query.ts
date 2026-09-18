@@ -45,9 +45,18 @@ LIMIT 100
 `;
 
 export const GET_ALL_RIDERS = `
-SELECT id, name, phone
-FROM users
-WHERE role = 'rider'
+SELECT u.id, u.name, u.phone, r.vehicle_type, r.vehicle_number, r.status
+FROM users u
+JOIN riders r ON r.user_id = u.id
+WHERE u.role = 'rider'
+ORDER BY u.name
+`;
+
+export const UPDATE_RIDER_STATUS_BY_ADMIN = `
+UPDATE riders
+SET status = $2, updated_at = NOW()
+WHERE user_id = $1
+RETURNING user_id AS id, status
 `;
 
 export const GET_ADMIN_USERS = `

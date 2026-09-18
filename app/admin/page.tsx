@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 type Restaurant = { id: number; name: string; address: string; owner_name: string; owner_phone: string | null; active_status: boolean; product_count: string; order_count: string };
-type Rider = { id: number; name: string; phone: string | null };
+type Rider = { id: number; name: string; phone: string | null; vehicle_type: string; vehicle_number: string; status: "offline" | "idle" | "busy" };
 type Profit = { totals: { product_sales: string; platform_profit: string }; restaurants: { id: number; name: string; order_count: string; total_sales: string; admin_profit: string }[] };
 type Report = { products: { id: number; name: string; total_sold: string; total_revenue: string }[]; reviews: { id: number; customer_name: string; rating: number; comment: string | null }[] };
 type ReviewRequest = { id: number; user_id: number; source_role: string; requested_role: string; status: string; details: string | null; verification_data?: Record<string, unknown>; created_at: string; reviewed_at?: string | null; review_note?: string | null; rejection_reason?: string | null; requester_name?: string; requester_email?: string; requester_phone?: string | null };
@@ -131,6 +131,17 @@ export default function AdminDashboard() {
     }
   }
 
+  async function updateRiderStatus(riderId: number, status: Rider["status"]) {
+    try {
+      const response = await fetch("/api/admin/riders", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ riderId, status }) });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Could not update rider status");
+      setRiders((current) => current.map((rider) => rider.id === riderId ? { ...rider, status: payload.rider.status } : rider));
+    } catch (statusError) {
+      setError(statusError instanceof Error ? statusError.message : "Could not update rider status");
+    }
+  }
+
   async function createCoupon(event: React.FormEvent) {
     event.preventDefault();
     setCouponSaving(true);
@@ -173,7 +184,7 @@ export default function AdminDashboard() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"><Metric label="Restaurants" value={restaurants.length} /><Metric label="Riders" value={riders.length} /><Metric label="Product sales" value={money(profit?.totals.product_sales ?? 0)} /><Metric label="Platform profit" value={money(profit?.totals.platform_profit ?? 0)} /></div>
       <div className="mt-10 grid gap-10 lg:grid-cols-[1fr_300px]">
         <section><div className="mb-4 flex items-center justify-between"><h2 className="font-serif text-2xl font-bold">Restaurants</h2><span className="text-sm text-muted-foreground">{restaurants.length} listed</span></div><div className="overflow-x-auto border border-border bg-card"><table className="w-full min-w-190 text-left text-sm"><thead className="border-b border-border bg-secondary/50 text-xs uppercase tracking-wide text-muted-foreground"><tr><th className="px-4 py-3">Restaurant</th><th className="px-4 py-3">Owner</th><th className="px-4 py-3">Products</th><th className="px-4 py-3">Orders</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Action</th></tr></thead><tbody>{restaurants.map((restaurant) => <tr key={restaurant.id} onClick={() => void openRestaurant(restaurant)} className="cursor-pointer border-b border-border last:border-0 hover:bg-secondary/40"><td className="px-4 py-4"><strong>{restaurant.name}</strong><span className="mt-1 block text-xs text-muted-foreground">{restaurant.address}</span></td><td className="px-4 py-4">{restaurant.owner_name}<span className="mt-1 block text-xs text-muted-foreground">{restaurant.owner_phone || "No phone"}</span></td><td className="px-4 py-4">{restaurant.product_count}</td><td className="px-4 py-4">{restaurant.order_count}</td><td className="px-4 py-4">{restaurant.active_status ? "Active" : "Inactive"}</td><td className="px-4 py-4"><button onClick={(event) => { event.stopPropagation(); void toggleRestaurant(restaurant); }} className="text-xs font-bold text-primary hover:underline">{restaurant.active_status ? "Deactivate" : "Activate"}</button></td></tr>)}</tbody></table></div></section>
-        <section><h2 className="mb-4 font-serif text-2xl font-bold">Riders</h2><div className="border border-border bg-card">{riders.map((rider) => <div key={rider.id} className="flex justify-between border-b border-border px-4 py-4 text-sm last:border-0"><span className="font-semibold">{rider.name}</span><span className="text-muted-foreground">{rider.phone || "No phone"}</span></div>)}{!riders.length && <p className="p-4 text-sm text-muted-foreground">No riders found.</p>}</div></section>
+        <section><h2 className="mb-4 font-serif text-2xl font-bold">Riders</h2><div className="border border-border bg-card">{riders.map((rider) => <div key={rider.id} className="border-b border-border px-4 py-4 text-sm last:border-0"><div className="flex items-center justify-between gap-3"><span className="font-semibold">{rider.name}</span><select value={rider.status} onChange={(event) => void updateRiderStatus(rider.id, event.target.value as Rider["status"])} className="border border-border bg-background px-2 py-1 text-xs uppercase"><option value="offline">Offline</option><option value="idle">Available</option><option value="busy">Busy</option></select></div><span className="mt-1 block text-xs text-muted-foreground">{rider.phone || "No phone"} · {rider.vehicle_type} · {rider.vehicle_number}</span></div>)}{!riders.length && <p className="p-4 text-sm text-muted-foreground">No riders found.</p>}</div></section>
       </div>
       {requests.length > 0 && <section className="mt-10">
         <div className="mb-4 flex items-center justify-between">
