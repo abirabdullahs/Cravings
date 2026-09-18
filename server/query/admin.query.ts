@@ -72,6 +72,48 @@ WHERE u.id = $1
 GROUP BY u.id
 `;
 
+export const GET_ADMIN_ORDERS = `
+SELECT o.id, o.total_amount, o.delivery_fee, o.discount, o.order_status, o.created_at,
+       u.name AS customer_name, u.email AS customer_email,
+       r.name AS restaurant_name,
+       p.status AS payment_status, p.payment_method,
+       d.status AS delivery_status, rider.name AS rider_name
+FROM orders o
+JOIN users u ON u.id = o.user_id
+JOIN restaurants r ON r.id = o.restaurant_id
+LEFT JOIN payments p ON p.order_id = o.id
+LEFT JOIN deliveries d ON d.order_id = o.id
+LEFT JOIN users rider ON rider.id = d.rider_id
+WHERE ($1::text = '' OR o.order_status::text = $1)
+  AND ($2::text = '' OR p.status::text = $2)
+  AND ($3::text = '' OR d.status::text = $3)
+ORDER BY o.created_at DESC
+LIMIT $4 OFFSET $5
+`;
+
+export const GET_ADMIN_ORDER_DETAILS = `
+SELECT o.id, o.total_amount, o.delivery_fee, o.discount, o.order_status, o.created_at,
+       u.name AS customer_name, u.email AS customer_email, u.phone AS customer_phone,
+       r.name AS restaurant_name, r.address AS restaurant_address,
+       p.status AS payment_status, p.payment_method, p.transaction_id,
+       d.status AS delivery_status, rider.name AS rider_name, rider.phone AS rider_phone
+FROM orders o
+JOIN users u ON u.id = o.user_id
+JOIN restaurants r ON r.id = o.restaurant_id
+LEFT JOIN payments p ON p.order_id = o.id
+LEFT JOIN deliveries d ON d.order_id = o.id
+LEFT JOIN users rider ON rider.id = d.rider_id
+WHERE o.id = $1
+`;
+
+export const GET_ADMIN_ORDER_ITEMS = `
+SELECT oi.id, mi.item_name, oi.quantity, oi.unit_price, oi.subtotal
+FROM order_items oi
+JOIN menu_items mi ON mi.id = oi.menu_item_id
+WHERE oi.order_id = $1
+ORDER BY oi.id
+`;
+
 export const GET_WEEKLY_PLATFORM_PROFIT = `
 SELECT DATE_TRUNC('week', created_at) AS week,
        COUNT(*) AS order_count,
