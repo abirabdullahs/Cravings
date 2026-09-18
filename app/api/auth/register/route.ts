@@ -21,7 +21,10 @@ export const POST = async (request: Request) => {
     }
     email = data.email.trim().toLowerCase();
     data.email = email;
-    const user = await createAccount(data);
+    const user = await createAccount({
+      ...data,
+      verificationData: data.verificationData ?? data.verification_data ?? {},
+    });
     return NextResponse.json(user, { status: 201 });
   } catch (error: unknown) {
     if (error instanceof AppError) {

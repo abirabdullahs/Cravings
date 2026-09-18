@@ -16,15 +16,29 @@ type UserProfile = {
   account_status?: string;
   address?: string;
   requested_role?: string;
+  application?: {
+    id: number;
+    status: string;
+    requested_role: string;
+    source_role: string;
+    verification_data?: Record<string, unknown>;
+    rejection_reason?: string;
+    created_at?: string;
+  } | null;
   history: Array<{ title: string; detail: string; timestamp?: string }>;
 };
+type Coupon = { id: number; code: string; discount_type: string; discount_value: string; minimum_order: string; expiry_date: string | null };
+type Notification = { id: number; title: string; message: string | null; order_id: number | null; is_read: boolean; created_at: string };
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [resubmitting, setResubmitting] = useState(false);
   const [error, setError] = useState("");
   const [form, setForm] = useState({ name: "", phone: "", profile_image: "" });
+  const [coupons, setCoupons] = useState<Coupon[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
 
   useEffect(() => {
     async function load() {
@@ -54,6 +68,21 @@ export default function ProfilePage() {
     void load();
   }, []);
 
+  useEffect(() => {
+    if (profile?.role !== "customer") return;
+    void fetch("/api/coupons").then((response) => response.ok ? response.json() : { coupons: [] }).then((payload) => setCoupons(payload.coupons ?? []));
+  }, [profile?.role]);
+
+  useEffect(() => {
+    if (!profile) return;
+    void fetch("/api/notifications").then((response) => response.ok ? response.json() : { notifications: [] }).then((payload) => setNotifications(payload.notifications ?? []));
+  }, [profile]);
+
+  async function markNotificationRead(notificationId: number) {
+    const response = await fetch("/api/notifications", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ notificationId }) });
+    if (response.ok) setNotifications((current) => current.map((notification) => notification.id === notificationId ? { ...notification, is_read: true } : notification));
+  }
+
   async function saveProfile(event: React.FormEvent) {
     event.preventDefault();
     setSaving(true);
@@ -80,6 +109,55 @@ export default function ProfilePage() {
     }
   }
 
+  async function resubmitRoleRequest() {
+    if (!profile?.application?.requested_role) {
+      return;
+    }
+
+    setResubmitting(true);
+    setError("");
+    try {
+      const response = await fetch("/api/role-requests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          requestedRole: profile.application.requested_role,
+          details: "Role request resubmitted for review.",
+          verificationData: profile.application.verification_data ?? {},
+        }),
+      });
+
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({ error: "Unable to resubmit request" }));
+        throw new Error(payload.error || "Unable to resubmit request");
+      }
+
+      const payload = await response.json();
+      setProfile((current) => current ? {
+        ...current,
+        application: {
+          ...(current.application ?? {
+            id: 0,
+            status: "PENDING",
+            requested_role: profile.application.requested_role,
+            source_role: profile.role,
+            verification_data: profile.application.verification_data ?? {},
+            rejection_reason: "",
+            created_at: new Date().toISOString(),
+          }),
+          ...payload.request,
+          status: payload.request?.status ?? "PENDING",
+          verification_data: payload.request?.verification_data ?? profile.application.verification_data ?? {},
+          rejection_reason: payload.request?.rejection_reason ?? "",
+        },
+      } : current);
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : "Unable to resubmit request");
+    } finally {
+      setResubmitting(false);
+    }
+  }
+
   if (loading) {
     return <div className="mx-auto max-w-6xl px-4 py-8">Loading profile…</div>;
   }
@@ -92,14 +170,8 @@ export default function ProfilePage() {
     );
   }
 
-  const roleTitle =
-    profile.role === "owner"
-      ? "Restaurant Owner"
-      : profile.role === "rider"
-        ? "Rider"
-        : profile.role === "admin"
-          ? "Admin"
-          : "Customer";
+  const roleTitle = profile.role === "owner" ? "Restaurant Owner" : profile.role === "rider" ? "Rider" : profile.role === "admin" ? "Admin" : "Customer";
+  const applicationStatus = profile.application?.status?.toUpperCase();
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
@@ -126,6 +198,49 @@ export default function ProfilePage() {
         <p className="mb-6 rounded border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
           {error}
         </p>
+      )}
+
+      {profile.application && (
+        <section className="mb-6 rounded border border-border bg-card p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-primary">Role application</span>
+              <div className="mt-2 font-serif text-2xl font-bold">
+                {applicationStatus === "PENDING" && "Application Under Review. Rider/Owner features will unlock once approved."}
+                {applicationStatus === "REJECTED" && "Application rejected"}
+                {applicationStatus === "APPROVED" && "Role application approved"}
+              </div>
+            </div>
+            <span className="rounded-full border border-border px-3 py-1 text-xs font-semibold uppercase tracking-wide">{profile.application.status}</span>
+          </div>
+          {applicationStatus === "REJECTED" && profile.application.rejection_reason && (
+            <div className="mt-3 rounded border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+              Rejection reason: {profile.application.rejection_reason}
+            </div>
+          )}
+          {applicationStatus === "REJECTED" && (
+            <div className="mt-3 flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={() => void resubmitRoleRequest()}
+                disabled={resubmitting}
+                className="rounded bg-primary px-4 py-2 text-xs font-bold uppercase tracking-wide text-primary-foreground disabled:opacity-50"
+              >
+                {resubmitting ? "Resubmitting..." : "Re-submit application"}
+              </button>
+            </div>
+          )}
+          {profile.application.verification_data && Object.keys(profile.application.verification_data).length > 0 && (
+            <div className="mt-4 grid gap-2 sm:grid-cols-2">
+              {Object.entries(profile.application.verification_data).map(([key, value]) => (
+                <div key={key} className="rounded border border-border bg-background px-3 py-2 text-sm">
+                  <span className="block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{key}</span>
+                  <span className="block text-foreground">{String(value)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
       )}
 
       <section className="grid gap-8 lg:grid-cols-[320px_1fr]">
@@ -172,6 +287,8 @@ export default function ProfilePage() {
         </aside>
 
         <main className="space-y-8">
+          {profile.role === "customer" && <section className="rounded border border-border bg-card p-6"><div className="mb-4 flex items-center justify-between"><h2 className="font-serif text-2xl font-bold">My coupons</h2><span className="text-xs uppercase tracking-wide text-muted-foreground">Available offers</span></div><div className="grid gap-3 sm:grid-cols-2">{coupons.map((coupon) => <div key={coupon.id} className="border border-border bg-background p-4"><div className="flex items-center justify-between gap-3"><strong className="tracking-wide">{coupon.code}</strong><span className="text-sm font-bold text-primary">{coupon.discount_type === "percentage" ? `${coupon.discount_value}% off` : `৳${coupon.discount_value} off`}</span></div><p className="mt-2 text-xs text-muted-foreground">Minimum order ৳{coupon.minimum_order}{coupon.expiry_date ? ` · Expires ${new Date(coupon.expiry_date).toLocaleDateString()}` : ""}</p></div>)}{!coupons.length && <p className="text-sm text-muted-foreground">No available coupons right now.</p>}</div></section>}
+          <section className="rounded border border-border bg-card p-6"><div className="mb-4 flex items-center justify-between"><h2 className="font-serif text-2xl font-bold">Notifications</h2><span className="text-xs uppercase tracking-wide text-muted-foreground">{notifications.filter((notification) => !notification.is_read).length} unread</span></div><div className="space-y-3">{notifications.map((notification) => <article key={notification.id} className={`border p-4 ${notification.is_read ? "border-border bg-background" : "border-primary/40 bg-primary/5"}`}><div className="flex items-start justify-between gap-3"><div><strong>{notification.title}</strong><p className="mt-1 text-sm text-muted-foreground">{notification.message || "No message"}</p></div>{!notification.is_read && <button onClick={() => void markNotificationRead(notification.id)} className="shrink-0 text-xs font-bold text-primary hover:underline">Mark read</button>}</div><p className="mt-2 text-xs text-muted-foreground">{new Date(notification.created_at).toLocaleString()}</p></article>)}{!notifications.length && <p className="text-sm text-muted-foreground">No notifications yet.</p>}</div></section>
           <section className="rounded border border-border bg-card p-6">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="font-serif text-2xl font-bold">Edit profile</h2>

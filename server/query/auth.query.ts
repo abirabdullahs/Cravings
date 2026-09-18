@@ -25,9 +25,17 @@ export const COMPLETE_USER = `
 `;
 
 export const INSERT_ROLE_REQUEST = `
-  INSERT INTO role_requests (user_id, source_role, requested_role, status, details)
-  VALUES ($1, $2, $3, 'PENDING', $4)
+  INSERT INTO role_requests (user_id, source_role, requested_role, status, details, verification_data)
+  VALUES ($1, $2, $3, 'PENDING', $4, COALESCE($5, '{}'::jsonb))
   RETURNING *;
+`;
+
+export const FIND_ACTIVE_ROLE_REQUEST_BY_USER = `
+  SELECT *
+  FROM role_requests
+  WHERE user_id = $1
+  ORDER BY created_at DESC
+  LIMIT 1;
 `;
 
 export const LIST_ROLE_REQUESTS = `
@@ -38,6 +46,7 @@ export const LIST_ROLE_REQUESTS = `
     rr.requested_role,
     rr.status,
     rr.details,
+    rr.verification_data,
     rr.created_at,
     rr.reviewed_at,
     rr.review_note,

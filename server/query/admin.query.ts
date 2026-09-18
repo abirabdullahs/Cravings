@@ -11,6 +11,14 @@ GROUP BY r.id, u.name, u.phone
 ORDER BY r.name
 `;
 
+export const UPDATE_RESTAURANT_STATUS_BY_ADMIN = `
+UPDATE restaurants
+SET active_status = $2,
+    updated_at = NOW()
+WHERE id = $1
+RETURNING id, active_status
+`;
+
 export const GET_RESTAURANT_PRODUCT_SALES = `
 SELECT p.id, p.name, p.price,
        COUNT(oi.id) AS total_sold,
@@ -36,10 +44,139 @@ ORDER BY rv.created_at DESC
 LIMIT 100
 `;
 
+export const GET_ADMIN_REVIEWS = `
+SELECT rv.id, rv.rating, rv.comment, rv.created_at,
+       u.name AS customer_name, u.email AS customer_email,
+       r.name AS restaurant_name, rv.order_id
+FROM reviews rv
+JOIN users u ON u.id = rv.user_id
+JOIN restaurants r ON r.id = rv.restaurant_id
+WHERE ($1::int = 0 OR rv.rating = $1)
+ORDER BY rv.created_at DESC
+LIMIT $2
+`;
+
+export const GET_ADMIN_ANALYTICS = `
+SELECT
+  COUNT(*)::int AS total_orders,
+  COUNT(*) FILTER (WHERE order_status = 'delivered')::int AS completed_orders,
+  COUNT(*) FILTER (WHERE order_status = 'cancelled')::int AS cancelled_orders,
+  COUNT(DISTINCT user_id)::int AS active_customers,
+  COALESCE(AVG(total_amount) FILTER (WHERE order_status <> 'cancelled'), 0) AS average_order_value,
+  COALESCE(SUM(discount) FILTER (WHERE order_status <> 'cancelled'), 0) AS total_discounts
+FROM orders
+WHERE created_at >= NOW() - ($1::int * INTERVAL '1 day')
+`;
+
 export const GET_ALL_RIDERS = `
-SELECT id, name, phone
-FROM users
-WHERE role = 'rider'
+SELECT u.id, u.name, u.phone, r.vehicle_type, r.vehicle_number, r.status
+FROM users u
+JOIN riders r ON r.user_id = u.id
+WHERE u.role = 'rider'
+ORDER BY u.name
+`;
+
+export const UPDATE_RIDER_STATUS_BY_ADMIN = `
+UPDATE riders
+SET status = $2, updated_at = NOW()
+WHERE user_id = $1
+RETURNING user_id AS id, status
+`;
+
+export const GET_ADMIN_USERS = `
+SELECT u.id, u.name, u.email, u.phone, u.role, u.created_at,
+       COUNT(DISTINCT o.id)::int AS order_count,
+       COUNT(DISTINCT uc.id)::int AS coupon_count,
+       COUNT(DISTINCT rr.id)::int AS role_request_count
+FROM users u
+LEFT JOIN orders o ON o.user_id = u.id
+LEFT JOIN user_coupons uc ON uc.user_id = u.id
+LEFT JOIN role_requests rr ON rr.user_id = u.id
+WHERE ($1::text = '' OR u.role::text = $1)
+  AND ($2::text = '' OR u.name ILIKE '%' || $2 || '%' OR u.email ILIKE '%' || $2 || '%' OR COALESCE(u.phone, '') ILIKE '%' || $2 || '%')
+GROUP BY u.id
+ORDER BY u.created_at DESC
+LIMIT $3 OFFSET $4
+`;
+
+export const GET_ADMIN_USER_DETAILS = `
+SELECT u.id, u.name, u.email, u.phone, u.role, u.created_at,
+       COUNT(DISTINCT o.id)::int AS order_count,
+       COALESCE(SUM(CASE WHEN o.order_status <> 'cancelled' THEN o.total_amount ELSE 0 END), 0) AS total_spend,
+       COUNT(DISTINCT uc.id)::int AS coupon_count,
+       COUNT(DISTINCT rr.id)::int AS role_request_count
+FROM users u
+LEFT JOIN orders o ON o.user_id = u.id
+LEFT JOIN user_coupons uc ON uc.user_id = u.id
+LEFT JOIN role_requests rr ON rr.user_id = u.id
+WHERE u.id = $1
+GROUP BY u.id
+`;
+
+export const GET_ADMIN_ORDERS = `
+SELECT o.id, o.total_amount, o.delivery_fee, o.discount, o.order_status, o.created_at,
+       u.name AS customer_name, u.email AS customer_email,
+       r.name AS restaurant_name,
+       p.status AS payment_status, p.payment_method,
+       d.status AS delivery_status, rider.name AS rider_name
+FROM orders o
+JOIN users u ON u.id = o.user_id
+JOIN restaurants r ON r.id = o.restaurant_id
+LEFT JOIN payments p ON p.order_id = o.id
+LEFT JOIN deliveries d ON d.order_id = o.id
+LEFT JOIN users rider ON rider.id = d.rider_id
+WHERE ($1::text = '' OR o.order_status::text = $1)
+  AND ($2::text = '' OR p.status::text = $2)
+  AND ($3::text = '' OR d.status::text = $3)
+ORDER BY o.created_at DESC
+LIMIT $4 OFFSET $5
+`;
+
+export const GET_ADMIN_ORDER_DETAILS = `
+SELECT o.id, o.total_amount, o.delivery_fee, o.discount, o.order_status, o.created_at,
+       u.name AS customer_name, u.email AS customer_email, u.phone AS customer_phone,
+       r.name AS restaurant_name, r.address AS restaurant_address,
+      p.status AS payment_status, p.payment_method, p.transaction_id,
+      d.status AS delivery_status, d.rider_id, rider.name AS rider_name, rider.phone AS rider_phone
+FROM orders o
+JOIN users u ON u.id = o.user_id
+JOIN restaurants r ON r.id = o.restaurant_id
+LEFT JOIN payments p ON p.order_id = o.id
+LEFT JOIN deliveries d ON d.order_id = o.id
+LEFT JOIN users rider ON rider.id = d.rider_id
+WHERE o.id = $1
+`;
+
+export const GET_ADMIN_ORDER_ITEMS = `
+SELECT oi.id, mi.item_name, oi.quantity, oi.unit_price, oi.subtotal
+FROM order_items oi
+JOIN menu_items mi ON mi.id = oi.menu_item_id
+WHERE oi.order_id = $1
+ORDER BY oi.id
+`;
+
+export const UPDATE_ADMIN_ORDER_STATUS = `
+UPDATE orders
+SET order_status = $2, updated_at = NOW()
+WHERE id = $1
+RETURNING id, order_status
+`;
+
+export const ASSIGN_ADMIN_ORDER_RIDER = `
+UPDATE deliveries
+SET rider_id = $2,
+    status = CASE WHEN $2 IS NULL THEN 'unassigned'::delivery_status_enum ELSE 'accepted'::delivery_status_enum END,
+    assigned_at = CASE WHEN $2 IS NULL THEN NULL ELSE COALESCE(assigned_at, NOW()) END,
+    updated_at = NOW()
+WHERE order_id = $1
+RETURNING order_id, rider_id, status
+`;
+
+export const UPDATE_ADMIN_PAYMENT_STATUS = `
+UPDATE payments
+SET status = $2
+WHERE order_id = $1
+RETURNING order_id, status
 `;
 
 export const GET_WEEKLY_PLATFORM_PROFIT = `

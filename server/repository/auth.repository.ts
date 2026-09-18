@@ -5,6 +5,7 @@ import {
   INSERT_USER,
   COMPLETE_USER,
   INSERT_ROLE_REQUEST,
+  FIND_ACTIVE_ROLE_REQUEST_BY_USER,
   LIST_ROLE_REQUESTS,
   UPDATE_ROLE_REQUEST_STATUS,
   APPROVE_ROLE_REQUEST,
@@ -48,19 +49,31 @@ export const createRoleRequest = async ({
   currentRole,
   requestedRole,
   details,
+  verificationData,
 }: {
   userId: string;
   currentRole: string;
   requestedRole: string;
   details?: string;
+  verificationData?: Record<string, unknown>;
 }) => {
   const result = await pool.query(INSERT_ROLE_REQUEST, [
     userId,
     currentRole,
     requestedRole,
     details ?? "",
+    verificationData ?? {},
   ]);
   return result.rows[0];
+};
+
+export const findActiveRoleRequestByUser = async (userId: string) => {
+  const result = await pool.query(FIND_ACTIVE_ROLE_REQUEST_BY_USER, [userId]);
+  return result.rows[0];
+};
+
+export const findRoleRequestByUser = async (userId: string) => {
+  return await findActiveRoleRequestByUser(userId);
 };
 
 export const listRoleRequests = async () => {

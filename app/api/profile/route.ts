@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 import { NextResponse } from "next/server";
-import { getUserByEmail, updateOwnProfile } from "@/server/service/auth.service";
+import { getUserByEmail, updateOwnProfile, getRoleRequestForUser } from "@/server/service/auth.service";
 
 export async function GET() {
   const session = await auth();
@@ -14,6 +14,7 @@ export async function GET() {
   }
 
   const role = String(user.role ?? "customer");
+  const activeRequest = await getRoleRequestForUser(String(user.id));
   const roleHistory: Record<string, Array<{ title: string; detail: string; timestamp?: string }>> = {
     admin: [
       { title: "Admin policy update", detail: "Reviewed platform activity", timestamp: new Date().toISOString() },
@@ -38,9 +39,18 @@ export async function GET() {
       profile_image: user.profile_image,
       role,
       created_at: user.created_at,
-      account_status: "active",
+      account_status: activeRequest?.status === "APPROVED" ? "active" : activeRequest?.status ?? "active",
       address: "No saved address",
       history: roleHistory[role] ?? roleHistory.customer,
+      application: activeRequest ? {
+        id: activeRequest.id,
+        status: activeRequest.status,
+        requested_role: activeRequest.requested_role,
+        source_role: activeRequest.source_role,
+        verification_data: activeRequest.verification_data ?? {},
+        rejection_reason: activeRequest.rejection_reason,
+        created_at: activeRequest.created_at,
+      } : null,
     },
   });
 }

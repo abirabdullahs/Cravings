@@ -319,6 +319,7 @@ CREATE TABLE role_requests (
   details TEXT,
   review_note TEXT,
   rejection_reason TEXT,
+  verification_data JSONB NOT NULL DEFAULT '{}'::jsonb,
   created_at TIMESTAMP NOT NULL DEFAULT NOW(),
   reviewed_at TIMESTAMP,
   reviewed_by INT,

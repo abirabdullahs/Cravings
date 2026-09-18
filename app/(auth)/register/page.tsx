@@ -10,6 +10,7 @@ export default function RegisterPage() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [requestedRole, setRequestedRole] = useState<string>("customer");
 
   const getRoleBasedRedirect = (role: string): string => {
     const normalizedRole = role.toLowerCase();
@@ -33,12 +34,26 @@ export default function RegisterPage() {
 
     const formData = new FormData(e.currentTarget);
     const role = formData.get("role") as string;
+    const roleToSubmit = String(role ?? "customer").toLowerCase();
+    const verificationData = roleToSubmit === "owner" || roleToSubmit === "rider"
+      ? {
+          nid_number: String(formData.get("nid") ?? ""),
+          vehicle_type: String(formData.get("vehicleType") ?? ""),
+          vehicle_plate: String(formData.get("vehiclePlate") ?? ""),
+          license_number: String(formData.get("licenseNumber") ?? ""),
+          restaurant_name: String(formData.get("restaurantName") ?? ""),
+          business_address: String(formData.get("businessAddress") ?? ""),
+          trade_license: String(formData.get("tradeLicense") ?? ""),
+        }
+      : {};
+
     const payload = {
       name: formData.get("name") as string,
       email: formData.get("email") as string,
       password: formData.get("password") as string,
-      role: role.toLowerCase(),
+      role: roleToSubmit,
       phone: formData.get("number") as string,
+      verificationData,
     };
 
     try {
@@ -161,6 +176,8 @@ export default function RegisterPage() {
                 <select
                   name="role"
                   required
+                  value={requestedRole}
+                  onChange={(event) => setRequestedRole(event.target.value)}
                   className="h-11 rounded-sm border border-border bg-background px-3 text-sm normal-case tracking-normal text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-ring/30"
                 >
                   <option value="customer">Customer</option>
@@ -169,6 +186,47 @@ export default function RegisterPage() {
                 </select>
               </label>
             </div>
+
+            {(requestedRole === "rider" || requestedRole === "owner") && (
+              <div className="grid gap-4 rounded-sm border border-border bg-secondary/30 p-4 sm:grid-cols-2">
+                <label className="grid gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  NID / National ID
+                  <input name="nid" className="h-11 rounded-sm border border-border bg-background px-3 text-sm" />
+                </label>
+                {requestedRole === "rider" && (
+                  <>
+                    <label className="grid gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Vehicle type
+                      <input name="vehicleType" className="h-11 rounded-sm border border-border bg-background px-3 text-sm" />
+                    </label>
+                    <label className="grid gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Vehicle plate
+                      <input name="vehiclePlate" className="h-11 rounded-sm border border-border bg-background px-3 text-sm" />
+                    </label>
+                    <label className="grid gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Driving license number
+                      <input name="licenseNumber" className="h-11 rounded-sm border border-border bg-background px-3 text-sm" />
+                    </label>
+                  </>
+                )}
+                {requestedRole === "owner" && (
+                  <>
+                    <label className="grid gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Restaurant / business name
+                      <input name="restaurantName" className="h-11 rounded-sm border border-border bg-background px-3 text-sm" />
+                    </label>
+                    <label className="grid gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Business address
+                      <input name="businessAddress" className="h-11 rounded-sm border border-border bg-background px-3 text-sm" />
+                    </label>
+                    <label className="grid gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Trade license
+                      <input name="tradeLicense" className="h-11 rounded-sm border border-border bg-background px-3 text-sm" />
+                    </label>
+                  </>
+                )}
+              </div>
+            )}
 
             <button
               type="submit"

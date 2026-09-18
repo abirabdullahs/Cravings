@@ -8,6 +8,7 @@ import {
   updateRoleRequestStatus,
   approveRoleRequest,
   updateUserProfile,
+  findRoleRequestByUser,
   getRoleRequestById,
 } from "../repository/auth.repository";
 import { hashPassword } from "../utils/password";
@@ -51,6 +52,7 @@ export const createAccount = async (user: {
   password: string;
   phone: string;
   role: string;
+  verificationData?: Record<string, unknown>;
 }) => {
   const requestedRole = normalizeRole(user.role);
 
@@ -82,6 +84,7 @@ export const createAccount = async (user: {
       currentRole: "customer",
       requestedRole,
       details: `Role request submitted for ${requestedRole}. Pending admin approval.`,
+      verificationData: user.verificationData ?? {},
     });
   }
 
@@ -92,12 +95,26 @@ export const completeProfile = async ({
   role,
   phone,
   id,
+  verificationData,
 }: {
   role: string;
   phone: string;
   id: string;
+  verificationData?: Record<string, unknown>;
 }) => {
-  const data = await completeUser({ role: normalizeRole(role), phone, id });
+  const normalizedRole = normalizeRole(role);
+  const data = await completeUser({ role: normalizedRole === "owner" || normalizedRole === "rider" ? "customer" : normalizedRole, phone, id });
+
+  if (normalizedRole === "owner" || normalizedRole === "rider") {
+    await createRoleRequest({
+      userId: String(id),
+      currentRole: "customer",
+      requestedRole: normalizedRole,
+      details: `Role request submitted for ${normalizedRole}. Pending admin approval.`,
+      verificationData,
+    });
+  }
+
   return data;
 };
 
@@ -106,11 +123,13 @@ export const submitRoleRequest = async ({
   currentRole,
   requestedRole,
   details,
+  verificationData,
 }: {
   userId: string;
   currentRole: string;
   requestedRole: string;
   details?: string;
+  verificationData?: Record<string, unknown>;
 }) => {
   const normalizedRequestedRole = normalizeRole(requestedRole);
   const normalizedCurrentRole = normalizeRole(currentRole);
@@ -128,19 +147,33 @@ export const submitRoleRequest = async ({
     currentRole: normalizedCurrentRole,
     requestedRole: normalizedRequestedRole,
     details,
+    verificationData,
   });
 };
 
-export const listRequests = async (filters?: {
-  status?: string;
+type RoleRequestRow = {
+  id?: string | number;
+  user_id?: string | number;
+  source_role?: string;
+  requested_role?: string;
   requestedRole?: string;
-}) => {
+  status?: string;
+  details?: string;
+  verification_data?: Record<string, unknown>;
+  created_at?: string;
+  reviewed_at?: string | null;
+  review_note?: string;
+  rejection_reason?: string;
+  requester_name?: string;
+  requester_email?: string;
+  requester_phone?: string;
+  source_role_from_user?: string;
+};
+
+export const listRequests = async (filters?: { status?: string; requestedRole?: string }) => {
   const rows = await listRoleRequests();
-  return rows.filter((row: Record<string, unknown>) => {
-    if (
-      filters?.status &&
-      String(row.status).toUpperCase() !== String(filters.status).toUpperCase()
-    ) {
+  return rows.filter((row: RoleRequestRow) => {
+    if (filters?.status && String(row.status ?? "").toUpperCase() !== String(filters.status).toUpperCase()) {
       return false;
     }
     if (
@@ -152,6 +185,10 @@ export const listRequests = async (filters?: {
     }
     return true;
   });
+};
+
+export const getRoleRequestForUser = async (userId: string) => {
+  return await findRoleRequestByUser(userId);
 };
 
 export const getRequestById = async (id: string) => {
