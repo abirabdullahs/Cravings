@@ -4,10 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { signIn } from "next-auth/react";
 import { ArrowRightIcon } from "lucide-react";
-import { useRouter } from "next/navigation";
 
 export default function RegisterPage() {
-  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [requestedRole, setRequestedRole] = useState<string>("customer");
@@ -78,9 +76,8 @@ export default function RegisterPage() {
       if (signInRes?.error) {
         throw new Error("Account created, but failed to log in automatically.");
       }
-      router.refresh();
       const redirectPath = getRoleBasedRedirect(role);
-      router.push(redirectPath);
+      window.location.assign(redirectPath);
     } catch (err: unknown) {
       setError(
         err instanceof Error
@@ -104,15 +101,20 @@ export default function RegisterPage() {
               Your next favorite meal starts here.
             </h1>
             <p className="mt-4 max-w-xs text-sm leading-6 text-muted-foreground">
-              Create an account to explore Dhaka&apos;s kitchens and make every order feel personal.
+              Create an account to explore Dhaka&apos;s kitchens and make every
+              order feel personal.
             </p>
           </div>
-          <p className="text-sm font-medium text-foreground/70">Cravings<span className="text-primary">.</span></p>
+          <p className="text-sm font-medium text-foreground/70">
+            Cravings<span className="text-primary">.</span>
+          </p>
         </div>
 
         <div className="p-6 sm:p-10">
           <div className="mb-8">
-            <p className="text-sm font-medium text-primary md:hidden">Join Cravings</p>
+            <p className="text-sm font-medium text-primary md:hidden">
+              Join Cravings
+            </p>
             <h2 className="mt-1 font-serif text-3xl font-bold tracking-tight text-foreground">
               Create an account
             </h2>
@@ -234,7 +236,9 @@ export default function RegisterPage() {
               className="inline-flex h-11 items-center justify-center gap-2 rounded-sm bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {loading ? "Creating account..." : "Create account"}
-              {!loading && <ArrowRightIcon className="size-4" aria-hidden="true" />}
+              {!loading && (
+                <ArrowRightIcon className="size-4" aria-hidden="true" />
+              )}
             </button>
           </form>
 
@@ -246,7 +250,9 @@ export default function RegisterPage() {
 
           <button
             type="button"
-            onClick={() => signIn("google", { callbackUrl: "/complete-profile" })}
+            onClick={() =>
+              signIn("google", { callbackUrl: "/complete-profile" })
+            }
             className="h-11 w-full rounded-sm border border-border bg-background px-4 text-sm font-semibold text-foreground transition hover:border-primary hover:text-primary"
           >
             Continue with Google
@@ -254,7 +260,10 @@ export default function RegisterPage() {
 
           <p className="mt-7 text-center text-sm text-muted-foreground">
             Already have an account?{" "}
-            <Link href="/login" className="font-semibold text-primary hover:text-primary/80">
+            <Link
+              href="/login"
+              className="font-semibold text-primary hover:text-primary/80"
+            >
               Sign in
             </Link>
           </p>

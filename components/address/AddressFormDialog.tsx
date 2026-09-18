@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { UserAddress } from "@/types/order";
+import { LocationPicker } from "./LocationPicker";
 
 interface AddressFormDialogProps {
   isOpen: boolean;
@@ -35,8 +36,6 @@ export function AddressFormDialog({
 
   useEffect(() => {
     if (isOpen) {
-      // This effect intentionally resets local draft state when the dialog opens or its source changes.
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFormData(
         initialAddress ? { ...EMPTY_FORM, ...initialAddress } : EMPTY_FORM,
       );
@@ -73,6 +72,14 @@ export function AddressFormDialog({
     }));
   };
 
+  const handleLocationSelect = (lat: number, lng: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      latitude: Number(lat.toFixed(6)),
+      longitude: Number(lng.toFixed(6)),
+    }));
+  };
+
   const handleGetLocation = () => {
     if (!navigator.geolocation) {
       alert("Geolocation is not supported by your browser.");
@@ -84,8 +91,8 @@ export function AddressFormDialog({
       (pos) => {
         setFormData((prev) => ({
           ...prev,
-          latitude: pos.coords.latitude,
-          longitude: pos.coords.longitude,
+          latitude: Number(pos.coords.latitude.toFixed(6)),
+          longitude: Number(pos.coords.longitude.toFixed(6)),
         }));
         setIsLocating(false);
       },
@@ -114,7 +121,7 @@ export function AddressFormDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-md border border-border bg-card p-6 shadow-lg">
+      <div className="w-full max-w-md border border-border bg-card p-6 shadow-lg max-h-[90vh] overflow-y-auto">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="font-serif text-xl font-bold text-foreground">
             {initialAddress ? "Edit Address" : "Add New Address"}
@@ -130,6 +137,18 @@ export function AddressFormDialog({
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 text-xs">
+          {/* Interactive Map Selector */}
+          <div>
+            <label className="mb-1 block font-medium text-muted-foreground">
+              Select Pin Location on Map
+            </label>
+            <LocationPicker
+              latitude={formData.latitude??null}
+              longitude={formData.longitude??null}
+              onLocationSelect={handleLocationSelect}
+            />
+          </div>
+
           <div>
             <label className="mb-1 block font-medium text-muted-foreground">
               Address Label
@@ -163,35 +182,6 @@ export function AddressFormDialog({
             {errors.address && (
               <p className="mt-1 text-destructive">{errors.address}</p>
             )}
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="mb-1 block font-medium text-muted-foreground">
-                Street
-              </label>
-              <input
-                type="text"
-                name="street"
-                value={formData.street || ""}
-                onChange={handleChange}
-                placeholder="Street name"
-                className="w-full border border-border bg-background p-2 text-foreground focus:border-primary focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="mb-1 block font-medium text-muted-foreground">
-                Apt / Building
-              </label>
-              <input
-                type="text"
-                name="apartmentName"
-                value={formData.apartmentName || ""}
-                onChange={handleChange}
-                placeholder="Apt 4B"
-                className="w-full border border-border bg-background p-2 text-foreground focus:border-primary focus:outline-none"
-              />
-            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">

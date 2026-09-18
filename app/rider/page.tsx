@@ -1,47 +1,101 @@
-export default async function RiderDashboard() {
-	return (
-		<div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
-			<div className="mb-8 border-b border-border pb-7">
-				<p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">
-					Rider dashboard
-				</p>
-				<h1 className="mt-2 font-serif text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-					Ready for your next delivery.
-				</h1>
-				<p className="mt-2 max-w-xl text-sm text-muted-foreground">
-					Delivery requests and active orders will appear here when they are assigned to you.
-				</p>
-			</div>
+"use client";
 
-			<div className="grid gap-4 sm:grid-cols-3">
-				<div className="border border-border bg-card p-5">
-					<p className="text-xs uppercase tracking-wide text-muted-foreground">
-						Available requests
-					</p>
-					<p className="mt-2 text-2xl font-bold text-foreground">0</p>
-				</div>
-				<div className="border border-border bg-card p-5">
-					<p className="text-xs uppercase tracking-wide text-muted-foreground">
-						Active deliveries
-					</p>
-					<p className="mt-2 text-2xl font-bold text-foreground">0</p>
-				</div>
-				<div className="border border-border bg-card p-5">
-					<p className="text-xs uppercase tracking-wide text-muted-foreground">
-						Today&apos;s earnings
-					</p>
-					<p className="mt-2 text-2xl font-bold text-foreground">৳0</p>
-				</div>
-			</div>
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { RiderGreeting } from "@/components/rider-dashboard/RiderGreeting";
+import { StatsGrid } from "@/components/rider-dashboard/StatsGrid";
+import { IncomingOrderCard } from "@/components/rider-dashboard/IncomingOrderCard";
+import { TodaysSummaryCard } from "@/components/rider-dashboard/TodaysSummaryCard";
+import {
+  useAvailableRequests,
+  useRider,
+  useRiderEarnings,
+  useRiderProfile,
+} from "@/hooks/useRider";
 
-			<section className="mt-8 border border-dashed border-border p-10 text-center">
-				<h2 className="font-serif text-2xl font-bold text-foreground">
-					No delivery requests yet
-				</h2>
-				<p className="mt-2 text-sm text-muted-foreground">
-					Stay available and new requests will show up here.
-				</p>
-			</section>
-		</div>
-	);
+function todayDateString() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+export default function RiderDashboard() {
+  const router = useRouter();
+  const { data: profile, isLoading: isProfileLoading } = useRiderProfile();
+  const { data: requests, isLoading: isRequestsLoading } =
+    useAvailableRequests();
+  const { data: earnings, isLoading: isEarningsLoading } =
+    useRiderEarnings(todayDateString());
+  const { acceptRequest, isAccepting, setDutyStatus, isUpdatingDuty } =
+    useRider();
+
+  const [dismissedIds, setDismissedIds] = useState<Set<number>>(new Set());
+
+  const currentStatus: "online" | "offline" =
+    profile?.status === "offline" ? "offline" : "online";
+
+  async function handleDutyToggle(next: "online" | "offline") {
+    if (next === currentStatus) return;
+    await setDutyStatus(next);
+  }
+
+  const visibleOpportunity = requests?.find(
+    (request) => !dismissedIds.has(request.orderId),
+  );
+
+  if (isProfileLoading || !profile) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center text-sm text-muted-foreground">
+        Loading your dashboard…
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      <main className="mx-auto max-w-7xl px-6 py-10">
+        <RiderGreeting
+          firstName={profile.name.split(" ")[0]}
+          dutyStatus={currentStatus}
+          busy={isUpdatingDuty}
+          onToggle={handleDutyToggle}
+        />
+
+        <div className="mt-8">
+          <StatsGrid earnings={earnings} isLoading={isEarningsLoading} />
+        </div>
+
+        <div className="mt-8 grid gap-6 xl:grid-cols-[1fr_1.2fr]">
+          {isRequestsLoading ? (
+            <div className="flex items-center justify-center border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
+              Checking for incoming orders…
+            </div>
+          ) : visibleOpportunity ? (
+            <IncomingOrderCard
+              opportunity={visibleOpportunity}
+              busy={isAccepting}
+              onAccept={async () => {
+                await acceptRequest(visibleOpportunity.orderId);
+                router.push(`/rider/deliveries/active`);
+              }}
+              onDecline={() =>
+                setDismissedIds((prev) =>
+                  new Set(prev).add(visibleOpportunity.orderId),
+                )
+              }
+            />
+          ) : (
+            <div className="flex items-center justify-center border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
+              {currentStatus === "online"
+                ? "No incoming orders right now — we'll notify you the moment one comes in."
+                : "You're offline. Go online to start receiving delivery opportunities."}
+            </div>
+          )}
+
+          <TodaysSummaryCard
+            earnings={earnings}
+            isEarningsLoading={isEarningsLoading}
+          />
+        </div>
+      </main>
+    </div>
+  );
 }

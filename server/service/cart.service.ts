@@ -11,9 +11,9 @@ export const addCartItem = async ({
   menuItemId,
   quantity,
 }: {
-  userId: string;
-  restaurantId: string;
-  menuItemId: string;
+  userId: number;
+  restaurantId: number;
+  menuItemId: number;
   quantity: number;
 }) => {
   let cart = await findCart({ userId, restaurantId });

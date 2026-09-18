@@ -2,25 +2,65 @@
 import { useEffect, useState } from "react";
 import { RouteCard } from "@/components/tracking/RouteCard";
 import { StatusTimeline } from "@/components/tracking/StatusTimeline";
+import { ReviewModal } from "@/components/reviews/ReviewModal";
 import { OrderSummaryCard } from "@/components/tracking/OrderSummaryCard";
 import type {
   DeliveryStep,
-  DeliveryTracking,
-  TrackingItem,
+  DeliveryTracking
 } from "@/types/delivery-tracking";
+import { OrderDetailItem } from "@/types/order";
 
+// Updated logical sequence for customers
 const CUSTOMER_ORDER_STEPS = [
   { key: "pending", label: "Order placed" },
   { key: "confirmed", label: "Order confirmed" },
-  { key: "preparing", label: "Restaurant is preparing" },
-  { key: "ready", label: "Food ready for pickup" },
-  { key: "accepted", label: "Rider accepted the order" },
-  { key: "arrived_at_store", label: "Rider arrived at restaurant" },
-  { key: "picked_up", label: "Rider picked up the food" },
+  { key: "preparing", label: "Preparing food" },
+  { key: "rider_assigned", label: "Rider assigned & heading to store" },
+  { key: "out_for_delivery", label: "Picked up & on the way" },
+  { key: "arrived_at_destination", label: "Arrived at Destination" },
   { key: "delivered", label: "Delivered to you" },
 ];
 
-// Rider-only: what tapping the action button does at each step.
+function getCustomerStatus(
+  orderStatus: DeliveryTracking["orderStatus"],
+  deliveryStatus: DeliveryTracking["deliveryStatus"],
+) {
+  if (orderStatus === "cancelled" || deliveryStatus === "cancelled") {
+    return "cancelled";
+  }
+
+  // 1. Order or delivery is complete
+  if (orderStatus === "delivered" || deliveryStatus === "delivered") {
+    return "delivered";
+  }
+
+  // 2. Food picked up and on the way
+  if (deliveryStatus === "picked_up" || orderStatus === "out_for_delivery") {
+    return "out_for_delivery";
+  }
+
+  // 3. Rider assigned or arrived at restaurant, but hasn't picked up food yet
+  if (deliveryStatus === "accepted" || deliveryStatus === "arrived_at_store") {
+    return "rider_assigned";
+  }
+
+  // 4. Kitchen is working on the order
+  if (orderStatus === "ready" || orderStatus === "preparing") {
+    return "preparing";
+  }
+  if (deliveryStatus === "arrived_at_destination") {
+    return "arrived_at_destination";
+  }
+
+  // 5. Order confirmed by restaurant
+  if (orderStatus === "confirmed") {
+    return "confirmed";
+  }
+
+  return "pending";
+}
+
+// Rider action map
 const NEXT_STEP: Partial<
   Record<DeliveryStep, { label: string; next: DeliveryStep }>
 > = {
@@ -51,9 +91,9 @@ function elapsedSince(iso: string | null): number {
 interface ActiveOrderViewProps {
   viewer: "rider" | "customer";
   tracking: DeliveryTracking;
-  onAdvance?: (next: DeliveryStep) => void;
+  onAdvance?: (next: DeliveryStep) => Promise<void>;
   isAdvancing?: boolean;
-  receiptItems?: TrackingItem[];
+  receiptItems?: OrderDetailItem[];
 }
 
 export function ActiveOrderView({
@@ -64,7 +104,6 @@ export function ActiveOrderView({
   receiptItems,
 }: ActiveOrderViewProps) {
   const elapsedMinutes = useElapsedMinutes(tracking.assignedAt);
-
   const callTargets =
     viewer === "rider"
       ? [
@@ -77,14 +116,37 @@ export function ActiveOrderView({
         ];
 
   const nextStep = NEXT_STEP[tracking.deliveryStatus];
-  const customerStatus =
-    tracking.deliveryStatus !== "unassigned"
-      ? tracking.deliveryStatus
-      : tracking.orderStatus;
+  const [advanceError, setAdvanceError] = useState<string | null>(null);
+  const customerStatus = getCustomerStatus(
+    tracking.orderStatus,
+    tracking.deliveryStatus,
+  );
+  const riderTimelineStatus = nextStep?.next ?? tracking.deliveryStatus;
+  const waitingForFood =
+    viewer === "rider" &&
+    (tracking.deliveryStatus === "accepted" ||
+      tracking.deliveryStatus === "arrived_at_store") &&
+    tracking.orderStatus !== "ready";
+  const canAdvance = !(waitingForFood && nextStep?.next === "picked_up");
+
+  const [hasSkippedReview, setHasSkippedReview] = useState(false);
+  const [hasSubmittedReview, setHasSubmittedReview] = useState(false);
+
+  const isDelivered =
+    tracking.deliveryStatus === "delivered" ||
+    tracking.orderStatus === "delivered";
+
+  // Show review modal automatically ONLY for customer view when order becomes delivered
+  const showReviewModal =
+    viewer === "customer" &&
+    isDelivered &&
+    !hasSkippedReview &&
+    !hasSubmittedReview;
 
   return (
     <div className="grid gap-8 lg:grid-cols-[1.3fr_1fr]">
       <RouteCard
+        tracking={tracking}
         pickupLabel={tracking.restaurantName}
         pickupAddress={tracking.restaurantAddress}
         dropoffAddress={tracking.dropoffAddress}
@@ -104,14 +166,19 @@ export function ActiveOrderView({
         </h2>
 
         <div className="mt-5 border-t border-border pt-5">
-          {viewer === "customer" && (
-            <StatusTimeline
-              currentStatus={customerStatus}
-              steps={CUSTOMER_ORDER_STEPS}
-            />
-          )}
+          {viewer === "customer" &&
+            (customerStatus === "cancelled" ? (
+              <p className="text-sm font-semibold text-destructive">
+                This order was cancelled.
+              </p>
+            ) : (
+              <StatusTimeline
+                currentStatus={customerStatus}
+                steps={CUSTOMER_ORDER_STEPS}
+              />
+            ))}
           {viewer === "rider" && tracking.deliveryStatus !== "unassigned" && (
-            <StatusTimeline currentStatus={tracking.deliveryStatus} />
+            <StatusTimeline currentStatus={riderTimelineStatus} />
           )}
         </div>
 
@@ -128,20 +195,55 @@ export function ActiveOrderView({
 
         {viewer === "rider" && nextStep && onAdvance && (
           <button
-            onClick={() => onAdvance(nextStep.next)}
-            disabled={isAdvancing}
+            onClick={async () => {
+              setAdvanceError(null);
+              try {
+                await onAdvance(nextStep.next);
+              } catch (error) {
+                setAdvanceError(
+                  error instanceof Error
+                    ? error.message
+                    : "Unable to update delivery status.",
+                );
+              }
+            }}
+            disabled={isAdvancing || !canAdvance}
             className="mt-4 w-full bg-primary py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:opacity-50"
           >
             {nextStep.label}
           </button>
         )}
 
-        {viewer === "rider" && tracking.deliveryStatus === "delivered" && (
+        {waitingForFood && (
+          <p className="mt-2 text-center text-xs text-muted-foreground">
+            Waiting for the restaurant to mark the food ready.
+          </p>
+        )}
+
+        {advanceError && (
+          <p className="mt-2 text-center text-xs text-destructive">
+            {advanceError}
+          </p>
+        )}
+
+        {(tracking.deliveryStatus === "delivered" ||
+          tracking.orderStatus === "delivered") && (
           <p className="mt-4 text-center text-sm font-semibold text-emerald-700">
-            Delivered — nice work.
+            Delivered — order complete.
           </p>
         )}
       </div>
+      {showReviewModal && (
+        <ReviewModal
+          orderId={tracking.orderId}
+          restaurantId={tracking.restaurantId}
+          restaurantName={tracking.restaurantName}
+          riderId={tracking.riderId}
+          riderName={tracking.riderName}
+          onClose={() => setHasSkippedReview(true)}
+          onSubmitSuccess={() => setHasSubmittedReview(true)}
+        />
+      )}
     </div>
   );
 }

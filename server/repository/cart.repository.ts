@@ -37,8 +37,8 @@ export const findCart = async ({
   userId,
   restaurantId,
 }: {
-  userId: string;
-  restaurantId: string;
+  userId: number;
+  restaurantId: number;
 }) => {
   const data = await pool.query(FIND_CART, [userId, restaurantId]);
   return data.rows[0];
@@ -48,8 +48,8 @@ export const insertCart = async ({
   userId,
   restaurantId,
 }: {
-  userId: string;
-  restaurantId: string;
+  userId: number;
+  restaurantId: number;
 }) => {
   const data = await pool.query(INSERT_CART, [userId, restaurantId]);
   return data.rows[0];
@@ -60,9 +60,9 @@ export const upsertCartItem = async ({
   quantity,
   cartId,
 }: {
-  menuItemId: string;
+  menuItemId: number;
   quantity: number;
-  cartId: string;
+  cartId: number;
 }) => {
   const data = await pool.query(UPSERT_CART_ITEM, [
     menuItemId,
@@ -105,7 +105,7 @@ const cleanId = restaurantId === null ? null : Number(restaurantId);
   return [...carts.values()];
 };
 
-export const findUserAddresses = async (userId: string) => {
+export const findUserAddresses = async (userId: number) => {
   const data = await pool.query(
     `SELECT id, label, address, street, apartment_name, city, postal_code
      FROM user_addresses

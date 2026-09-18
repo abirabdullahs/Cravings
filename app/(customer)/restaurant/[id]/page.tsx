@@ -27,7 +27,7 @@ export default function RestaurantPage({
     notFound();
   }
   const handleAddCartItem = (item: MenuItem, quantity: number) => {
-    createCartItem(item.id, data.restaurant.id, quantity);
+    createCartItem({menuItemId: item.id, restaurantId: Number(data.restaurant.id), quantity});
   };
 
   return (

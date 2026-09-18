@@ -8,6 +8,7 @@ export interface RiderProfile {
   name: string;
   phone?: string;
   profileImage?: string;
+  status: string;
 }
 
 export interface DeliveryOpportunity {
@@ -17,7 +18,19 @@ export interface DeliveryOpportunity {
   totalAmount: number;
   createdAt: string;
 }
-
+export interface DeliveryItem {
+  deliveryId: number;
+  orderId: number;
+  deliveryStatus: string;
+  orderStatus: string;
+  totalAmount: number;
+  deliveryFee: number;
+  restaurantName: string;
+  restaurantAddress: string;
+  dropoffAddress: string;
+  assignedAt: string;
+  deliveredAt: string | null;
+}
 export interface RiderEarningsSummary {
   deliveryDate: string;
   totalDeliveries: number;

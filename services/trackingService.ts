@@ -1,8 +1,7 @@
 import { apiRequest } from "@/lib/http";
 import type {
   DeliveryStep,
-  DeliveryTracking,
-  TrackingItem,
+  DeliveryTracking
 } from "@/types/delivery-tracking";
 
 export const fetchActiveDelivery = async (): Promise<DeliveryTracking | null> =>
@@ -13,17 +12,14 @@ export const fetchOrderTracking = async (
 ): Promise<DeliveryTracking> =>
   apiRequest<DeliveryTracking>(`/api/orders/${orderId}`);
 
-export const fetchOrderReceipt = async (
-  orderId: number,
-): Promise<TrackingItem[]> =>
-  apiRequest<TrackingItem[]>(`/api/orders/${orderId}/receipt`);
 
 export const advanceDeliveryStatus = async (
   orderId: number,
   status: DeliveryStep,
+  location?: { latitude: number; longitude: number },
 ): Promise<void> => {
   await apiRequest(`/api/rider/deliveries/${orderId}`, {
     method: "PATCH",
-    body: JSON.stringify({ status }),
+    body: JSON.stringify({ status, ...location }),
   });
 };

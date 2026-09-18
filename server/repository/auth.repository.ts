@@ -11,6 +11,8 @@ import {
   APPROVE_ROLE_REQUEST,
   UPDATE_USER_PROFILE,
   GET_ROLE_REQUEST_BY_ID,
+  INSERT_RIDER_PROFILE,
+  INSERT_RESTAURANT_OWNER_PROFILE,
 } from "../query/auth.query";
 import { User } from "../../types/user";
 
@@ -41,6 +43,25 @@ export const completeUser = async ({
 }) => {
   const data = [role, phone, id];
   const result = await pool.query(COMPLETE_USER, data);
+  return result.rows[0];
+};
+
+export const insertRiderProfile = async ({
+  userId,
+  vehicleType,
+  licensePlate,
+}: {
+  userId: string;
+  vehicleType: string;
+  licensePlate: string | null;
+}) => {
+  const data = [userId, vehicleType, licensePlate];
+  const result = await pool.query(INSERT_RIDER_PROFILE, data);
+  return result.rows[0];
+};
+
+export const insertRestaurantOwnerProfile = async (userId: string) => {
+  const result = await pool.query(INSERT_RESTAURANT_OWNER_PROFILE, [userId]);
   return result.rows[0];
 };
 
@@ -116,7 +137,10 @@ export const approveRoleRequest = async ({
   userId: string;
   requestedRole: string;
 }) => {
-  const result = await pool.query(APPROVE_ROLE_REQUEST, [userId, requestedRole]);
+  const result = await pool.query(APPROVE_ROLE_REQUEST, [
+    userId,
+    requestedRole,
+  ]);
   return result.rows[0];
 };
 

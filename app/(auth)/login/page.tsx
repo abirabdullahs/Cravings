@@ -3,10 +3,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { getSession, signIn } from "next-auth/react";
 import { ArrowRightIcon } from "lucide-react";
-import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
-  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -45,8 +43,9 @@ export default function LoginPage() {
       }
 
       const session = await getSession();
-      router.refresh();
-      router.push(getRoleBasedRedirect(session?.user?.role ?? "customer"));
+      window.location.assign(
+        getRoleBasedRedirect(session?.user?.role ?? "customer"),
+      );
     } catch {
       setError("Unable to sign in right now. Please try again.");
     } finally {
@@ -66,15 +65,20 @@ export default function LoginPage() {
               Good food is waiting.
             </h1>
             <p className="mt-4 max-w-xs text-sm leading-6 text-muted-foreground">
-              Sign in to discover Dhaka&apos;s favorite kitchens and pick up where you left off.
+              Sign in to discover Dhaka&apos;s favorite kitchens and pick up
+              where you left off.
             </p>
           </div>
-          <p className="text-sm font-medium text-foreground/70">Cravings<span className="text-primary">.</span></p>
+          <p className="text-sm font-medium text-foreground/70">
+            Cravings<span className="text-primary">.</span>
+          </p>
         </div>
 
         <div className="p-6 sm:p-10">
           <div className="mb-8">
-            <p className="text-sm font-medium text-primary md:hidden">Welcome back</p>
+            <p className="text-sm font-medium text-primary md:hidden">
+              Welcome back
+            </p>
             <h2 className="mt-1 font-serif text-3xl font-bold tracking-tight text-foreground">
               Sign in to Cravings
             </h2>
@@ -116,7 +120,9 @@ export default function LoginPage() {
               className="inline-flex h-11 items-center justify-center gap-2 rounded-sm bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {loading ? "Signing in..." : "Sign in"}
-              {!loading && <ArrowRightIcon className="size-4" aria-hidden="true" />}
+              {!loading && (
+                <ArrowRightIcon className="size-4" aria-hidden="true" />
+              )}
             </button>
           </form>
 
@@ -128,7 +134,9 @@ export default function LoginPage() {
 
           <button
             type="button"
-            onClick={() => signIn("google", { callbackUrl: "/complete-profile" })}
+            onClick={() =>
+              signIn("google", { callbackUrl: "/complete-profile" })
+            }
             className="h-11 w-full rounded-sm border border-border bg-background px-4 text-sm font-semibold text-foreground transition hover:border-primary hover:text-primary"
           >
             Continue with Google
@@ -136,7 +144,10 @@ export default function LoginPage() {
 
           <p className="mt-7 text-center text-sm text-muted-foreground">
             New to Cravings?{" "}
-            <Link href="/register" className="font-semibold text-primary hover:text-primary/80">
+            <Link
+              href="/register"
+              className="font-semibold text-primary hover:text-primary/80"
+            >
               Create an account
             </Link>
           </p>

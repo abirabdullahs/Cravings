@@ -3,17 +3,23 @@ CALL creation_of_order($1, $2, $3, $4, $5, NULL);
 `;
 export const GET_USER_ORDERS = `
 SELECT 
-  o.id, 
-  r.name AS restaurant_name, 
+  o.id,
+  o.restaurant_id,
+  r.name AS restaurant_name,
   o.total_amount, 
   o.order_status, 
   o.created_at,
-  COUNT(oi.id)::int AS total_items
+  COUNT(oi.id)::int AS total_items,
+  d.rider_id,
+  rider.name AS rider_name,
+  EXISTS (SELECT 1 FROM reviews review WHERE review.order_id = o.id) AS is_reviewed
 FROM orders o
 JOIN restaurants r ON r.id = o.restaurant_id
 LEFT JOIN order_items oi ON oi.order_id = o.id
+LEFT JOIN deliveries d ON d.order_id = o.id
+LEFT JOIN users rider ON rider.id = d.rider_id
 WHERE o.user_id = $1
-GROUP BY o.id, r.name
+GROUP BY o.id, r.name, d.rider_id, rider.name
 ORDER BY o.created_at DESC;
 `;
 
@@ -55,35 +61,38 @@ FROM orders o
 JOIN restaurants r ON r.id = o.restaurant_id
 LEFT JOIN order_items oi ON o.id = oi.order_id
 JOIN menu_items mi ON mi.id = oi.menu_item_id
-WHERE o.id = $1;
-`;
-
-export const GET_ORDER_RECEIPT = `
-SELECT
-  oi.id,
-  mi.item_name AS name,
-  oi.quantity,
-  oi.unit_price,
-  oi.subtotal
-FROM orders o
-JOIN order_items oi ON oi.order_id = o.id
-JOIN menu_items mi ON mi.id = oi.menu_item_id
 WHERE o.id = $1 AND o.user_id = $2
 ORDER BY oi.id;
 `;
 
+
 export const GET_ORDER_TRACKING_FOR_CUSTOMER = `
 SELECT
   o.id AS order_id,
+  o.restaurant_id,
   o.order_status,
   d.status AS delivery_status,
   d.assigned_at,
   r.name AS restaurant_name,
   r.address AS restaurant_address,
   r.phone AS restaurant_phone,
+  r.latitude AS restaurant_latitude,
+  r.longitude AS restaurant_longitude,
   ua.address AS dropoff_address,
+  ua.latitude AS dropoff_latitude,
+  ua.longitude AS dropoff_longitude,
   rider_user.name AS rider_name,
   rider_user.phone AS rider_phone,
+  d.rider_id,
+  latest_location.latitude AS rider_latitude,
+  latest_location.longitude AS rider_longitude,
+  latest_location.recorded_at AS rider_location_recorded_at,
+  CASE
+    WHEN r.latitude IS NOT NULL AND r.longitude IS NOT NULL
+      AND ua.latitude IS NOT NULL AND ua.longitude IS NOT NULL
+    THEN calculate_distance_km(r.latitude, r.longitude, ua.latitude, ua.longitude)
+    ELSE NULL
+  END AS distance_km,
   o.total_amount,
   p.payment_method,
   (SELECT COUNT(*)::int FROM order_items oi WHERE oi.order_id = o.id) AS item_count
@@ -92,6 +101,13 @@ JOIN restaurants r ON r.id = o.restaurant_id
 JOIN user_addresses ua ON ua.id = o.address_id
 LEFT JOIN deliveries d ON d.order_id = o.id
 LEFT JOIN users rider_user ON rider_user.id = d.rider_id
+LEFT JOIN LATERAL (
+  SELECT latitude, longitude, recorded_at
+  FROM delivery_location_history
+  WHERE delivery_id = d.id
+  ORDER BY recorded_at DESC, id DESC
+  LIMIT 1
+) latest_location ON TRUE
 LEFT JOIN payments p ON p.order_id = o.id
 WHERE o.id = $1 AND o.user_id = $2
 `;

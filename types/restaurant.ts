@@ -8,6 +8,8 @@ export interface RestaurantSummary {
   isActive: boolean;
   cuisines: string[];
   area?: string;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 export interface Restaurant extends RestaurantSummary {

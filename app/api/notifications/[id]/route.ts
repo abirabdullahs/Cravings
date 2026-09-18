@@ -24,8 +24,11 @@ export async function PATCH(
       );
     }
 
-    const updated = await markNotificationRead(notificationId);
-    return NextResponse.json({ success: true, data: updated });
+    const updated = await markNotificationRead(
+      notificationId,
+      Number(session.user.id),
+    );
+    return NextResponse.json(updated);
   } catch (error) {
     return handleApiError(error);
   }

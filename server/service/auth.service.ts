@@ -10,6 +10,8 @@ import {
   updateUserProfile,
   findRoleRequestByUser,
   getRoleRequestById,
+  insertRiderProfile,
+  insertRestaurantOwnerProfile,
 } from "../repository/auth.repository";
 import { hashPassword } from "../utils/password";
 import { AppError } from "@/lib/errors/AppError";
@@ -103,7 +105,14 @@ export const completeProfile = async ({
   verificationData?: Record<string, unknown>;
 }) => {
   const normalizedRole = normalizeRole(role);
-  const data = await completeUser({ role: normalizedRole === "owner" || normalizedRole === "rider" ? "customer" : normalizedRole, phone, id });
+  const data = await completeUser({
+    role:
+      normalizedRole === "owner" || normalizedRole === "rider"
+        ? "customer"
+        : normalizedRole,
+    phone,
+    id,
+  });
 
   if (normalizedRole === "owner" || normalizedRole === "rider") {
     await createRoleRequest({
@@ -170,10 +179,17 @@ type RoleRequestRow = {
   source_role_from_user?: string;
 };
 
-export const listRequests = async (filters?: { status?: string; requestedRole?: string }) => {
+export const listRequests = async (filters?: {
+  status?: string;
+  requestedRole?: string;
+}) => {
   const rows = await listRoleRequests();
   return rows.filter((row: RoleRequestRow) => {
-    if (filters?.status && String(row.status ?? "").toUpperCase() !== String(filters.status).toUpperCase()) {
+    if (
+      filters?.status &&
+      String(row.status ?? "").toUpperCase() !==
+        String(filters.status).toUpperCase()
+    ) {
       return false;
     }
     if (
@@ -218,6 +234,16 @@ export const reviewRoleRequest = async ({
       userId: String(request.user_id),
       requestedRole: request.requested_role,
     });
+
+    if (request.requested_role === "rider") {
+      await insertRiderProfile({
+        userId: String(request.user_id),
+        vehicleType: request.verification_data?.vehicle_type ?? "BIKE",
+        licensePlate: request.verification_data?.license_number ?? null,
+      });
+    } else if (request.requested_role === "owner") {
+      await insertRestaurantOwnerProfile(String(request.user_id));
+    }
   }
 
   return await updateRoleRequestStatus({

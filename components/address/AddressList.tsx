@@ -86,7 +86,7 @@ export function AddressList({
             {addresses.map((address) => (
               <div
                 key={address.id}
-                className="rounded-lg border border-gray-200 p-4 transition-shadow hover:shadow-md"
+                className="rounded-lg border secondary border-gray-200 p-4 transition-shadow hover:shadow-md"
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">

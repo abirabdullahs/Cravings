@@ -16,12 +16,14 @@ export function StatusTimeline({
   steps = DELIVERY_STEPS,
 }: StatusTimelineProps) {
   const currentIndex = steps.findIndex((step) => step.key === currentStatus);
+  const isAllDelivered = currentStatus === "delivered";
 
   return (
     <ol className="space-y-3">
       {steps.map((step, index) => {
-        const isDone = index < currentIndex;
-        const isCurrent = index === currentIndex;
+        // Mark as done if step index is behind current status OR if overall state is delivered
+        const isDone = isAllDelivered || index < currentIndex;
+        const isCurrent = !isAllDelivered && index === currentIndex;
 
         return (
           <li key={step.key} className="flex items-center gap-3">
@@ -38,10 +40,10 @@ export function StatusTimeline({
             </span>
             <span
               className={`text-sm font-semibold ${
-                isCurrent
-                  ? "text-primary"
-                  : isDone
-                    ? "text-foreground"
+                isDone
+                  ? "text-foreground"
+                  : isCurrent
+                    ? "text-primary"
                     : "text-muted-foreground"
               }`}
             >

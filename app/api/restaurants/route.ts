@@ -17,6 +17,6 @@ export async function GET(request: NextRequest) {
     const restaurants = await getRestaurants(filter);
     return NextResponse.json(restaurants);
   } catch (err: unknown) {
-    handleApiError(err, "Unable to load restaurants");
+    return handleApiError(err, "Unable to load restaurants");
   }
 }

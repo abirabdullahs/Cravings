@@ -109,10 +109,11 @@ function getSortClause(sort?: string): string {
   switch (sort) {
     case "top-rated":
       return "ORDER BY R.active_status DESC, R.rating DESC NULLS LAST";
-    case "fastest":
-      return "ORDER BY R.active_status DESC, R.delivery_minutes ASC";
     case "cheapest":
       return "ORDER BY R.active_status DESC, R.minimum_order ASC";
+    case "popular":
+      return `ORDER BY R.active_status DESC,
+        (SELECT COUNT(*) FROM orders o WHERE o.restaurant_id = R.id) DESC`;
     default:
       return "ORDER BY R.active_status DESC, R.name ASC";
   }

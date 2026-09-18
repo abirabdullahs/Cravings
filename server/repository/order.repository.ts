@@ -9,7 +9,6 @@ import {
   GET_RESTAURANT_ORDERS,
   FIND_ORDER_DETAIL,
   GET_ORDER_TRACKING_FOR_CUSTOMER,
-  GET_ORDER_RECEIPT,
   MARK_ORDER_READY,
 } from "../query/order.query";
 
@@ -70,8 +69,8 @@ export const markOrderReady = async (orderId: number, restaurantId: number) => {
   return result.rows[0] ? toCamelCase(result.rows[0]) : null;
 };
 
-export const findOrderDetail = async (orderId: number) => {
-  const result = await pool.query(FIND_ORDER_DETAIL, [orderId]);
+export const findOrderDetail = async (orderId: number, customerId: number) => {
+  const result = await pool.query(FIND_ORDER_DETAIL, [orderId, customerId]);
 
   if (result.rowCount === 0) {
     throw new Error("Order not found");
@@ -87,9 +86,4 @@ export const findOrderTrackingForCustomer = async (
   toCamelCase(
     (await pool.query(GET_ORDER_TRACKING_FOR_CUSTOMER, [orderId, customerId]))
       .rows[0],
-  );
-
-export const findOrderReceipt = async (orderId: number, customerId: number) =>
-  toCamelCase(
-    (await pool.query(GET_ORDER_RECEIPT, [orderId, customerId])).rows,
   );

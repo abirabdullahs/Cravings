@@ -52,11 +52,7 @@ export function CheckoutPage({
   );
   const vatTaxes = items.length ? Math.round(subtotal * 0.03) : 0;
   const deliveryFee = items.length ? 60 : 0;
-  const campaignDiscount = items.length ? 50 : 0;
-  const total = Math.max(
-    0,
-    subtotal + vatTaxes + deliveryFee - campaignDiscount,
-  );
+  const total = Math.max(0, subtotal + vatTaxes + deliveryFee);
 
   const updateQuantity = async (item: CartItem, quantity: number) => {
     if (quantity < 0) return;
@@ -65,11 +61,11 @@ export function CheckoutPage({
     );
     setError(null);
     try {
-      await createCartItem(
-        item.menuItemId,
-        selectedCart!.restaurantId,
+      await createCartItem({
+        menuItemId: item.menuItemId,
+        restaurantId: selectedCart!.restaurantId,
         quantity,
-      );
+      });
     } catch (requestError) {
       setError(
         requestError instanceof Error
@@ -251,14 +247,14 @@ export function CheckoutPage({
                     {formatPrice(deliveryFee)}
                   </dd>
                 </div>
-                {campaignDiscount > 0 && (
+                {/* {campaignDiscount > 0 && (
                   <div className="flex justify-between text-emerald-600">
                     <dt>Campaign Discount</dt>
                     <dd className="font-semibold">
                       -{formatPrice(campaignDiscount)}
                     </dd>
                   </div>
-                )}
+                )} */}
 
                 <div className="flex justify-between border-t border-border pt-4 font-serif text-lg font-bold text-foreground">
                   <dt>Total Payable</dt>

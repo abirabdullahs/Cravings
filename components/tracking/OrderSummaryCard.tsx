@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { TrackingItem } from "@/types/delivery-tracking";
+import { OrderDetailItem } from "@/types/order";
 
 interface CallTarget {
   label: string;
@@ -13,7 +13,7 @@ interface OrderSummaryCardProps {
   totalAmount: number;
   paymentMethod: string | null;
   callTargets: CallTarget[];
-  items?: TrackingItem[];
+  items?: OrderDetailItem[];
   expandable?: boolean;
 }
 

@@ -5,11 +5,12 @@ interface RiderGreetingProps {
   onToggle: (next: "online" | "offline") => void;
 }
 
-// NOTE: RiderProfile has no dutyStatus field — GET_RIDER_PROFILE doesn't
-// select it (duty lives on riders.status, which no query currently joins
-// in). Until that's added, dutyStatus is owned by the parent as local
-// state (defaults to "offline") rather than read from the server.
-export function RiderGreeting({ firstName, dutyStatus, busy, onToggle }: RiderGreetingProps) {
+export function RiderGreeting({
+  firstName,
+  dutyStatus,
+  busy,
+  onToggle,
+}: RiderGreetingProps) {
   const isOnline = dutyStatus === "online";
 
   return (
@@ -24,7 +25,9 @@ export function RiderGreeting({ firstName, dutyStatus, busy, onToggle }: RiderGr
       </div>
 
       <div className="flex items-center gap-3">
-        <span className="text-sm font-medium text-foreground">Duty Status:</span>
+        <span className="text-sm font-medium text-foreground">
+          Duty Status:
+        </span>
         <div className="flex rounded-full border border-border bg-card p-1">
           <button
             disabled={busy}

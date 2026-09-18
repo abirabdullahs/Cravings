@@ -50,6 +50,28 @@ export interface CreatedOrder {
   status: string;
 }
 
+export interface OrderHistoryItem {
+  id: number;
+  restaurantId: number;
+  restaurantName: string;
+  orderStatus: string;
+  createdAt: string;
+  totalItems: number;
+  totalAmount: number;
+  riderId: number | null;
+  riderName: string | null;
+  isReviewed: boolean;
+}
+
+export interface OrderDetailItem {
+  id: number;
+  name: string;
+  quantity: number;
+  unitPrice: number;
+  subtotal: number;
+}
+
+
 export interface RestaurantOrder {
   id: number;
   customerName: string;
@@ -57,4 +79,13 @@ export interface RestaurantOrder {
   createdAt: string;
   totalItems: number;
   totalAmount?: number;
+}
+
+export interface SubmitReviewInput {
+  orderId: number;
+  restaurantId: number;
+  riderId?: number | null;
+  rating: number;
+  riderRating: number | null;
+  comment: string;
 }

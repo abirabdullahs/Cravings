@@ -7,7 +7,7 @@ import Credentials from "next-auth/providers/credentials";
 import { getUserByEmail, createAccount } from "./server/service/auth.service";
 
 export const { handlers, auth, signIn, signOut, unstable_update } = NextAuth({
-  session: { strategy: "jwt", maxAge: 15 * 60, },
+  session: { strategy: "jwt", maxAge: 15 * 60 },
   secret: process.env.AUTH_SECRET,
   providers: [
     Google({
@@ -108,6 +108,17 @@ export const { handlers, auth, signIn, signOut, unstable_update } = NextAuth({
         const updatedUser = session.user || session;
         if (updatedUser.phone !== undefined) token.phone = updatedUser.phone;
         if (updatedUser.role !== undefined) token.role = updatedUser.role;
+      }
+
+      // JWT sessions must reflect an approval made after the session was issued.
+      if (!user && token.email) {
+        const dbUser = await getUserByEmail(String(token.email));
+        if (dbUser) {
+          token.id = String(dbUser.id ?? token.id ?? "");
+          token.phone =
+            dbUser.phone && dbUser.phone !== "0" ? dbUser.phone : "";
+          token.role = dbUser.role ?? "customer";
+        }
       }
       return token;
     },

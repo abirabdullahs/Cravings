@@ -12,11 +12,12 @@ export async function POST(request: NextRequest, context: Context) {
     const user = await getAuthenticatedUser();
 
     // require validation
+  
     const data = await addCartItem({
-      userId: user.id,
-      restaurantId,
-      menuItemId,
-      quantity,
+      userId: Number(user.id),
+      restaurantId: Number(restaurantId),
+      menuItemId: Number(menuItemId),
+      quantity: Number(quantity),
     });
     return NextResponse.json(data, { status: 200 });
   } catch (error: unknown) {

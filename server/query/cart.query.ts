@@ -1,6 +1,10 @@
 export const FIND_CART = `SELECT * FROM carts WHERE user_id = $1 AND restaurant_id = $2;`;
 
-export const INSERT_CART = `INSERT INTO carts (user_id, restaurant_id) values($1, $2);`;
+export const INSERT_CART = `
+  INSERT INTO carts (user_id, restaurant_id)
+  VALUES ($1, $2)
+  RETURNING *;
+`;
 
 export const UPSERT_CART_ITEM = `INSERT INTO cart_items (menu_item_id, quantity, cart_id) 
   VALUES ($1, $2, $3)

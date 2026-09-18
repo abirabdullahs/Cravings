@@ -5,6 +5,9 @@ import {
   CartItemInput,
   CreateOrderInput,
   CreatedOrder,
+  SubmitReviewInput,
+  OrderHistoryItem,
+  OrderDetailItem
 } from "@/types/order";
 import { Restaurant, RestaurantMenu } from "@/types/restaurant";
 
@@ -32,8 +35,6 @@ export const fetchCartItems = async (
   );
 };
 
-// export const fetchAddresses = async (): Promise<UserAddress[]> =>
-//   apiRequest<UserAddress[]>("/api/addresses");
 
 export const placeOrder = async (
   input: CreateOrderInput,
@@ -42,3 +43,17 @@ export const placeOrder = async (
     method: "POST",
     body: JSON.stringify(input),
   });
+
+export const submitReview = async (input: SubmitReviewInput) =>
+  apiRequest<void>("/api/reviews", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+
+export const fetchOrderHistory = async (): Promise<OrderHistoryItem[]> =>
+  apiRequest<OrderHistoryItem[]>("/api/orders");
+
+export const fetchOrderDetail = async (
+  orderId: number,
+): Promise<OrderDetailItem[]> =>
+  apiRequest<OrderDetailItem[]>(`/api/orders/${orderId}/detail`);

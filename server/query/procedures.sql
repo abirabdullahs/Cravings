@@ -11,6 +11,7 @@ CREATE OR REPLACE PROCEDURE creation_of_order (
     v_restaurant_id INT;
     v_total_amount NUMERIC(10,2);
     v_discount NUMERIC(10,2);
+    v_delivery_fee NUMERIC(10,2);
     v_user_coupon_id INT;
   BEGIN
 
@@ -44,9 +45,20 @@ CREATE OR REPLACE PROCEDURE creation_of_order (
     WHERE C.id = p_cart_id
       AND C.user_id = p_user_id
     GROUP BY C.restaurant_id, C.user_coupons_id, CU.discount_type, CU.discount_value;
+
+    SELECT CASE
+      WHEN R.latitude IS NOT NULL AND R.longitude IS NOT NULL
+        AND A.latitude IS NOT NULL AND A.longitude IS NOT NULL
+      THEN calculate_delivery_fee(calculate_distance_km(R.latitude, R.longitude, A.latitude, A.longitude))
+      ELSE p_delivery_fee
+    END
+    INTO v_delivery_fee
+    FROM restaurants R
+    JOIN user_addresses A ON A.id = p_adress_id
+    WHERE R.id = v_restaurant_id;
     
     INSERT INTO orders (user_id, restaurant_id, address_id, total_amount, delivery_fee, discount)
-    VALUES (p_user_id, v_restaurant_id, p_adress_id, v_total_amount, p_delivery_fee, v_discount)
+    VALUES (p_user_id, v_restaurant_id, p_adress_id, v_total_amount, COALESCE(v_delivery_fee, 0), v_discount)
     RETURNING id INTO p_order_id;
 
     INSERT INTO order_items (menu_item_id, quantity, unit_price, subtotal, order_id)
@@ -55,7 +67,7 @@ CREATE OR REPLACE PROCEDURE creation_of_order (
     WHERE C.cart_id = p_cart_id;
 
     
-    INSERT INTO payments (order_id, amount, payment_method) VALUES (p_order_id, v_total_amount - v_discount + p_delivery_fee, p_payment_method);
+    INSERT INTO payments (order_id, amount, payment_method) VALUES (p_order_id, v_total_amount - v_discount + COALESCE(v_delivery_fee, 0), p_payment_method);
 
     INSERT INTO deliveries (order_id, rider_id, status) VALUES (p_order_id, NULL, 'unassigned');
 

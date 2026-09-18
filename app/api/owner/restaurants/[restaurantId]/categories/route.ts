@@ -16,7 +16,7 @@ export async function POST(request: Request, { params }: Context) {
     const data = await addCategory(restaurantId, user.id, name);
     return NextResponse.json(data, { status: 201 });
   } catch (error) {
-    handleApiError(error, "Unable to add category");
+    return handleApiError(error, "Unable to add category");
   }
 }
 
@@ -33,6 +33,6 @@ export async function DELETE(request: Request, { params }: Context) {
     await removeCategory(categoryId, restaurantId, user.id);
     return NextResponse.json({ success: true });
   } catch (error) {
-    handleApiError(error, "Unable to remove category");
+    return handleApiError(error, "Unable to remove category");
   }
 }

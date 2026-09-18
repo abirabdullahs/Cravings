@@ -1,5 +1,5 @@
 export const FIND_RESTAURANTS_BY_OWNER = `
-SELECT id, name, description, phone, email, address, opening_time,
+SELECT id, name, description, phone, email, address, latitude, longitude, opening_time,
 			 closing_time, delivery_fee, minimum_order, active_status
 FROM restaurants
 WHERE owner_id = $1

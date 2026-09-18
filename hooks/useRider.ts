@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   acceptDeliveryRequest,
   fetchAvailableRequests,
+  fetchDeliveries,
   fetchRiderEarnings,
   fetchRiderProfile,
   setDutyStatus,
@@ -19,7 +20,7 @@ export function useAvailableRequests() {
   return useQuery({
     queryKey: ["rider", "requests"],
     queryFn: fetchAvailableRequests,
-    refetchInterval: 5000, // polling placeholder until realtime replaces it
+    refetchInterval: 3000, // polling placeholder until realtime replaces it
   });
 }
 
@@ -27,6 +28,13 @@ export function useRiderEarnings(date: string) {
   return useQuery({
     queryKey: ["rider", "earnings", date],
     queryFn: () => fetchRiderEarnings(date),
+  });
+}
+
+export function useRiderDeliveries( date?: string) {
+  return useQuery({
+    queryKey: ["riderDeliveries", date],
+    queryFn: () => fetchDeliveries(1, date || null),
   });
 }
 

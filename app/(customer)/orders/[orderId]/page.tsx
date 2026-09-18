@@ -1,7 +1,8 @@
 "use client";
 import { useParams } from "next/navigation";
 import { ActiveOrderView } from "@/components/tracking/ActiveOrderView";
-import { useOrderReceipt, useOrderTracking } from "@/hooks/useDeliveryTracking";
+import { useOrderTracking } from "@/hooks/useDeliveryTracking";
+import { useOrderDetail } from "@/hooks/useOrder";
 
 export default function OrderTrackingPage() {
   const { orderId } = useParams<{ orderId: string }>();
@@ -10,7 +11,7 @@ export default function OrderTrackingPage() {
     isLoading,
     isError,
   } = useOrderTracking(Number(orderId));
-  const { data: receiptItems = [] } = useOrderReceipt(Number(orderId));
+  const { data: receiptItems = [] } = useOrderDetail(Number(orderId));
 
   if (isLoading) {
     return (

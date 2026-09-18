@@ -8,7 +8,9 @@ export type DeliveryStep =
   | "accepted"
   | "arrived_at_store"
   | "picked_up"
-  | "delivered";
+  | "arrived_at_destination"
+  | "delivered"
+  | "cancelled";
 
 export type OrderStatus =
   | "pending"
@@ -19,22 +21,19 @@ export type OrderStatus =
   | "delivered"
   | "cancelled";
 
-export interface TrackingItem {
-  name: string;
-  quantity: number;
-  unitPrice: number;
-  subtotal: number;
-}
+
 
 export const DELIVERY_STEPS: { key: DeliveryStep; label: string }[] = [
   { key: "accepted", label: "Order Accepted" },
   { key: "arrived_at_store", label: "Heading to Restaurant" },
   { key: "picked_up", label: "Picked Up Food" },
+  { key: "arrived_at_destination", label: "Arrived at Destination" },
   { key: "delivered", label: "Delivered to Customer" },
 ];
 
 export interface DeliveryTracking {
   orderId: number;
+  restaurantId: number;
   orderStatus: OrderStatus;
   deliveryStatus: DeliveryStep;
   assignedAt: string | null;
@@ -49,8 +48,17 @@ export interface DeliveryTracking {
 
   riderName?: string; // present for the customer view
   riderPhone?: string; // present for the customer view
+  riderId?: number | null;
 
   totalAmount: number;
   paymentMethod: string | null;
   itemCount: number;
+  restaurantLatitude: number | null;
+  restaurantLongitude: number | null;
+  dropoffLatitude: number | null;
+  dropoffLongitude: number | null;
+  riderLatitude: number | null;
+  riderLongitude: number | null;
+  riderLocationRecordedAt: string | null;
+  distanceKm: number | null;
 }

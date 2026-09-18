@@ -2,8 +2,9 @@ import { AppError } from "@/lib/errors/AppError";
 import { ErrorCode } from "@/lib/errors/errorCodes";
 import {
   createOrder,
+  findUserOrders,
   findOrderTrackingForCustomer,
-  findOrderReceipt,
+  findOrderDetail,
   findRestaurantOrders,
   markOrderReady,
 } from "../repository/order.repository";
@@ -52,8 +53,10 @@ export const getOrderTrackingForCustomer = async (
   customerId: number,
 ) => await findOrderTrackingForCustomer(orderId, customerId);
 
-export const getOrderReceipt = (orderId: number, customerId: number) =>
-  findOrderReceipt(orderId, customerId);
+export const getUserOrders = (customerId: number) => findUserOrders(customerId);
+
+export const getOrderDetail = (orderId: number, customerId: number) =>
+  findOrderDetail(orderId, customerId);
 
 export const getActiveRestaurantOrders = (restaurantId: number) =>
   findRestaurantOrders(restaurantId);

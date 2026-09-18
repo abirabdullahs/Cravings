@@ -4,7 +4,7 @@ import {
   useNotifications,
   useMarkNotificationRead,
   useMarkAllNotificationsRead,
-} from "@/hooks/useNotification";
+} from "@/hooks/useNotifications";
 import { Bell, CheckCheck, Loader2 } from "lucide-react";
 
 export default function NotificationsPage() {

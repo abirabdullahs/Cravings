@@ -9,13 +9,15 @@ export async function PATCH(
 ) {
   try {
     const { orderId } = await params;
-    const { status } = await request.json();
+    const { status, latitude, longitude } = await request.json();
     const user = await requireRider();
 
     const result = await updateDeliveryStatus(
       Number(orderId),
       Number(user.id),
       status,
+      latitude,
+      longitude,
     );
 
     return NextResponse.json(result, { status: 200 });

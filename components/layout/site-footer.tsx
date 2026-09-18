@@ -1,28 +1,36 @@
-import Link from "next/link"
-import { Logo } from "@/components/brand/logo"
+import Link from "next/link";
+import { Logo } from "@/components/brand/logo";
 
-const columns = [
+const footerSections = [
   {
     title: "Explore",
     links: [
-      { label: "Our Selection", href: "/search" },
-      { label: "Dhakaiya Heritage", href: "#" },
-      { label: "The Edit", href: "#" },
+      { label: "Browse Restaurants", href: "/search" },
+      { label: "Coverage Areas", href: "/delivery-areas" },
+      {label: "About Us", href: "/about" }
     ],
   },
   {
-    title: "Support",
+    title: "Partnerships",
     links: [
-      { label: "Contact Curators", href: "#" },
-      { label: "Delivery Areas", href: "#" },
-      { label: "Merchant Partners", href: "#" },
+      { label: "Partner Restaurant", href: "/register" },
+      { label: "Rider Portal", href: "/rider" },
+      { label: "Apply as Rider", href: "/register" },
     ],
   },
-]
+  {
+    title: "Support & Legal",
+    links: [
+      { label: "Help & FAQ", href: "/help" },
+      { label: "Terms of Service", href: "/terms" },
+      { label: "Privacy Policy", href: "/privacy" },
+    ],
+  },
+];
 
 export function SiteFooter() {
   return (
-    <footer className="bg-footer text-footer-foreground">
+    <footer className="bg-footer text-footer-foreground border-t border-border/10">
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6">
         <div className="flex flex-col gap-10 md:flex-row md:justify-between">
           <div className="max-w-xs">
@@ -33,8 +41,8 @@ export function SiteFooter() {
             </p>
           </div>
 
-          <div className="flex gap-12 sm:gap-20">
-            {columns.map((col) => (
+          <div className="grid grid-cols-2 gap-8 sm:grid-cols-3 sm:gap-12">
+            {footerSections.map((col) => (
               <div key={col.title}>
                 <h3 className="text-[11px] font-semibold uppercase tracking-wider text-primary">
                   {col.title}
@@ -62,5 +70,5 @@ export function SiteFooter() {
         </div>
       </div>
     </footer>
-  )
+  );
 }

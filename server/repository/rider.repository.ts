@@ -12,7 +12,14 @@ import {
   UPDATE_ORDER_STATUS_DELIVERED,
   UPDATE_ORDER_STATUS_OUT_FOR_DELIVERY,
   GET_ACTIVE_DELIVERY_FOR_RIDER,
+  INSERT_DELIVERY_LOCATION,
+  LOCK_RIDER_FOR_ACCEPT,
+  GET_RIDER_DELIVERIES,
+  CANCELL_ALL,
+  MARK_ARRIVED_AT_DESTINATION,
 } from "../query/rider.query";
+import { AppError } from "@/lib/errors/AppError";
+import { ErrorCode } from "@/lib/errors/errorCodes";
 import { toCamelCase } from "@/lib/case";
 
 export const findAvailableRequests = async () =>
@@ -20,6 +27,21 @@ export const findAvailableRequests = async () =>
 
 export const acceptRequest = async (orderId: number, riderId: number) =>
   withTransaction(async (client) => {
+    const rider = await client.query(LOCK_RIDER_FOR_ACCEPT, [riderId]);
+    await client.query(
+      CANCELL_ALL,
+      [riderId],
+    );
+    if (rider.rowCount !== 1) {
+      throw new AppError(ErrorCode.RIDER_NOT_FOUND);
+    }
+    if (rider.rows[0].status !== "idle") {
+      throw new AppError(
+        ErrorCode.INVALID_STATUS,
+        "You already have an active delivery",
+      );
+    }
+
     const result = await client.query(ACCEPT_REQUEST, [orderId, riderId]);
     if (result.rowCount !== 1) {
       throw new Error("Delivery is no longer available");
@@ -28,7 +50,12 @@ export const acceptRequest = async (orderId: number, riderId: number) =>
     await client.query(SET_RIDER_STATUS, [riderId, "busy"]);
     return toCamelCase(result.rows[0]);
   });
-export const markArrivedAtStore = async (orderId: number, riderId: number) =>
+export const markArrivedAtStore = async (
+  orderId: number,
+  riderId: number,
+  latitude: number,
+  longitude: number,
+) =>
   withTransaction(async (client) => {
     const result = await client.query(MARK_ARRIVED_AT_STORE, [
       orderId,
@@ -39,9 +66,21 @@ export const markArrivedAtStore = async (orderId: number, riderId: number) =>
       throw new Error("Delivery is not in accepted status");
     }
 
+    await client.query(INSERT_DELIVERY_LOCATION, [
+      result.rows[0].id,
+      latitude,
+      longitude,
+      "arrived_at_store",
+    ]);
+
     return toCamelCase(result.rows[0]);
   });
-export const markPickedUp = async (orderId: number, riderId: number) =>
+export const markPickedUp = async (
+  orderId: number,
+  riderId: number,
+  latitude: number,
+  longitude: number,
+) =>
   withTransaction(async (client) => {
     const delivery = await client.query(MARK_PICKED_UP, [orderId, riderId]);
 
@@ -57,13 +96,51 @@ export const markPickedUp = async (orderId: number, riderId: number) =>
       throw new Error("Order is not ready for delivery");
     }
 
+    await client.query(INSERT_DELIVERY_LOCATION, [
+      delivery.rows[0].id,
+      latitude,
+      longitude,
+      "picked_up",
+    ]);
+
     return {
       delivery: toCamelCase(delivery.rows[0]),
       order: toCamelCase(order.rows[0]),
     };
   });
 
-export const markDelivered = async (orderId: number, riderId: number) =>
+export const markArrivedAtDestination = async (
+  orderId: number,
+  riderId: number,
+  latitude: number,
+  longitude: number,
+) =>
+  withTransaction(async (client) => {
+    const result = await client.query(MARK_ARRIVED_AT_DESTINATION, [
+      orderId,
+      riderId,
+    ]);
+
+    if (result.rowCount !== 1) {
+      throw new Error("Delivery is not in the correct status");
+    }
+
+    await client.query(INSERT_DELIVERY_LOCATION, [
+      result.rows[0].id,
+      latitude,
+      longitude,
+      "arrived_at_destination",
+    ]);
+
+    return toCamelCase(result.rows[0]);
+  });
+
+export const markDelivered = async (
+  orderId: number,
+  riderId: number,
+  latitude: number,
+  longitude: number,
+) =>
   withTransaction(async (client) => {
     const delivery = await client.query(MARK_DELIVERED, [orderId, riderId]);
 
@@ -76,6 +153,13 @@ export const markDelivered = async (orderId: number, riderId: number) =>
     if (order.rowCount !== 1) {
       throw new Error("Order is not out for delivery");
     }
+
+    await client.query(INSERT_DELIVERY_LOCATION, [
+      delivery.rows[0].id,
+      latitude,
+      longitude,
+      "delivered",
+    ]);
 
     await client.query(SET_RIDER_STATUS, [riderId, "idle"]);
     return {
@@ -102,6 +186,10 @@ export const findRiderEarningsByDate = async (riderId: number, date: string) =>
     (await pool.query(GET_RIDER_EARNINGS_BY_DATE, [riderId, date])).rows[0],
   );
 
+export const findRiderDeliveries = async (riderId: number, date: string | null) =>
+  toCamelCase(
+    (await pool.query(GET_RIDER_DELIVERIES, [riderId, date])).rows,
+  );
 export const findRiderProfile = async (riderId: number) =>
   toCamelCase((await pool.query(GET_RIDER_PROFILE, [riderId])).rows[0]);
 

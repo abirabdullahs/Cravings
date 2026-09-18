@@ -1,3 +1,4 @@
+
 CREATE TYPE role_enum AS ENUM (
   'admin',
   'customer',
@@ -12,7 +13,7 @@ CREATE TYPE rider_status_enum AS ENUM (
 );
 
 CREATE TYPE order_status_enum AS ENUM (
-  -- 'pending',
+  'pending',
   'confirmed',
   'preparing',
   'ready',
@@ -26,6 +27,7 @@ CREATE TYPE delivery_status_enum AS ENUM (
   'accepted',
   'arrived_at_store',
   'picked_up',
+  'arrived_at_destination',
   'delivered',
   'cancelled'
 );
@@ -56,6 +58,38 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+CREATE OR REPLACE FUNCTION calculate_distance_km(
+  lat1 NUMERIC,
+  lon1 NUMERIC,
+  lat2 NUMERIC,
+  lon2 NUMERIC
+)
+RETURNS NUMERIC
+LANGUAGE SQL
+IMMUTABLE
+STRICT
+AS $$
+  SELECT 6371.0 * 2 * ASIN(SQRT(
+    POWER(SIN(RADIANS(lat2 - lat1) / 2), 2) +
+    COS(RADIANS(lat1)) * COS(RADIANS(lat2)) *
+    POWER(SIN(RADIANS(lon2 - lon1) / 2), 2)
+  ));
+$$;
+
+CREATE OR REPLACE FUNCTION calculate_delivery_fee(distance_km NUMERIC)
+RETURNS NUMERIC(10,2)
+LANGUAGE SQL
+IMMUTABLE
+STRICT
+AS $$
+  SELECT CASE
+    WHEN distance_km <= 2 THEN 40.00
+    WHEN distance_km <= 5 THEN 60.00
+    WHEN distance_km <= 8 THEN 80.00
+    ELSE 80.00 + CEIL(distance_km - 8) * 10.00
+  END::NUMERIC(10,2);
+$$;
+
 CREATE TABLE users (
   id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   name VARCHAR NOT NULL,
@@ -74,6 +108,24 @@ CREATE TRIGGER trg_users_updated_at
   BEFORE UPDATE ON users
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
+CREATE TABLE user_addresses (
+  id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  user_id INT NOT NULL,
+  label VARCHAR,
+  address TEXT NOT NULL,
+  street VARCHAR,
+  apartment_name VARCHAR,
+  city VARCHAR NOT NULL,
+  postal_code VARCHAR,
+  latitude NUMERIC(9,6),
+  longitude NUMERIC(9,6),
+  CONSTRAINT fk_user_addresses_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE DEFERRABLE INITIALLY IMMEDIATE,
+  CONSTRAINT ck_user_addresses_latitude_range CHECK (latitude IS NULL OR latitude BETWEEN -90 AND 90),
+  CONSTRAINT ck_user_addresses_longitude_range CHECK (longitude IS NULL OR longitude BETWEEN -180 AND 180)
+);
+
+CREATE INDEX ix_user_addresses_user ON user_addresses (user_id);
+
 CREATE TABLE restaurants (
   id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   owner_id INT NOT NULL,
@@ -90,13 +142,15 @@ CREATE TABLE restaurants (
   delivery_fee NUMERIC(10,2) NOT NULL DEFAULT 0,
   minimum_order NUMERIC(10,2) NOT NULL DEFAULT 0,
   active_status BOOLEAN NOT NULL DEFAULT FALSE,
-  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
-  updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
   cuisines VARCHAR[] NOT NULL DEFAULT '{}',
   rating NUMERIC(2,1) DEFAULT 0.0,
   image VARCHAR,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
   CONSTRAINT fk_restaurants_owner FOREIGN KEY (owner_id) REFERENCES users (id) DEFERRABLE INITIALLY IMMEDIATE,
-  CONSTRAINT ck_restaurants_fees CHECK (delivery_fee >= 0 AND minimum_order >= 0)
+  CONSTRAINT ck_restaurants_fees CHECK (delivery_fee >= 0 AND minimum_order >= 0),
+  CONSTRAINT ck_restaurants_latitude_range CHECK (latitude IS NULL OR latitude BETWEEN -90 AND 90),
+  CONSTRAINT ck_restaurants_longitude_range CHECK (longitude IS NULL OR longitude BETWEEN -180 AND 180)
 );
 
 CREATE INDEX ix_restaurants_owner ON restaurants (owner_id);
@@ -114,60 +168,6 @@ CREATE TABLE categories (
 );
 
 CREATE INDEX ix_categories_restaurant ON categories (restaurant_id);
-
-CREATE TABLE coupons (
-  id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  code VARCHAR NOT NULL,
-  discount_type discount_type_enum NOT NULL,
-  discount_value NUMERIC(10,2) NOT NULL,
-  minimum_order NUMERIC(10,2) NOT NULL DEFAULT 0,
-  expiry_date DATE,
-  CONSTRAINT uq_coupons_code UNIQUE (code),
-  CONSTRAINT ck_coupons_value_positive CHECK (discount_value > 0),
-  CONSTRAINT ck_coupons_percentage_range CHECK (discount_type <> 'percentage' OR discount_value <= 100),
-  CONSTRAINT ck_coupons_minimum_order CHECK (minimum_order >= 0)
-);
-
-CREATE TABLE user_addresses (
-  id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  user_id INT NOT NULL,
-  label VARCHAR,
-  address TEXT NOT NULL,
-  street VARCHAR,
-  apartment_name VARCHAR,
-  city VARCHAR NOT NULL,
-  postal_code VARCHAR,
-  latitude NUMERIC(9,6),
-  longitude NUMERIC(9,6),
-  CONSTRAINT fk_user_addresses_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE DEFERRABLE INITIALLY IMMEDIATE
-);
-
-CREATE INDEX ix_user_addresses_user ON user_addresses (user_id);
-
-CREATE TABLE riders (
-  user_id INT PRIMARY KEY,
-  vehicle_type VARCHAR NOT NULL,
-  vehicle_number VARCHAR NOT NULL,
-  status rider_status_enum NOT NULL DEFAULT 'idle',
-  updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
-  CONSTRAINT fk_riders_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE DEFERRABLE INITIALLY IMMEDIATE,
-  CONSTRAINT uq_riders_vehicle_number UNIQUE (vehicle_number)
-);
-
-CREATE TRIGGER trg_riders_updated_at
-  BEFORE UPDATE ON riders
-  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
-
-CREATE TABLE user_coupons (
-  id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  user_id INT NOT NULL,
-  coupon_id INT NOT NULL,
-  used BOOLEAN NOT NULL DEFAULT FALSE,
-  CONSTRAINT fk_user_coupons_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE DEFERRABLE INITIALLY IMMEDIATE,
-  CONSTRAINT fk_user_coupons_coupon FOREIGN KEY (coupon_id) REFERENCES coupons (id) DEFERRABLE INITIALLY IMMEDIATE
-);
-
-CREATE INDEX ix_user_coupons_user ON user_coupons (user_id);
 
 CREATE TABLE menu_items (
   id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -190,6 +190,45 @@ CREATE INDEX ix_menu_items_category ON menu_items (category_id);
 CREATE TRIGGER trg_menu_items_updated_at
   BEFORE UPDATE ON menu_items
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+CREATE TABLE riders (
+  user_id INT PRIMARY KEY,
+  vehicle_type VARCHAR NOT NULL,
+  vehicle_plate VARCHAR NOT NULL,
+  license_number VARCHAR NOT NULL,
+  status rider_status_enum NOT NULL DEFAULT 'idle',
+  updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  CONSTRAINT fk_riders_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE DEFERRABLE INITIALLY IMMEDIATE,
+  CONSTRAINT uq_riders_vehicle_number UNIQUE (vehicle_number)
+);
+
+CREATE TRIGGER trg_riders_updated_at
+  BEFORE UPDATE ON riders
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+CREATE TABLE coupons (
+  id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  code VARCHAR NOT NULL,
+  discount_type discount_type_enum NOT NULL,
+  discount_value NUMERIC(10,2) NOT NULL,
+  minimum_order NUMERIC(10,2) NOT NULL DEFAULT 0,
+  expiry_date DATE,
+  CONSTRAINT uq_coupons_code UNIQUE (code),
+  CONSTRAINT ck_coupons_value_positive CHECK (discount_value > 0),
+  CONSTRAINT ck_coupons_percentage_range CHECK (discount_type <> 'percentage' OR discount_value <= 100),
+  CONSTRAINT ck_coupons_minimum_order CHECK (minimum_order >= 0)
+);
+
+CREATE TABLE user_coupons (
+  id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  user_id INT NOT NULL,
+  coupon_id INT NOT NULL,
+  used BOOLEAN NOT NULL DEFAULT FALSE,
+  CONSTRAINT fk_user_coupons_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE DEFERRABLE INITIALLY IMMEDIATE,
+  CONSTRAINT fk_user_coupons_coupon FOREIGN KEY (coupon_id) REFERENCES coupons (id) DEFERRABLE INITIALLY IMMEDIATE
+);
+
+CREATE INDEX ix_user_coupons_user ON user_coupons (user_id);
 
 CREATE TABLE carts (
   id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -293,22 +332,61 @@ CREATE TRIGGER trg_deliveries_updated_at
   BEFORE UPDATE ON deliveries
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
+CREATE TABLE delivery_location_history (
+  id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  delivery_id INT NOT NULL,
+  latitude NUMERIC(9,6) NOT NULL,
+  longitude NUMERIC(9,6) NOT NULL,
+  event VARCHAR(32) NOT NULL,
+  recorded_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  CONSTRAINT fk_delivery_location_history_delivery FOREIGN KEY (delivery_id) REFERENCES deliveries (id) ON DELETE CASCADE,
+  CONSTRAINT ck_delivery_location_history_lat CHECK (latitude BETWEEN -90 AND 90),
+  CONSTRAINT ck_delivery_location_history_lng CHECK (longitude BETWEEN -180 AND 180),
+  CONSTRAINT ck_delivery_location_history_event CHECK (event IN ('accepted', 'arrived_at_store', 'picked_up', 'out_for_delivery', 'delivered'))
+);
+
+CREATE INDEX ix_delivery_location_history_delivery_time ON delivery_location_history (delivery_id, recorded_at DESC);
+
+
 CREATE TABLE reviews (
   id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   user_id INT NOT NULL,
   order_id INT NOT NULL,
   restaurant_id INT NOT NULL,
-  rating INT NOT NULL,
+  rider_id INT, -- Optional link to rate the delivery rider
+  rating INT NOT NULL, -- Restaurant / Food rating (1-5)
+  rider_rating INT, -- Delivery service rating (1-5)
   comment TEXT,
   created_at TIMESTAMP NOT NULL DEFAULT NOW(),
   CONSTRAINT uq_reviews_order UNIQUE (order_id),
   CONSTRAINT fk_reviews_user FOREIGN KEY (user_id) REFERENCES users (id) DEFERRABLE INITIALLY IMMEDIATE,
   CONSTRAINT fk_reviews_order FOREIGN KEY (order_id) REFERENCES orders (id) DEFERRABLE INITIALLY IMMEDIATE,
   CONSTRAINT fk_reviews_restaurant FOREIGN KEY (restaurant_id) REFERENCES restaurants (id) DEFERRABLE INITIALLY IMMEDIATE,
-  CONSTRAINT ck_reviews_rating CHECK (rating BETWEEN 1 AND 5)
+  CONSTRAINT fk_reviews_rider FOREIGN KEY (rider_id) REFERENCES riders (user_id) DEFERRABLE INITIALLY IMMEDIATE,
+  CONSTRAINT ck_reviews_rating CHECK (rating BETWEEN 1 AND 5),
+  CONSTRAINT ck_reviews_rider_rating CHECK (rider_rating IS NULL OR rider_rating BETWEEN 1 AND 5)
 );
 
 CREATE INDEX ix_reviews_restaurant ON reviews (restaurant_id);
+CREATE INDEX ix_reviews_rider ON reviews (rider_id);
+
+CREATE OR REPLACE FUNCTION update_restaurant_rating()
+RETURNS TRIGGER AS $$
+BEGIN
+  UPDATE restaurants
+  SET rating = (
+    SELECT COALESCE(ROUND(AVG(rating)::numeric, 1), 0.0)
+    FROM reviews
+    WHERE restaurant_id = COALESCE(NEW.restaurant_id, OLD.restaurant_id)
+  )
+  WHERE id = COALESCE(NEW.restaurant_id, OLD.restaurant_id);
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_reviews_update_restaurant_rating
+  AFTER INSERT OR UPDATE OR DELETE ON reviews
+  FOR EACH ROW EXECUTE FUNCTION update_restaurant_rating();
 
 CREATE TABLE role_requests (
   id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
