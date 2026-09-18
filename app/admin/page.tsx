@@ -7,6 +7,8 @@ type Rider = { id: number; name: string; phone: string | null };
 type Profit = { totals: { product_sales: string; platform_profit: string }; restaurants: { id: number; name: string; order_count: string; total_sales: string; admin_profit: string }[] };
 type Report = { products: { id: number; name: string; total_sold: string; total_revenue: string }[]; reviews: { id: number; customer_name: string; rating: number; comment: string | null }[] };
 type ReviewRequest = { id: number; user_id: number; source_role: string; requested_role: string; status: string; details: string | null; verification_data?: Record<string, unknown>; created_at: string; reviewed_at?: string | null; review_note?: string | null; rejection_reason?: string | null; requester_name?: string; requester_email?: string; requester_phone?: string | null };
+type Coupon = { id: number; code: string; discount_type: string; discount_value: string; minimum_order: string; expiry_date: string | null; assigned_count: number };
+type Customer = { id: number; name: string; email: string };
 
 const money = (value: string | number) => `৳${Number(value || 0).toLocaleString()}`;
 
@@ -18,6 +20,10 @@ export default function AdminDashboard() {
   const [requests, setRequests] = useState<ReviewRequest[]>([]);
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
   const [report, setReport] = useState<Report | null>(null);
+  const [coupons, setCoupons] = useState<Coupon[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [couponForm, setCouponForm] = useState({ code: "", discountType: "percentage", discountValue: "", minimumOrder: "0", expiryDate: "", assignMode: "all", userIds: [] as number[] });
+  const [couponSaving, setCouponSaving] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -28,6 +34,7 @@ export default function AdminDashboard() {
           fetch("/api/admin/riders"),
           fetch(`/api/admin/profit?range=${range}`),
           fetch("/api/admin/requests"),
+          fetch("/api/admin/coupons"),
         ]);
         if (!responses.every((response) => response.ok)) throw new Error("Could not load admin data");
         setRestaurants((await responses[0].json()).restaurants);
@@ -35,6 +42,9 @@ export default function AdminDashboard() {
         setProfit(await responses[2].json());
         const requestPayload = await responses[3].json();
         setRequests(requestPayload.requests ?? []);
+        const couponPayload = await responses[4].json();
+        setCoupons(couponPayload.coupons ?? []);
+        setCustomers(couponPayload.users ?? []);
       } catch (loadError) {
         setError(loadError instanceof Error ? loadError.message : "Could not load admin data");
       }
@@ -46,6 +56,23 @@ export default function AdminDashboard() {
     setSelectedRestaurant(restaurant);
     const response = await fetch(`/api/admin/restaurants/${restaurant.id}?range=${range}`);
     if (response.ok) setReport(await response.json());
+  }
+
+  async function createCoupon(event: React.FormEvent) {
+    event.preventDefault();
+    setCouponSaving(true);
+    setError("");
+    try {
+      const response = await fetch("/api/admin/coupons", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(couponForm) });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Could not create coupon");
+      setCoupons((current) => [{ ...payload.coupon, assigned_count: couponForm.assignMode === "all" ? customers.length : couponForm.userIds.length }, ...current]);
+      setCouponForm({ code: "", discountType: "percentage", discountValue: "", minimumOrder: "0", expiryDate: "", assignMode: "all", userIds: [] });
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Could not create coupon");
+    } finally {
+      setCouponSaving(false);
+    }
   }
 
   async function reviewRequest(requestId: number, status: "APPROVED" | "REJECTED") {
@@ -110,6 +137,10 @@ export default function AdminDashboard() {
           ))}
         </div>
       </section>}
+      <section className="mt-10 grid gap-8 lg:grid-cols-[360px_1fr]">
+        <div className="border border-border bg-card p-6"><h2 className="font-serif text-2xl font-bold">Create coupon</h2><form onSubmit={createCoupon} className="mt-5 space-y-4"><input required placeholder="Coupon code" value={couponForm.code} onChange={(event) => setCouponForm({ ...couponForm, code: event.target.value })} className="w-full border border-border bg-background px-3 py-2 text-sm uppercase" /><div className="grid grid-cols-2 gap-3"><select value={couponForm.discountType} onChange={(event) => setCouponForm({ ...couponForm, discountType: event.target.value })} className="border border-border bg-background px-3 py-2 text-sm"><option value="percentage">Percentage</option><option value="fixed_amount">Fixed amount</option></select><input required min="0.01" step="0.01" type="number" placeholder="Value" value={couponForm.discountValue} onChange={(event) => setCouponForm({ ...couponForm, discountValue: event.target.value })} className="border border-border bg-background px-3 py-2 text-sm" /></div><div className="grid grid-cols-2 gap-3"><input min="0" step="0.01" type="number" placeholder="Minimum order" value={couponForm.minimumOrder} onChange={(event) => setCouponForm({ ...couponForm, minimumOrder: event.target.value })} className="border border-border bg-background px-3 py-2 text-sm" /><input type="date" value={couponForm.expiryDate} onChange={(event) => setCouponForm({ ...couponForm, expiryDate: event.target.value })} className="border border-border bg-background px-3 py-2 text-sm" /></div><select value={couponForm.assignMode} onChange={(event) => setCouponForm({ ...couponForm, assignMode: event.target.value, userIds: [] })} className="w-full border border-border bg-background px-3 py-2 text-sm"><option value="all">Assign to all customers</option><option value="specific">Assign to specific customers</option></select>{couponForm.assignMode === "specific" && <select required multiple value={couponForm.userIds.map(String)} onChange={(event) => setCouponForm({ ...couponForm, userIds: Array.from(event.target.selectedOptions, (option) => Number(option.value)) })} className="h-28 w-full border border-border bg-background px-3 py-2 text-sm">{customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.name} · {customer.email}</option>)}</select>}<button disabled={couponSaving} className="w-full rounded bg-primary px-4 py-2 text-sm font-bold text-primary-foreground disabled:opacity-50">{couponSaving ? "Creating..." : "Create and assign coupon"}</button></form></div>
+        <div><div className="mb-4 flex items-center justify-between"><h2 className="font-serif text-2xl font-bold">Coupons</h2><span className="text-sm text-muted-foreground">{coupons.length} defined</span></div><div className="border border-border bg-card">{coupons.map((coupon) => <div key={coupon.id} className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-4 last:border-0"><div><strong>{coupon.code}</strong><p className="mt-1 text-xs text-muted-foreground">{coupon.discount_type === "percentage" ? `${coupon.discount_value}% off` : `৳${coupon.discount_value} off`} · Minimum ৳{coupon.minimum_order}</p></div><div className="text-right text-xs text-muted-foreground"><div>{coupon.assigned_count} customers</div><div>{coupon.expiry_date ? `Expires ${new Date(coupon.expiry_date).toLocaleDateString()}` : "No expiry"}</div></div></div>)}{!coupons.length && <p className="p-4 text-sm text-muted-foreground">No coupons defined yet.</p>}</div></div>
+      </section>
       {profit && <section className="mt-10"><h2 className="mb-4 font-serif text-2xl font-bold">Restaurant sales</h2><div className="grid gap-3 md:grid-cols-2">{profit.restaurants.map((restaurant) => <div key={restaurant.id} className="flex items-center justify-between border border-border bg-card p-4"><div><strong>{restaurant.name}</strong><p className="mt-1 text-xs text-muted-foreground">{restaurant.order_count} orders</p></div><div className="text-right"><strong>{money(restaurant.total_sales)}</strong><p className="mt-1 text-xs text-muted-foreground">{money(restaurant.admin_profit)} fee</p></div></div>)}</div></section>}
       {selectedRestaurant && report && <section className="mt-10 border-t border-border pt-8"><div className="flex items-center justify-between"><h2 className="font-serif text-2xl font-bold">{selectedRestaurant.name} detail</h2><button onClick={() => { setSelectedRestaurant(null); setReport(null); }} className="text-sm text-muted-foreground hover:text-foreground">Close</button></div><div className="mt-4 grid gap-8 lg:grid-cols-2"><div><h3 className="mb-3 font-semibold">Product sales</h3>{report.products.map((product) => <div key={product.id} className="flex justify-between border-b border-border py-3 text-sm"><span>{product.name}<span className="ml-2 text-xs text-muted-foreground">{product.total_sold} sold</span></span><strong>{money(product.total_revenue)}</strong></div>)}</div><div><h3 className="mb-3 font-semibold">Reviews</h3>{report.reviews.map((review) => <div key={review.id} className="border-b border-border py-3 text-sm"><div className="flex justify-between"><strong>{review.customer_name}</strong><span>{review.rating}/5</span></div><p className="mt-1 text-muted-foreground">{review.comment || "No comment"}</p></div>)}</div></div></section>}
     </div>

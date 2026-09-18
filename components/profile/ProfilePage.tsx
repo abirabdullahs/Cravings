@@ -26,6 +26,7 @@ type UserProfile = {
   } | null;
   history: Array<{ title: string; detail: string; timestamp?: string }>;
 };
+type Coupon = { id: number; code: string; discount_type: string; discount_value: string; minimum_order: string; expiry_date: string | null };
 
 export default function ProfilePage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -34,6 +35,7 @@ export default function ProfilePage() {
   const [resubmitting, setResubmitting] = useState(false);
   const [error, setError] = useState("");
   const [form, setForm] = useState({ name: "", phone: "", profile_image: "" });
+  const [coupons, setCoupons] = useState<Coupon[]>([]);
 
   useEffect(() => {
     async function load() {
@@ -58,6 +60,11 @@ export default function ProfilePage() {
 
     void load();
   }, []);
+
+  useEffect(() => {
+    if (profile?.role !== "customer") return;
+    void fetch("/api/coupons").then((response) => response.ok ? response.json() : { coupons: [] }).then((payload) => setCoupons(payload.coupons ?? []));
+  }, [profile?.role]);
 
   async function saveProfile(event: React.FormEvent) {
     event.preventDefault();
@@ -227,6 +234,7 @@ export default function ProfilePage() {
         </aside>
 
         <main className="space-y-8">
+          {profile.role === "customer" && <section className="rounded border border-border bg-card p-6"><div className="mb-4 flex items-center justify-between"><h2 className="font-serif text-2xl font-bold">My coupons</h2><span className="text-xs uppercase tracking-wide text-muted-foreground">Available offers</span></div><div className="grid gap-3 sm:grid-cols-2">{coupons.map((coupon) => <div key={coupon.id} className="border border-border bg-background p-4"><div className="flex items-center justify-between gap-3"><strong className="tracking-wide">{coupon.code}</strong><span className="text-sm font-bold text-primary">{coupon.discount_type === "percentage" ? `${coupon.discount_value}% off` : `৳${coupon.discount_value} off`}</span></div><p className="mt-2 text-xs text-muted-foreground">Minimum order ৳{coupon.minimum_order}{coupon.expiry_date ? ` · Expires ${new Date(coupon.expiry_date).toLocaleDateString()}` : ""}</p></div>)}{!coupons.length && <p className="text-sm text-muted-foreground">No available coupons right now.</p>}</div></section>}
           <section className="rounded border border-border bg-card p-6">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="font-serif text-2xl font-bold">Edit profile</h2>
