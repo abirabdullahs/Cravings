@@ -172,6 +172,13 @@ WHERE order_id = $1
 RETURNING order_id, rider_id, status
 `;
 
+export const UPDATE_ADMIN_PAYMENT_STATUS = `
+UPDATE payments
+SET status = $2
+WHERE order_id = $1
+RETURNING order_id, status
+`;
+
 export const GET_WEEKLY_PLATFORM_PROFIT = `
 SELECT DATE_TRUNC('week', created_at) AS week,
        COUNT(*) AS order_count,
