@@ -3,12 +3,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ClockIcon, MinusIcon, PlusIcon } from "lucide-react";
+import { ClockIcon, MinusIcon, PlusIcon, TagIcon } from "lucide-react";
 import { use, useState } from "react";
-import { useCartItems, useOrder } from "@/hooks/useOrder";
+
 import { AddressButton } from "@/components/address/AddressSelection";
-import type { CartItem } from "@/types/order";
 import { useAddresses } from "@/hooks/useAddressManager";
+import { useCartItems, useOrder , useUserCoupons} from "@/hooks/useOrder";
+import type { CartItem } from "@/types/order";
 
 const formatPrice = (amount: number) => `৳${Math.round(amount)}`;
 
@@ -24,15 +25,26 @@ export function CheckoutPage({
   const { data: carts = [], isLoading: isCartLoading } = useCartItems(
     restaurantId ?? null,
   );
-
   const { data: addresses = [], isLoading: isAddressLoading } = useAddresses();
-  const { createCartItem, isCreating, placeOrder, isPlacingOrder } = useOrder();
+  const { data: coupons = [], isLoading: isCouponsLoading } = useUserCoupons();
+  const {
+    createCartItem,
+    isCreating,
+    placeOrder,
+    isPlacingOrder,
+    addCoupon,
+    isAddingCoupon,
+  } = useOrder();
+
   const router = useRouter();
   const [selectedAddressId, setSelectedAddressId] = useState<number | null>(
     null,
   );
   const [paymentMethod, setPaymentMethod] =
     useState<PaymentMethod>("mobile_banking");
+  const [selectedCouponId, setSelectedCouponId] = useState<
+    number | string | null
+  >(null);
   const [instructions, setInstructions] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -46,14 +58,29 @@ export function CheckoutPage({
   const [items, setItems] = useState<CartItem[]>(selectedCart?.cartItems ?? []);
   const restaurantName = selectedCart?.restaurantName ?? "Restaurant";
 
+  // Subtotal Calculation
   const subtotal = items.reduce(
     (sum, item) => sum + Number(item.price) * item.quantity,
     0,
   );
+
+  const activeCoupon = coupons.find((c) => c.id === selectedCouponId);
+
+  let couponDiscount = selectedCart?.discount ?? 0;
+  if (!couponDiscount && activeCoupon && subtotal > 0) {
+    if (activeCoupon.discountType === "percentage") {
+      couponDiscount = (subtotal * activeCoupon.discountValue) / 100;
+    } else {
+      couponDiscount = activeCoupon.discountValue;
+    }
+    couponDiscount = Math.min(couponDiscount, subtotal);
+  }
+
   const vatTaxes = items.length ? Math.round(subtotal * 0.03) : 0;
   const deliveryFee = items.length ? 60 : 0;
-  const total = Math.max(0, subtotal + vatTaxes + deliveryFee);
+  const total = Math.max(0, subtotal + vatTaxes + deliveryFee - couponDiscount);
 
+  // Update item quantity on cart
   const updateQuantity = async (item: CartItem, quantity: number) => {
     if (quantity < 0) return;
     setItems((prevItems) =>
@@ -75,6 +102,27 @@ export function CheckoutPage({
     }
   };
 
+  // Attach Coupon directly to Cart
+  const handleApplyCoupon = async (couponId: number) => {
+    setSelectedCouponId(couponId);
+    if (!selectedCart || !couponId) return;
+
+    setError(null);
+    try {
+      await addCoupon({
+        cartId: selectedCart.id,
+        couponId,
+      });
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Unable to apply coupon to cart",
+      );
+    }
+  };
+
+  // Submit Order (Copies cart state on backend)
   const submitOrder = async () => {
     if (!selectedCart || activeAddressId === null) {
       setError("Select a delivery address before placing your order.");
@@ -98,7 +146,7 @@ export function CheckoutPage({
     }
   };
 
-  if (isCartLoading || isAddressLoading) {
+  if (isCartLoading || isAddressLoading || isCouponsLoading) {
     return (
       <div className="px-4 py-20 text-center text-sm text-muted-foreground">
         Loading checkout...
@@ -247,14 +295,18 @@ export function CheckoutPage({
                     {formatPrice(deliveryFee)}
                   </dd>
                 </div>
-                {/* {campaignDiscount > 0 && (
+
+                {couponDiscount > 0 && (
                   <div className="flex justify-between text-emerald-600">
-                    <dt>Campaign Discount</dt>
+                    <dt className="flex items-center gap-1 font-semibold">
+                      <TagIcon className="size-3" /> Coupon Discount
+                      {activeCoupon?.code ? ` (${activeCoupon.code})` : ""}
+                    </dt>
                     <dd className="font-semibold">
-                      -{formatPrice(campaignDiscount)}
+                      -{formatPrice(couponDiscount)}
                     </dd>
                   </div>
-                )} */}
+                )}
 
                 <div className="flex justify-between border-t border-border pt-4 font-serif text-lg font-bold text-foreground">
                   <dt>Total Payable</dt>
@@ -309,6 +361,35 @@ export function CheckoutPage({
                     No delivery address selected.
                   </p>
                 )}
+              </section>
+
+              {/* Coupon Selection -> Calls addCoupon on Cart */}
+              <section>
+                <label
+                  htmlFor="coupon-select"
+                  className="block text-[10px] font-bold uppercase tracking-wider text-primary"
+                >
+                  Apply Coupon to Cart
+                </label>
+                <select
+                  id="coupon-select"
+                  disabled={isAddingCoupon}
+                  value={selectedCouponId ?? ""}
+                  onChange={(e) =>
+                    handleApplyCoupon(
+                     Number(e.target.value)
+                    )
+                  }
+                  className="mt-2 w-full border border-border bg-background p-3 text-xs text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
+                >
+                  <option value="">No coupon selected</option>
+                  {coupons.map((coupon) => (
+                    <option key={coupon.id} value={coupon.id}>
+                      {coupon.code} —{" "}
+                      {`${coupon.discountValue}${coupon.discountType === "percentage" ? "%" : "৳"} Off`}
+                    </option>
+                  ))}
+                </select>
               </section>
 
               {/* Payment Method Section */}

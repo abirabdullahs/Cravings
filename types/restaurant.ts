@@ -64,6 +64,7 @@ export interface RestaurantInput {
   deliveryFee: number;
   minimumOrder: number;
   isActive: boolean;
+  imageUrl: string ;
 }
 
 export interface MenuItemInput {
@@ -85,6 +86,7 @@ export const emptyRestaurantInput: RestaurantInput = {
   deliveryFee: 0,
   minimumOrder: 0,
   isActive: false,
+  imageUrl: "",
 };
 
 export const emptyMenuItemInput: MenuItemInput = {

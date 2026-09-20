@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { AdminOrder } from "@/components/admin/admin-types";
+import type { AdminOrder } from "@/types/admin-types";
 
 const money = (value: string | number) =>
   `৳${Number(value || 0).toLocaleString()}`;

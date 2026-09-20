@@ -4,6 +4,7 @@ import {
   fetchCartItems,
   fetchOrderDetail,
   fetchRestaurantDetails,
+  fetchUserCoupons,
   placeOrder,
   submitReview,
 } from "@/services/orderService";
@@ -11,6 +12,7 @@ import type { Cart, CartItemInput, CreateOrderInput, SubmitReviewInput } from "@
 import { Restaurant, RestaurantMenu } from "@/types/restaurant";
 import { fetchOrderHistory } from "@/services/orderService";
 import type { OrderHistoryItem } from "@/types/order";
+import { apiRequest } from "@/lib/http";
 
 
 import { useQueryClient, useMutation, useQuery } from "@tanstack/react-query";
@@ -45,6 +47,13 @@ export function useOrderDetail(orderId: number) {
   });
 }
 
+export function useUserCoupons(){
+  return useQuery({
+    queryKey: ["user", "coupons"],
+    queryFn: fetchUserCoupons,
+  })
+}
+
 
 // Hook for cart mutations
 export function useOrder() {
@@ -73,6 +82,18 @@ export function useOrder() {
     }
   });
 
+  const addCouponMutation = useMutation({
+    mutationFn: ({ couponId, cartId }: { couponId: number; cartId: number }) => {
+      return apiRequest("/api/coupons", {
+        method: "POST",
+        body: JSON.stringify({ couponId, cartId }),
+      });
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["user", "coupons"] });
+    }
+  });
+
   return {
     createCartItem: ( input: CartItemInput ) =>
       createCartItemMutation.mutateAsync(input),
@@ -83,5 +104,8 @@ export function useOrder() {
     submitReview: (input: SubmitReviewInput) =>
       submitReviewMutation.mutateAsync(input),
     isSubmittingReview: submitReviewMutation.isPending,
+    addCoupon: (input: { couponId: number; cartId: number }) =>
+      addCouponMutation.mutateAsync(input),
+    isAddingCoupon: addCouponMutation.isPending,
   };
 }

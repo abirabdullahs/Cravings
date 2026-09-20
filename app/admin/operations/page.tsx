@@ -2,11 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { RoleRequestsTable } from "@/components/admin/RoleRequestsTable";
-import type {
-  Restaurant,
-  Rider,
-  ReviewRequest,
-} from "@/components/admin/admin-types";
+import type { Restaurant, Rider, ReviewRequest } from "@/types/admin-types";
 
 export default function AdminOperationsPage() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);

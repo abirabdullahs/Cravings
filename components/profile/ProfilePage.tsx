@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import { UploadButton } from "@/lib/uploadthing";
 import {
   useNotifications,
   useMarkNotificationRead,
@@ -31,6 +32,7 @@ type UserProfile = {
   } | null;
   history: Array<{ title: string; detail: string; timestamp?: string }>;
 };
+
 type Coupon = {
   id: number;
   code: string;
@@ -45,6 +47,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [resubmitting, setResubmitting] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [error, setError] = useState("");
   const [form, setForm] = useState({ name: "", phone: "", profile_image: "" });
   const [coupons, setCoupons] = useState<Coupon[]>([]);
@@ -113,9 +116,7 @@ export default function ProfilePage() {
   }
 
   async function resubmitRoleRequest() {
-    if (!profile?.application?.requested_role) {
-      return;
-    }
+    if (!profile?.application?.requested_role) return;
 
     setResubmitting(true);
     setError("");
@@ -261,26 +262,6 @@ export default function ProfilePage() {
               </button>
             </div>
           )}
-          {profile.application.verification_data &&
-            Object.keys(profile.application.verification_data).length > 0 && (
-              <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                {Object.entries(profile.application.verification_data).map(
-                  ([key, value]) => (
-                    <div
-                      key={key}
-                      className="rounded border border-border bg-background px-3 py-2 text-sm"
-                    >
-                      <span className="block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                        {key}
-                      </span>
-                      <span className="block text-foreground">
-                        {String(value)}
-                      </span>
-                    </div>
-                  ),
-                )}
-              </div>
-            )}
         </section>
       )}
 
@@ -299,10 +280,10 @@ export default function ProfilePage() {
             </h2>
             <p className="text-sm text-muted-foreground">{profile.email}</p>
             <div className="mt-4 flex flex-wrap gap-2 text-xs">
-              <span className="rounded px-2 py-1 bg-secondary">
+              <span className="rounded bg-secondary px-2 py-1">
                 {roleTitle}
               </span>
-              <span className="rounded px-2 py-1 bg-secondary">
+              <span className="rounded bg-secondary px-2 py-1">
                 Joined {new Date(profile.created_at).toLocaleDateString()}
               </span>
             </div>
@@ -314,7 +295,7 @@ export default function ProfilePage() {
             </div>
             <div className="flex justify-between gap-4 border-b border-border pb-2">
               <dt className="text-muted-foreground">Address</dt>
-              <dd className="font-semibold text-right">
+              <dd className="text-right font-semibold">
                 {profile.address || "No saved address"}
               </dd>
             </div>
@@ -366,6 +347,7 @@ export default function ProfilePage() {
               </div>
             </section>
           )}
+
           <section className="rounded border border-border bg-card p-6">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="font-serif text-2xl font-bold">Notifications</h2>
@@ -411,6 +393,8 @@ export default function ProfilePage() {
               )}
             </div>
           </section>
+
+          {/* Edit Profile Form */}
           <section className="rounded border border-border bg-card p-6">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="font-serif text-2xl font-bold">Edit profile</h2>
@@ -428,6 +412,7 @@ export default function ProfilePage() {
                   }
                 />
               </label>
+
               <label className="block">
                 <span className="mb-2 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Phone
@@ -440,22 +425,53 @@ export default function ProfilePage() {
                   }
                 />
               </label>
-              <label className="block md:col-span-2">
+
+              {/* Profile Image Uploader */}
+              <div className="block md:col-span-2">
                 <span className="mb-2 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Profile image URL
+                  Profile Photo
                 </span>
-                <input
-                  className="w-full border border-border bg-background px-3 py-2"
-                  value={form.profile_image}
-                  onChange={(event) =>
-                    setForm({ ...form, profile_image: event.target.value })
-                  }
-                />
-              </label>
+                <div className="flex flex-wrap items-center gap-4 rounded border border-border bg-background p-3">
+                  <Image
+                    src={form.profile_image || "/placeholder-user.jpg"}
+                    alt="Current avatar"
+                    width={48}
+                    height={48}
+                    className="size-12 rounded-full object-cover border border-border"
+                  />
+                  <div className="flex flex-col gap-1">
+                    <UploadButton
+                      endpoint="profilePicture"
+                      onUploadProgress={() => setUploadingImage(true)}
+                      onClientUploadComplete={(res) => {
+                        setUploadingImage(false);
+                        const url = res?.[0]?.ufsUrl || res?.[0]?.url;
+                        if (url)
+                          setForm((prev) => ({ ...prev, profile_image: url }));
+                      }}
+                      onUploadError={(error: Error) => {
+                        setUploadingImage(false);
+                        alert(`Upload failed: ${error.message}`);
+                      }}
+                      appearance={{
+                        button:
+                          "bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-4 py-2 rounded-md",
+                        allowedContent: "text-muted-foreground text-[11px]",
+                      }}
+                    />
+                    <span className="text-xs text-muted-foreground">
+                      {uploadingImage
+                        ? "Uploading photo..."
+                        : "Upload a new avatar"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
               <div className="md:col-span-2">
                 <button
-                  disabled={saving}
-                  className="rounded bg-primary px-4 py-2 font-semibold text-primary-foreground"
+                  disabled={saving || uploadingImage}
+                  className="rounded bg-primary px-4 py-2 font-semibold text-primary-foreground disabled:opacity-50"
                 >
                   {saving ? "Saving..." : "Save profile"}
                 </button>

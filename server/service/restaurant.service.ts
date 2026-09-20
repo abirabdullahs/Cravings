@@ -72,6 +72,7 @@ function restaurantValues(ownerId: string, input: RestaurantInput) {
     Number(input.deliveryFee ?? 0),
     Number(input.minimumOrder ?? 0),
     input.isActive,
+    input.imageUrl|| null,
   ];
 }
 

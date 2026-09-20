@@ -20,7 +20,7 @@ export default auth(async (req) => {
     "/login",
     "/register",
     "/search",
-    "/restaurants",
+    "/restaurant",
     "/help",
     "/privacy",
     "/terms",

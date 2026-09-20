@@ -5,6 +5,9 @@ import "./globals.css";
 import { SiteFooter } from "../components/layout/site-footer";
 import { SiteHeader } from "../components/layout/site-header";
 import SessionProvider from "../components/provider/SessionProvider";
+import { NextSSRPlugin } from "@uploadthing/react/next-ssr-plugin";
+import { extractRouterConfig } from "uploadthing/server";
+import { ourFileRouter } from "@/app/api/uploadthing/core";
 
 const manrope = Manrope({
   subsets: ["latin"],
@@ -59,6 +62,7 @@ export default function RootLayout({
     >
       <body className="font-sans antialiased">
         <SessionProvider>
+          <NextSSRPlugin routerConfig={extractRouterConfig(ourFileRouter)} />
           <div className="flex min-h-screen flex-col">
             <SiteHeader />
             <main className="flex-1">{children}</main>

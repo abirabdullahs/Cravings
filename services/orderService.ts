@@ -7,7 +7,8 @@ import {
   CreatedOrder,
   SubmitReviewInput,
   OrderHistoryItem,
-  OrderDetailItem
+  OrderDetailItem,
+  Coupon
 } from "@/types/order";
 import { Restaurant, RestaurantMenu } from "@/types/restaurant";
 
@@ -27,6 +28,13 @@ export const fetchRestaurantDetails = async (
   );
 };
 
+export const fetchCarts = async (
+  retaurantId: Number | null,
+): Promise<Cart[]> => {
+  return apiRequest<Cart[]>(
+    retaurantId === null ? "/api/carts/all" : `/api/carts/${retaurantId}`,
+  );
+};
 export const fetchCartItems = async (
   restaurantId: number | null,
 ): Promise<Cart[]> => {
@@ -35,6 +43,9 @@ export const fetchCartItems = async (
   );
 };
 
+export const fetchUserCoupons = async (): Promise<Coupon[]> => {
+  return apiRequest<Coupon[]>("/api/coupons");
+};
 
 export const placeOrder = async (
   input: CreateOrderInput,

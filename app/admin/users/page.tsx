@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { UserManagementTable } from "@/components/admin/UserManagementTable";
-import type { AdminUser } from "@/components/admin/admin-types";
+import type { AdminUser } from "@/types/admin-types";
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<AdminUser[]>([]);

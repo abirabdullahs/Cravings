@@ -29,7 +29,7 @@ export async function PUT(request: Request, { params }: Context) {
       ? NextResponse.json(item, { status: 200 })
       : NextResponse.json({ error: "Not found" }, { status: 404 });
   } catch (error) {
-    handleApiError(error, "Unable to update menu item");
+    return handleApiError(error, "Unable to update menu item");
   }
 }
 
@@ -42,6 +42,6 @@ export async function DELETE(_: Request, { params }: Context) {
       ? NextResponse.json({ success: true })
       : NextResponse.json({ error: "Not found" }, { status: 404 });
   } catch (error) {
-    handleApiError(error, "Unable to delete menu item");
+    return handleApiError(error, "Unable to delete menu item");
   }
 }

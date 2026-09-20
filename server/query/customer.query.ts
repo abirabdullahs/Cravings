@@ -22,10 +22,10 @@ WHERE r.active_status = true
 
 export const FIND_RESTAURANT_DETAILS = `
 SELECT c.id AS category_id, c.name AS category_name,
-       p.id , p.item_name, p.price, p.item_img, p.is_available
-FROM categories c
-JOIN menu_items p ON p.category_id = c.id
-WHERE c.restaurant_id = $1 AND p.is_available = true
+       p.id , p.item_name, p.price, p.item_img as image, p.is_available
+FROM menu_items p
+left JOIN categories c ON p.category_id = c.id
+WHERE p.restaurant_id = $1 AND p.is_available = true
 ORDER BY c.name, p.item_name
 `;
 

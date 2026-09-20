@@ -1,6 +1,8 @@
 import { FormEvent, useState } from "react";
-import { Check, X } from "lucide-react";
+import Image from "next/image";
+import { Check, X, Trash2 } from "lucide-react";
 import { FormField } from "@/components/ui/FormField";
+import { UploadButton } from "@/lib/uploadthing";
 import type { MenuCategory, MenuItemInput } from "@/types/restaurant";
 
 interface MenuItemFormDialogProps {
@@ -20,7 +22,8 @@ export function MenuItemFormDialog({
   onSubmit,
   onClose,
 }: MenuItemFormDialogProps) {
-  const [form, setForm] = useState(initialValue);
+  const [form, setForm] = useState<MenuItemInput>(initialValue);
+  const [uploading, setUploading] = useState(false);
 
   function update<K extends keyof MenuItemInput>(
     key: K,
@@ -47,6 +50,7 @@ export function MenuItemFormDialog({
           <X className="size-4 text-muted-foreground" />
         </button>
       </div>
+
       <FormField
         label="Item name"
         name="name"
@@ -54,6 +58,7 @@ export function MenuItemFormDialog({
         value={form.name}
         onChange={(value) => update("name", value)}
       />
+
       <FormField
         label="Price"
         name="price"
@@ -62,6 +67,7 @@ export function MenuItemFormDialog({
         value={form.price}
         onChange={(value) => update("price", Number(value))}
       />
+
       <label className="grid gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
         Category
         <select
@@ -82,12 +88,58 @@ export function MenuItemFormDialog({
           ))}
         </select>
       </label>
-      <FormField
-        label="Image URL"
-        name="imageUrl"
-        value={form.imageUrl}
-        onChange={(value) => update("imageUrl", value)}
-      />
+
+      {/* Image Upload Integration */}
+      <div className="grid gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        <span>Item Image</span>
+        {form.imageUrl ? (
+          <div className="flex items-center gap-3 rounded-sm border border-border bg-background p-2">
+            <Image
+              src={form.imageUrl}
+              alt="Item preview"
+              width={40}
+              height={40}
+              className="size-10 rounded object-cover"
+            />
+            <span className="truncate text-xs normal-case text-muted-foreground">
+              {form.imageUrl}
+            </span>
+            <button
+              type="button"
+              onClick={() => update("imageUrl", "")}
+              className="ml-auto text-destructive hover:opacity-80"
+              aria-label="Remove image"
+            >
+              <Trash2 className="size-4" />
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 rounded-sm border border-dashed border-border bg-background p-2">
+            <UploadButton
+              endpoint="menuItemImage"
+              onUploadProgress={() => setUploading(true)}
+              onClientUploadComplete={(res) => {
+                setUploading(false);
+                const url = res?.[0]?.ufsUrl || res?.[0]?.url;
+                if (url) update("imageUrl", url);
+              }}
+              onUploadError={(error: Error) => {
+                setUploading(false);
+                alert(`Upload failed: ${error.message}`);
+              }}
+              appearance={{
+                button:
+                  "bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-4 py-2 rounded-md",
+                allowedContent: "text-muted-foreground text-[11px]",
+              }}
+            />
+            <span className="text-xs normal-case text-muted-foreground">
+              {uploading ? "Uploading image..." : "Upload item photo"}
+            </span>
+          </div>
+        )}
+      </div>
+
       <label className="grid gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground sm:col-span-2">
         Description
         <textarea
@@ -97,12 +149,13 @@ export function MenuItemFormDialog({
           className="rounded-sm border border-border bg-background px-3 py-2 text-sm normal-case tracking-normal text-foreground outline-none focus:border-primary"
         />
       </label>
+
       <div className="flex gap-2 sm:col-span-2">
         <button
-          disabled={busy}
-          className="inline-flex items-center gap-2 bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground"
+          disabled={busy || uploading}
+          className="inline-flex items-center gap-2 bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground disabled:opacity-50"
         >
-          <Check className="size-3.5" /> Save item
+          <Check className="size-3.5" /> {busy ? "Saving..." : "Save item"}
         </button>
         <button
           type="button"

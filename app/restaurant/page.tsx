@@ -157,5 +157,6 @@ function restaurantToInput(restaurant: Restaurant): RestaurantInput {
     deliveryFee: restaurant.deliveryFee,
     minimumOrder: restaurant.minimumOrder,
     isActive: restaurant.isActive,
+    imageUrl: restaurant.imageUrl??"",
   };
 }

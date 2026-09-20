@@ -1,11 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type {
-  AdminReview,
-  Coupon,
-  Customer,
-} from "@/components/admin/admin-types";
+import type { AdminReview, Coupon, Customer } from "@/types/admin-types";
 
 export default function AdminMarketingPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);

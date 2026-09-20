@@ -9,10 +9,20 @@ export interface CartItem {
   quantity: number;
 }
 
+export interface Coupon {
+  id: number;
+  code: string;
+  discountType: string;
+  discountValue: number;
+  minimumOrder: number;
+  expiryDate: string | null;
+}
+
 export interface Cart {
   id: number;
   restaurantId: number;
   restaurantName: string;
+  discount: number | null;
   cartItems: CartItem[];
 }
 

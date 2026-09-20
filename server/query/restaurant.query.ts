@@ -17,8 +17,8 @@ SELECT * FROM restaurants WHERE id = $1
 export const INSERT_RESTAURANT = `
 INSERT INTO restaurants
 	(owner_id, name, description, phone, email, address, opening_time,
-	 closing_time, delivery_fee, minimum_order, active_status)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+	 closing_time, delivery_fee, minimum_order, active_status, image)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
 RETURNING *
 `;
 
@@ -56,7 +56,7 @@ export const UPDATE_RESTAURANT = `
 UPDATE restaurants
 SET name = $3, description = $4, phone = $5, email = $6, address = $7,
 	opening_time = $8, closing_time = $9, delivery_fee = $10,
-	minimum_order = $11, active_status = $12
+	minimum_order = $11, active_status = $12, image = $13
 WHERE id = $1 AND owner_id = $2
 RETURNING *
 `;
