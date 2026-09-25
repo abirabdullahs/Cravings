@@ -4,16 +4,21 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ClockIcon, MinusIcon, PlusIcon, TagIcon } from "lucide-react";
-import { use, useState } from "react";
+import { use, useRef, useState } from "react";
 
 import { AddressButton } from "@/components/address/AddressSelection";
 import { useAddresses } from "@/hooks/useAddressManager";
-import { useCartItems, useOrder , useUserCoupons} from "@/hooks/useOrder";
+import {
+  useCartItems,
+  useOrder,
+  useOrderQuote,
+  useUserCoupons,
+} from "@/hooks/useOrder";
 import type { CartItem } from "@/types/order";
 
-const formatPrice = (amount: number) => `৳${Math.round(amount)}`;
+const formatPrice = (amount: number) => `৳${amount.toFixed(2)}`;
 
-type PaymentMethod = "card" | "mobile_banking" | "bank_transfer" | "cash";
+type PaymentMethod = "cash" | "bkash" | "nagad" | "card";
 
 export function CheckoutPage({
   cartId,
@@ -41,12 +46,17 @@ export function CheckoutPage({
     null,
   );
   const [paymentMethod, setPaymentMethod] =
-    useState<PaymentMethod>("mobile_banking");
+    useState<PaymentMethod>("cash");
   const [selectedCouponId, setSelectedCouponId] = useState<
     number | string | null
   >(null);
   const [instructions, setInstructions] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [isMockConfirmationOpen, setIsMockConfirmationOpen] = useState(false);
+  const checkoutAttemptRef = useRef<{
+    cartId: number;
+    idempotencyKey: string;
+  } | null>(null);
 
   const selectedCart = cartId
     ? carts.find((cart) => cart.id === cartId)
@@ -54,38 +64,35 @@ export function CheckoutPage({
   const activeAddressId = selectedAddressId ?? addresses[0]?.id ?? null;
   const activeAddress =
     addresses.find((addr) => addr.id === activeAddressId) ?? addresses[0];
+  const {
+    data: quote,
+    error: quoteError,
+    isFetching: isQuoteFetching,
+  } = useOrderQuote(selectedCart?.id ?? null, activeAddressId);
 
-  const [items, setItems] = useState<CartItem[]>(selectedCart?.cartItems ?? []);
+  const [quantityOverrides, setQuantityOverrides] = useState<
+    Record<number, number>
+  >({});
+  const items = (selectedCart?.cartItems ?? []).map((item) => ({
+    ...item,
+    quantity: quantityOverrides[item.id] ?? item.quantity,
+  }));
   const restaurantName = selectedCart?.restaurantName ?? "Restaurant";
 
-  // Subtotal Calculation
-  const subtotal = items.reduce(
-    (sum, item) => sum + Number(item.price) * item.quantity,
-    0,
-  );
-
   const activeCoupon = coupons.find((c) => c.id === selectedCouponId);
-
-  let couponDiscount = selectedCart?.discount ?? 0;
-  if (!couponDiscount && activeCoupon && subtotal > 0) {
-    if (activeCoupon.discountType === "percentage") {
-      couponDiscount = (subtotal * activeCoupon.discountValue) / 100;
-    } else {
-      couponDiscount = activeCoupon.discountValue;
-    }
-    couponDiscount = Math.min(couponDiscount, subtotal);
-  }
-
-  const vatTaxes = items.length ? Math.round(subtotal * 0.03) : 0;
-  const deliveryFee = items.length ? 60 : 0;
-  const total = Math.max(0, subtotal + vatTaxes + deliveryFee - couponDiscount);
+  const subtotal = quote?.subtotal ?? 0;
+  const couponDiscount = quote?.discount ?? 0;
+  const vatTaxes = quote?.tax ?? 0;
+  const deliveryFee = quote?.deliveryFee ?? 0;
+  const total = quote?.finalTotal ?? 0;
 
   // Update item quantity on cart
   const updateQuantity = async (item: CartItem, quantity: number) => {
     if (quantity < 0) return;
-    setItems((prevItems) =>
-      prevItems.map((i) => (i.id === item.id ? { ...i, quantity } : i)),
-    );
+    setQuantityOverrides((current) => ({
+      ...current,
+      [item.id]: quantity,
+    }));
     setError(null);
     try {
       await createCartItem({
@@ -130,11 +137,19 @@ export function CheckoutPage({
     }
     setError(null);
     try {
+      if (checkoutAttemptRef.current?.cartId !== selectedCart.id) {
+        checkoutAttemptRef.current = {
+          cartId: selectedCart.id,
+          idempotencyKey: crypto.randomUUID(),
+        };
+      }
+
       const order = await placeOrder({
         cartId: selectedCart.id,
         addressId: activeAddressId,
-        deliveryFee,
         paymentMethod,
+        idempotencyKey: checkoutAttemptRef.current.idempotencyKey,
+        deliveryInstructions: instructions,
       });
       router.push(`/orders/${order.id}`);
     } catch (requestError) {
@@ -144,6 +159,15 @@ export function CheckoutPage({
           : "Unable to place order",
       );
     }
+  };
+
+  const handlePlaceOrder = () => {
+    if (paymentMethod === "cash") {
+      void submitOrder();
+      return;
+    }
+
+    setIsMockConfirmationOpen(true);
   };
 
   if (isCartLoading || isAddressLoading || isCouponsLoading) {
@@ -401,19 +425,24 @@ export function CheckoutPage({
                 <div className="mt-2 space-y-2">
                   {[
                     {
-                      id: "mobile_banking",
-                      title: "bKash / Mobile Wallet",
-                      subtitle: "Instant 10% cashback applied",
+                      id: "cash",
+                      title: "Cash on Delivery",
+                      subtitle: "Pay with cash at your door",
+                    },
+                    {
+                      id: "bkash",
+                      title: "bKash",
+                      subtitle: "Mock payment for this demo",
+                    },
+                    {
+                      id: "nagad",
+                      title: "Nagad",
+                      subtitle: "Mock payment for this demo",
                     },
                     {
                       id: "card",
                       title: "Credit / Debit Card",
-                      subtitle: "Visa, Mastercard, AMEX",
-                    },
-                    {
-                      id: "cash",
-                      title: "Cash on Delivery",
-                      subtitle: "Pay with cash at your door",
+                      subtitle: "Mock card payment for this demo",
                     },
                   ].map((option) => {
                     const isSelected = paymentMethod === option.id;
@@ -482,22 +511,80 @@ export function CheckoutPage({
               </div>
 
               {error && <p className="text-xs text-destructive">{error}</p>}
+              {quoteError && (
+                <p className="text-xs text-destructive">
+                  {quoteError instanceof Error
+                    ? quoteError.message
+                    : "Unable to calculate order total"}
+                </p>
+              )}
 
               {/* Submit Order Button */}
               <button
                 type="button"
-                disabled={!items.length || !addresses.length || isPlacingOrder}
-                onClick={submitOrder}
+                disabled={
+                  !items.length ||
+                  !addresses.length ||
+                  !quote ||
+                  isQuoteFetching ||
+                  isPlacingOrder
+                }
+                onClick={handlePlaceOrder}
                 className="w-full bg-primary py-3.5 text-xs font-bold text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isPlacingOrder
                   ? "Placing order..."
+                  : isQuoteFetching
+                    ? "Calculating total..."
                   : `Place Order (Payable ${formatPrice(total)})`}
               </button>
             </div>
           </aside>
         </div>
       </div>
+
+      {isMockConfirmationOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="mock-payment-title"
+            className="w-full max-w-md border border-border bg-card p-6 shadow-xl"
+          >
+            <h2
+              id="mock-payment-title"
+              className="font-serif text-xl font-bold text-foreground"
+            >
+              Confirm mock {paymentMethod.toUpperCase()} payment
+            </h2>
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+              This is a demonstration payment. No real account or card will be
+              charged. Confirming will create a completed mock payment for
+              {` ${formatPrice(total)}`}.
+            </p>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setIsMockConfirmationOpen(false)}
+                className="border border-border px-4 py-2 text-xs font-semibold text-foreground"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isPlacingOrder}
+                onClick={() => {
+                  setIsMockConfirmationOpen(false);
+                  void submitOrder();
+                }}
+                className="bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground disabled:opacity-50"
+              >
+                Confirm mock payment
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

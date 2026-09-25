@@ -85,8 +85,8 @@ export default function ProfilePage() {
   useEffect(() => {
     if (profile?.role !== "customer") return;
     void fetch("/api/coupons")
-      .then((response) => (response.ok ? response.json() : { coupons: [] }))
-      .then((payload) => setCoupons(payload.coupons ?? []));
+      .then((response) => (response.ok ? response.json() :[] ))
+      .then((payload) => setCoupons(payload ?? []));
   }, [profile?.role]);
 
   async function saveProfile(event: React.FormEvent) {

@@ -12,7 +12,7 @@ export async function GET() {
       [Number(user.id)],
     );
     const data = toCamelCase(result.rows);
-    return NextResponse.json({ data }, { status: 200 });
+    return NextResponse.json(data , { status: 200 });
   } catch (error) {
     return handleApiError(error);
   }
@@ -23,8 +23,8 @@ export async function POST(request: Request) {
     const user = await getAuthenticatedUser();
     const { couponId, cartId } = await request.json();
     const result = await pool.query(
-      `UPDATE carts SET coupon_id = $1 WHERE cart_id = $2 RETURNING *`,
-      [Number(couponId), Number(cartId)]
+      `UPDATE carts SET user_coupon_id = $1 WHERE id = $2 AND user_id = $3 RETURNING *`,
+      [Number(couponId), Number(cartId), Number(user.id)]
     );
     return NextResponse.json({ userCoupon: result.rows[0] }, { status: 201 });
   } catch (error) {

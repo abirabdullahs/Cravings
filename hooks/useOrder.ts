@@ -3,12 +3,13 @@ import {
   createCartItem,
   fetchCartItems,
   fetchOrderDetail,
+  fetchOrderQuote,
   fetchRestaurantDetails,
   fetchUserCoupons,
   placeOrder,
   submitReview,
 } from "@/services/orderService";
-import type { Cart, CartItemInput, CreateOrderInput, SubmitReviewInput } from "@/types/order";
+import type { Cart, CartItemInput, CreateOrderInput, OrderQuote, SubmitReviewInput } from "@/types/order";
 import { Restaurant, RestaurantMenu } from "@/types/restaurant";
 import { fetchOrderHistory } from "@/services/orderService";
 import type { OrderHistoryItem } from "@/types/order";
@@ -47,6 +48,17 @@ export function useOrderDetail(orderId: number) {
   });
 }
 
+export function useOrderQuote(
+  cartId: number | null,
+  addressId: number | null,
+) {
+  return useQuery<OrderQuote>({
+    queryKey: ["order-quote", cartId, addressId],
+    queryFn: () => fetchOrderQuote(cartId!, addressId!),
+    enabled: cartId !== null && addressId !== null,
+  });
+}
+
 export function useUserCoupons(){
   return useQuery({
     queryKey: ["user", "coupons"],
@@ -62,9 +74,10 @@ export function useOrder() {
   const createCartItemMutation = useMutation({
     mutationFn: (input: CartItemInput) => createCartItem(input),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({
-        queryKey: ["cart"],
-      });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["cart"] }),
+        queryClient.invalidateQueries({ queryKey: ["order-quote"] }),
+      ]);
     },
   });
   const placeOrderMutation = useMutation({
@@ -90,7 +103,10 @@ export function useOrder() {
       });
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["user", "coupons"] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["user", "coupons"] }),
+        queryClient.invalidateQueries({ queryKey: ["order-quote"] }),
+      ]);
     }
   });
 

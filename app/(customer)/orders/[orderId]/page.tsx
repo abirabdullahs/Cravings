@@ -11,7 +11,7 @@ export default function OrderTrackingPage() {
     isLoading,
     isError,
   } = useOrderTracking(Number(orderId));
-  const { data: receiptItems = [] } = useOrderDetail(Number(orderId));
+  const { data: receipt } = useOrderDetail(Number(orderId));
 
   if (isLoading) {
     return (
@@ -33,7 +33,7 @@ export default function OrderTrackingPage() {
       <ActiveOrderView
         viewer="customer"
         tracking={tracking}
-        receiptItems={receiptItems}
+        receiptItems={receipt?.items ?? []}
       />
     </div>
   );

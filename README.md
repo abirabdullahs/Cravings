@@ -1,36 +1,31 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Cravings
 
-## Getting Started
+A food-delivery academic project with customer, restaurant-owner, rider, and administrator workflows. Built with Next.js 16.2.9, React 19, TypeScript, Tailwind CSS 4, Auth.js, and PostgreSQL using raw SQL.
 
-First, run the development server:
+## Documentation
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+Start with the [project audit and documentation index](docs/README.md).
+
+- [Architecture](docs/ARCHITECTURE.md) and [code/API map](docs/CODE_MAP.md)
+- [Feature scope, working parts, and limitations](docs/FEATURES.md)
+- [Database and rider/owner profile alignment](docs/DATABASE.md)
+- [Problems and fixes — repair handoff and later-session prompt](docs/PROBLEMS_AND_FIXES.md)
+- [Verification results](docs/VERIFICATION.md) and [academic completion plan](docs/COMPLETION_PLAN.md)
+- [File-level source inventory](docs/SOURCE_INVENTORY.md)
+
+The September 2026 audit found that TypeScript and production build pass, while lint and several core SQL queries fail. The complete order/delivery workflow still needs repairs. Documentation distinguishes observed reads, static findings, and untested mutations.
+
+## Local development
+
+Install dependencies with `npm ci`, configure a private `.env.local`, and run `npm run dev`. The homepage is `/`, implemented in `app/(customer)/page.tsx`. See the [setup reference](docs/COMPLETION_PLAN.md) for environment variables and verification commands.
+
+Database setup is not yet reliably reproducible from the historical SQL files. Do not execute all schema/seed scripts against an existing database: some drop or truncate records. Follow the [database reconciliation plan](docs/DATABASE.md) and establish a disposable test database first.
+
+```powershell
+npx tsc --noEmit --incremental false
+npm run lint
+npm run build
+npm run start
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Read AGENTS.md and the relevant installed Next.js guides under `node_modules/next/dist/docs/` before application changes. Older archived documentation describes earlier versions of the project; the current audit identifies known conflicts.

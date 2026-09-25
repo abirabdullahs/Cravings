@@ -234,12 +234,12 @@ CREATE TABLE carts (
   id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   user_id INT NOT NULL,
   restaurant_id INT NOT NULL,
-  user_coupons_id INT,
+  user_coupon_id INT,
   created_at TIMESTAMP NOT NULL DEFAULT NOW(),
   CONSTRAINT uq_cart_user_restaurant UNIQUE (user_id, restaurant_id),
   CONSTRAINT fk_cart_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE DEFERRABLE INITIALLY IMMEDIATE,
   CONSTRAINT fk_cart_restaurant FOREIGN KEY (restaurant_id) REFERENCES restaurants (id) DEFERRABLE INITIALLY IMMEDIATE,
-  CONSTRAINT fk_cart_coupon FOREIGN KEY (user_coupons_id) REFERENCES user_coupons (id) DEFERRABLE INITIALLY IMMEDIATE
+  CONSTRAINT fk_cart_coupon FOREIGN KEY (user_coupon_id) REFERENCES user_coupons (id) DEFERRABLE INITIALLY IMMEDIATE
 );
 
 CREATE INDEX ix_carts_user ON carts (user_id);
@@ -262,6 +262,8 @@ CREATE TABLE orders (
   user_id INT NOT NULL,
   restaurant_id INT NOT NULL,
   address_id INT NOT NULL,
+  idempotency_key UUID NOT NULL,
+  delivery_instructions TEXT,
   total_amount NUMERIC(10,2) NOT NULL,
   delivery_fee NUMERIC(10,2) NOT NULL DEFAULT 0,
   discount NUMERIC(10,2) NOT NULL DEFAULT 0,
@@ -276,6 +278,8 @@ CREATE TABLE orders (
 
 CREATE INDEX ix_orders_user ON orders (user_id, created_at);
 CREATE INDEX ix_orders_restaurant ON orders (restaurant_id, order_status);
+CREATE UNIQUE INDEX uq_orders_user_idempotency
+  ON orders (user_id, idempotency_key);
 
 CREATE TRIGGER trg_orders_updated_at
   BEFORE UPDATE ON orders
@@ -299,15 +303,15 @@ CREATE INDEX ix_order_items_order ON order_items (order_id);
 CREATE TABLE payments (
   id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   order_id INT NOT NULL,
-  transaction_id VARCHAR,
+  transaction_id VARCHAR(100),
   payment_method VARCHAR NOT NULL,
   amount NUMERIC(10,2) NOT NULL,
   status payment_status_enum NOT NULL DEFAULT 'pending',
-  paid_at TIMESTAMP DEFAULT NOW(),
+  paid_at TIMESTAMP,
   CONSTRAINT fk_payments_order FOREIGN KEY (order_id) REFERENCES orders (id) DEFERRABLE INITIALLY IMMEDIATE,
   CONSTRAINT uq_payments_transaction_id UNIQUE (transaction_id),
   CONSTRAINT ck_payments_amount CHECK (amount > 0),
-  CONSTRAINT ck_payments_method CHECK (payment_method IN ('card','mobile_banking','bank_transfer','cash'))
+  CONSTRAINT ck_payments_method CHECK (payment_method IN ('cash','bkash','nagad','card'))
 );
 
 CREATE INDEX ix_payments_order ON payments (order_id, status);

@@ -1,5 +1,9 @@
 export const CALL_CREATE_ORDER_PROCEDURE = `
-CALL creation_of_order($1, $2, $3, $4, $5, NULL);
+CALL creation_of_order($1, $2, $3, $4, $5::UUID, $6, NULL);
+`;
+export const GET_ORDER_QUOTE = `
+SELECT subtotal, discount, delivery_fee, tax, final_total
+FROM calculate_order_quote($1, $2, $3);
 `;
 export const GET_USER_ORDERS = `
 SELECT 
@@ -51,20 +55,30 @@ RETURNING id, order_status;
 
 export const FIND_ORDER_DETAIL = `
 SELECT 
-  o.id AS order_id, 
-  r.name AS restaurant_name, 
-  mi.item_name AS menu_item_name, 
-  oi.quantity, 
-  oi.unit_price, 
-  oi.subtotal
+  o.id AS order_id,
+  oi.id AS item_id,
+  mi.item_name,
+  oi.quantity,
+  oi.unit_price,
+  oi.subtotal AS item_subtotal,
+  COALESCE(SUM(oi.subtotal) OVER (), 0)::NUMERIC(10,2) AS subtotal,
+  o.discount,
+  o.delivery_fee,
+  ROUND(
+    o.total_amount - COALESCE(SUM(oi.subtotal) OVER (), 0) + o.discount - o.delivery_fee,
+    2
+  ) AS tax,
+  o.total_amount,
+  p.paid_at,
+  p.transaction_id,
+  o.delivery_instructions
 FROM orders o
-JOIN restaurants r ON r.id = o.restaurant_id
-LEFT JOIN order_items oi ON o.id = oi.order_id
-JOIN menu_items mi ON mi.id = oi.menu_item_id
+LEFT JOIN order_items oi ON oi.order_id = o.id
+LEFT JOIN menu_items mi ON mi.id = oi.menu_item_id
+LEFT JOIN payments p ON p.order_id = o.id
 WHERE o.id = $1 AND o.user_id = $2
 ORDER BY oi.id;
 `;
-
 
 export const GET_ORDER_TRACKING_FOR_CUSTOMER = `
 SELECT
@@ -136,9 +150,10 @@ WHERE order_id = $1 AND status = 'unassigned';
  * {
  *   userId
  *   addressId
- *   deliveryFee
  *   cartId
  *   paymentMethod
+ *   idempotencyKey
+ *   deliveryInstructions
  * }
  * create order row orderitems
  * reduce restaurant stock

@@ -7,8 +7,9 @@ import {
   CreatedOrder,
   SubmitReviewInput,
   OrderHistoryItem,
-  OrderDetailItem,
-  Coupon
+  OrderDetail,
+  Coupon,
+  OrderQuote,
 } from "@/types/order";
 import { Restaurant, RestaurantMenu } from "@/types/restaurant";
 
@@ -29,7 +30,7 @@ export const fetchRestaurantDetails = async (
 };
 
 export const fetchCarts = async (
-  retaurantId: Number | null,
+  retaurantId: number | null,
 ): Promise<Cart[]> => {
   return apiRequest<Cart[]>(
     retaurantId === null ? "/api/carts/all" : `/api/carts/${retaurantId}`,
@@ -55,6 +56,14 @@ export const placeOrder = async (
     body: JSON.stringify(input),
   });
 
+export const fetchOrderQuote = async (
+  cartId: number,
+  addressId: number,
+): Promise<OrderQuote> =>
+  apiRequest<OrderQuote>(
+    `/api/orders/quote?cartId=${cartId}&addressId=${addressId}`,
+  );
+
 export const submitReview = async (input: SubmitReviewInput) =>
   apiRequest<void>("/api/reviews", {
     method: "POST",
@@ -66,5 +75,5 @@ export const fetchOrderHistory = async (): Promise<OrderHistoryItem[]> =>
 
 export const fetchOrderDetail = async (
   orderId: number,
-): Promise<OrderDetailItem[]> =>
-  apiRequest<OrderDetailItem[]>(`/api/orders/${orderId}/detail`);
+): Promise<OrderDetail> =>
+  apiRequest<OrderDetail>(`/api/orders/${orderId}/detail`);

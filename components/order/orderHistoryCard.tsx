@@ -5,13 +5,13 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { fetchOrderDetail } from "@/services/orderService";
 import { ReviewModal } from "@/components/reviews/ReviewModal";
-import type { OrderHistoryItem, OrderDetailItem } from "@/types/order";
+import type { OrderDetail, OrderHistoryItem } from "@/types/order";
 
 export function OrderHistoryCard({ order }: { order: OrderHistoryItem }) {
   const [showReceipt, setShowReceipt] = useState(false);
   const [showReview, setShowReview] = useState(false);
   const [reviewed, setReviewed] = useState(order.isReviewed);
-  const receipt = useQuery<OrderDetailItem[]>({
+  const receipt = useQuery<OrderDetail>({
     queryKey: ["orders", order.id, "detail"],
     queryFn: () => fetchOrderDetail(order.id),
     enabled: showReceipt,
@@ -67,8 +67,8 @@ export function OrderHistoryCard({ order }: { order: OrderHistoryItem }) {
             <p className="text-muted-foreground">Loading receipt...</p>
           ) : receipt.isError ? (
             <p className="text-destructive">Unable to load this receipt.</p>
-          ) : receipt.data?.length ? (
-            receipt.data.map((item) => (
+          ) : receipt.data?.items.length ? (
+            receipt.data.items.map((item) => (
               <div key={item.id} className="flex justify-between gap-4 py-1">
                 <span className="text-muted-foreground">
                   {item.quantity} x {item.name}

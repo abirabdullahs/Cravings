@@ -47,8 +47,17 @@ export interface UserAddress {
 export interface CreateOrderInput {
   cartId: number;
   addressId: number;
+  paymentMethod: "cash" | "bkash" | "nagad" | "card";
+  idempotencyKey: string;
+  deliveryInstructions: string;
+}
+
+export interface OrderQuote {
+  subtotal: number;
+  discount: number;
   deliveryFee: number;
-  paymentMethod: "card" | "mobile_banking" | "bank_transfer" | "cash";
+  tax: number;
+  finalTotal: number;
 }
 
 export interface CreatedOrder {
@@ -79,6 +88,19 @@ export interface OrderDetailItem {
   quantity: number;
   unitPrice: number;
   subtotal: number;
+}
+
+export interface OrderDetail {
+  orderId: number;
+  items: OrderDetailItem[];
+  subtotal: number;
+  discount: number;
+  deliveryFee: number;
+  tax: number;
+  totalAmount: number;
+  paidAt: string | null;
+  transactionId: string | null;
+  deliveryInstructions: string | null;
 }
 
 

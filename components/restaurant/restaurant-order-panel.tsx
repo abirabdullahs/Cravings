@@ -23,9 +23,6 @@ export function RestaurantOrderPanel({
     (sum, item) => sum + item.price * item.quantity,
     0,
   );
-  const delivery = items.length ? 45 : 0;
-  const total = subtotal + delivery;
-
   return (
     <aside className="lg:sticky lg:top-[9.5rem] lg:self-start">
       <div className="border border-border bg-card">
@@ -80,11 +77,11 @@ export function RestaurantOrderPanel({
               </div>
               <div className="flex justify-between">
                 <span>Delivery fee</span>
-                <span>৳{delivery}</span>
+                <span>Calculated at checkout</span>
               </div>
               <div className="flex justify-between pt-2 text-sm font-semibold text-foreground">
-                <span>Total</span>
-                <span>৳{total}</span>
+                <span>Estimated subtotal</span>
+                <span>৳{subtotal.toFixed(2)}</span>
               </div>
             </div>
             <Link

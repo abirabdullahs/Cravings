@@ -10,6 +10,7 @@ import {
   MARK_PICKED_UP,
   SET_RIDER_STATUS,
   UPDATE_ORDER_STATUS_DELIVERED,
+  SETTLE_CASH_PAYMENT,
   UPDATE_ORDER_STATUS_OUT_FOR_DELIVERY,
   GET_ACTIVE_DELIVERY_FOR_RIDER,
   INSERT_DELIVERY_LOCATION,
@@ -154,6 +155,8 @@ export const markDelivered = async (
       throw new Error("Order is not out for delivery");
     }
 
+    const payment = await client.query(SETTLE_CASH_PAYMENT, [orderId]);
+
     await client.query(INSERT_DELIVERY_LOCATION, [
       delivery.rows[0].id,
       latitude,
@@ -165,6 +168,7 @@ export const markDelivered = async (
     return {
       delivery: toCamelCase(delivery.rows[0]),
       order: toCamelCase(order.rows[0]),
+      payment: payment.rows[0] ? toCamelCase(payment.rows[0]) : null,
     };
   });
 

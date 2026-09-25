@@ -88,7 +88,6 @@ const cleanId = restaurantId === null ? null : Number(restaurantId);
       id: number;
       restaurantId: number;
       restaurantName: string;
-      discount: string | null;
       cartItems: CartItem[];
     }
   >();
@@ -97,7 +96,6 @@ const cleanId = restaurantId === null ? null : Number(restaurantId);
       id: row.cart_id,
       restaurantId: row.restaurant_id,
       restaurantName: row.restaurant_name,
-      discount: row.discount,
       cartItems: [] as CartItem[],
     };
     cart.cartItems.push(toCartItem(row));

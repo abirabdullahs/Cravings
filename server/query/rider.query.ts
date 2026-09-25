@@ -70,7 +70,9 @@ RETURNING id, status;
 export const MARK_DELIVERED = `
 UPDATE deliveries
 SET status = 'delivered', delivered_at = NOW()
-WHERE order_id = $1 AND rider_id = $2 AND status = 'picked_up'
+WHERE order_id = $1
+  AND rider_id = $2
+  AND status IN ('picked_up', 'arrived_at_destination')
 RETURNING id, status, delivered_at;
 `;
 
@@ -78,6 +80,16 @@ export const UPDATE_ORDER_STATUS_DELIVERED = `
 UPDATE orders SET order_status = 'delivered'
 WHERE id = $1 AND order_status = 'out_for_delivery'
 RETURNING id, order_status;
+`;
+
+export const SETTLE_CASH_PAYMENT = `
+UPDATE payments
+SET status = 'completed',
+    paid_at = COALESCE(paid_at, NOW())
+WHERE order_id = $1
+  AND payment_method = 'cash'
+  AND status = 'pending'
+RETURNING order_id, status, paid_at;
 `;
 
 export const SET_RIDER_STATUS = `

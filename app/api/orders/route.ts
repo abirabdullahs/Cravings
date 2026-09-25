@@ -7,7 +7,14 @@ export async function POST(request: NextRequest) {
   try {
     const user = await getAuthenticatedUser();
     const input = await request.json();
-    const order = await placeOrder({ userId: user.id, ...input });
+    const order = await placeOrder({
+      userId: user.id,
+      cartId: input.cartId,
+      addressId: input.addressId,
+      paymentMethod: input.paymentMethod,
+      idempotencyKey: input.idempotencyKey,
+      deliveryInstructions: input.deliveryInstructions,
+    });
     return NextResponse.json(order, { status: 201 });
   } catch (error: unknown) {
     return handleApiError(error, "Unable to place order");

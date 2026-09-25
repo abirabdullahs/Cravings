@@ -133,20 +133,46 @@ LIMIT $4 OFFSET $5
 `;
 
 export const GET_ADMIN_ORDER_DETAILS = `
-SELECT o.id, o.total_amount, o.delivery_fee, o.discount, o.order_status, o.created_at,
-       u.name AS customer_name, u.email AS customer_email, u.phone AS customer_phone,
-       r.name AS restaurant_name, r.address AS restaurant_address,
-      p.status AS payment_status, p.payment_method, p.transaction_id,
-      d.status AS delivery_status, d.rider_id, rider.name AS rider_name, rider.phone AS rider_phone
+SELECT 
+  o.id, 
+  COALESCE(item_totals.subtotal, 0)::NUMERIC(10,2) AS subtotal, 
+  o.total_amount, 
+  o.delivery_fee, 
+  o.discount,
+  ROUND(
+    o.total_amount - COALESCE(item_totals.subtotal, 0) + o.discount - o.delivery_fee, 
+    2
+  ) AS tax,
+  o.delivery_instructions, 
+  o.order_status, 
+  o.created_at,
+  u.name AS customer_name, 
+  u.email AS customer_email, 
+  u.phone AS customer_phone,
+  r.name AS restaurant_name, 
+  r.address AS restaurant_address,
+  p.status AS payment_status, 
+  p.payment_method, 
+  p.amount AS payment_amount,
+  p.paid_at, 
+  p.transaction_id,
+  d.status AS delivery_status, 
+  d.rider_id, 
+  rider.name AS rider_name, 
+  rider.phone AS rider_phone
 FROM orders o
 JOIN users u ON u.id = o.user_id
 JOIN restaurants r ON r.id = o.restaurant_id
+LEFT JOIN (
+  SELECT order_id, SUM(subtotal)::NUMERIC(10,2) AS subtotal
+  FROM order_items
+  GROUP BY order_id
+) item_totals ON item_totals.order_id = o.id
 LEFT JOIN payments p ON p.order_id = o.id
 LEFT JOIN deliveries d ON d.order_id = o.id
 LEFT JOIN users rider ON rider.id = d.rider_id
-WHERE o.id = $1
+WHERE o.id = $1;
 `;
-
 export const GET_ADMIN_ORDER_ITEMS = `
 SELECT oi.id, mi.item_name, oi.quantity, oi.unit_price, oi.subtotal
 FROM order_items oi
@@ -174,9 +200,13 @@ RETURNING order_id, rider_id, status
 
 export const UPDATE_ADMIN_PAYMENT_STATUS = `
 UPDATE payments
-SET status = $2
+SET status = $2,
+    paid_at = CASE
+      WHEN $2 = 'completed' THEN COALESCE(paid_at, NOW())
+      ELSE paid_at
+    END
 WHERE order_id = $1
-RETURNING order_id, status
+RETURNING order_id, status, paid_at, transaction_id
 `;
 
 export const GET_WEEKLY_PLATFORM_PROFIT = `
