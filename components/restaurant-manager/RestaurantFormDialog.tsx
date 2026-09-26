@@ -3,6 +3,7 @@ import Image from "next/image";
 import { X, Trash2 } from "lucide-react";
 import { FormField } from "@/components/ui/FormField";
 import { UploadButton } from "@/lib/uploadthing";
+import { LocationPicker } from "@/components/address/LocationPicker";
 import type { RestaurantInput } from "@/types/restaurant";
 
 interface RestaurantFormDialogProps {
@@ -88,6 +89,23 @@ export function RestaurantFormDialog({
             onChange={(value) => update("address", value)}
           />
           <FormField
+            label="Area"
+            name="area"
+            value={form.area}
+            onChange={(value) => update("area", value)}
+          />
+          <FormField
+            label="Cuisines"
+            name="cuisines"
+            value={form.cuisines.join(", ")}
+            onChange={(value) =>
+              update(
+                "cuisines",
+                value.split(",").map((cuisine) => cuisine.trim()),
+              )
+            }
+          />
+          <FormField
             label="Opening time"
             name="openingTime"
             type="time"
@@ -115,6 +133,31 @@ export function RestaurantFormDialog({
             value={form.minimumOrder ?? 0}
             onChange={(value) => update("minimumOrder", Number(value))}
           />
+
+          <div className="sm:col-span-2">
+            <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Branch location
+            </p>
+            <LocationPicker
+              latitude={form.latitude}
+              longitude={form.longitude}
+              onLocationSelect={(latitude, longitude) =>
+                setForm((current) => ({ ...current, latitude, longitude }))
+              }
+            />
+            <p className="mt-1 text-xs text-muted-foreground">
+              Select the restaurant entrance on the map for delivery routing.
+            </p>
+          </div>
+
+          <label className="flex items-center gap-2 text-sm text-foreground sm:col-span-2">
+            <input
+              type="checkbox"
+              checked={form.isActive}
+              onChange={(event) => update("isActive", event.target.checked)}
+            />
+            Accept customer orders from this branch
+          </label>
 
           {/* Restaurant Banner Image Upload */}
           <div className="grid gap-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground sm:col-span-2">

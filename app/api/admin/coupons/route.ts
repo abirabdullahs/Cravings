@@ -11,7 +11,7 @@ async function requireAdmin() {
 export async function GET() {
   if (!await requireAdmin()) return NextResponse.json({ error: "Admin access required" }, { status: 403 });
   const [coupons, users] = await Promise.all([
-    pool.query(`SELECT c.id, c.code, c.discount_type, c.discount_value, c.minimum_order, c.expiry_date, COUNT(uc.id)::int AS assigned_count FROM coupons c LEFT JOIN user_coupons uc ON uc.coupon_id = c.id GROUP BY c.id ORDER BY c.id DESC`),
+    pool.query(`SELECT c.id, c.code, c.discount_type, c.discount_value, c.minimum_order, c.expiry_date, COUNT(DISTINCT uc.user_id)::int AS assigned_count FROM coupons c LEFT JOIN user_coupons uc ON uc.coupon_id = c.id GROUP BY c.id ORDER BY c.id DESC`),
     pool.query(`SELECT id, name, email FROM users WHERE role = 'customer' ORDER BY name, email`),
   ]);
   return NextResponse.json({ coupons: coupons.rows, users: users.rows });

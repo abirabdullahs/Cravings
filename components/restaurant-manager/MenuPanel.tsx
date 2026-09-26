@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus } from "lucide-react";
+import { Plus, RotateCcw } from "lucide-react";
 import { MenuItemFormDialog } from "@/components/restaurant-manager/MenuItemFormDialog";
 import { MenuItemRow } from "@/components/restaurant-manager/MenuItemRow";
 import { emptyMenuItemInput } from "@/types/restaurant";
@@ -7,20 +7,24 @@ import type { MenuCategory, MenuItem, MenuItemInput } from "@/types/restaurant";
 
 interface MenuPanelProps {
   items: MenuItem[];
+  archivedItems: MenuItem[];
   categories: MenuCategory[];
   busy: boolean;
   onSave: (input: MenuItemInput, editingId: number | null) => Promise<void>;
   onToggleAvailability: (item: MenuItem) => void;
   onDelete: (item: MenuItem) => void;
+  onRestore: (item: MenuItem) => void;
 }
 
 export function MenuPanel({
   items,
+  archivedItems,
   categories,
   busy,
   onSave,
   onToggleAvailability,
   onDelete,
+  onRestore,
 }: MenuPanelProps) {
   const [showForm, setShowForm] = useState(false);
   const [editingItem, setEditingItem] = useState<MenuItem | null>(null);
@@ -61,6 +65,7 @@ export function MenuPanel({
 
       {showForm && (
         <MenuItemFormDialog
+          key={editingItem?.id ?? "new"}
           initialValue={editingItem ? itemToInput(editingItem) : emptyMenuItemInput}
           isEditing={Boolean(editingItem)}
           categories={categories}
@@ -88,6 +93,29 @@ export function MenuPanel({
       ) : (
         <div className="border border-dashed border-border px-5 py-10 text-center text-sm text-muted-foreground">
           Your menu is empty. Add the dishes your customers come for.
+        </div>
+      )}
+
+      {archivedItems.length > 0 && (
+        <div className="mt-7">
+          <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Archived items
+          </h4>
+          <div className="mt-2 divide-y divide-border border-y border-border">
+            {archivedItems.map((item) => (
+              <div key={item.id} className="flex items-center justify-between gap-3 py-3">
+                <span className="text-sm text-muted-foreground">{item.name}</span>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => onRestore(item)}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline disabled:opacity-50"
+                >
+                  <RotateCcw className="size-3.5" /> Restore
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>

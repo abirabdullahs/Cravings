@@ -38,7 +38,11 @@ export async function PATCH(request: Request, { params }: Context) {
 
     if (!ownedId)
       return NextResponse.json({ error: "Not found" }, { status: 404 });
-    if (status !== "ready" || !Number.isInteger(Number(orderId))) {
+    if (
+      status !== "ready" ||
+      !Number.isInteger(Number(orderId)) ||
+      Number(orderId) < 1
+    ) {
       return NextResponse.json(
         { error: "Invalid order status" },
         { status: 400 },

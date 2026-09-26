@@ -28,12 +28,33 @@ WHERE user_id = $1
 FOR UPDATE;
 `;
 
-export const CANCELL_ALL =`
-  UPDATE deliveries 
-      SET status = 'cancelled', 
-          updated_at = NOW()
-      WHERE rider_id = $1 
-        AND status IN ('assigned', 'arrived_at_store', 'picked_up');`
+export const HAS_ACTIVE_DELIVERY = `
+SELECT EXISTS (
+  SELECT 1
+  FROM deliveries
+  WHERE rider_id = $1
+    AND status IN ('accepted', 'arrived_at_store', 'picked_up', 'arrived_at_destination')
+) AS has_active;
+`;
+
+export const REQUEUE_STALE_DELIVERIES = `
+WITH stale AS (
+  UPDATE deliveries
+  SET status = 'unassigned', rider_id = NULL, assigned_at = NULL
+  WHERE status IN ('accepted', 'arrived_at_store')
+    AND updated_at < NOW() - INTERVAL '15 minutes'
+  RETURNING rider_id
+)
+UPDATE riders r
+SET status = 'idle'
+WHERE r.user_id IN (SELECT rider_id FROM stale WHERE rider_id IS NOT NULL)
+  AND NOT EXISTS (
+    SELECT 1
+    FROM deliveries d
+    WHERE d.rider_id = r.user_id
+      AND d.status IN ('accepted', 'arrived_at_store', 'picked_up', 'arrived_at_destination')
+  );
+`;
 
 export const MARK_ARRIVED_AT_STORE = `
 UPDATE deliveries
@@ -57,7 +78,7 @@ RETURNING id, status;
 export const UPDATE_ORDER_STATUS_OUT_FOR_DELIVERY = `
 UPDATE orders SET order_status = 'out_for_delivery'
 WHERE id = $1 AND order_status = 'ready'
-RETURNING id, order_status;
+RETURNING id, user_id, order_status;
 `;
 
 export const MARK_ARRIVED_AT_DESTINATION = `
@@ -79,7 +100,7 @@ RETURNING id, status, delivered_at;
 export const UPDATE_ORDER_STATUS_DELIVERED = `
 UPDATE orders SET order_status = 'delivered'
 WHERE id = $1 AND order_status = 'out_for_delivery'
-RETURNING id, order_status;
+RETURNING id, user_id, order_status;
 `;
 
 export const SETTLE_CASH_PAYMENT = `
@@ -111,7 +132,7 @@ export const GET_RIDER_DELIVERIES = `
   SELECT 
     d.id AS delivery_id,
     d.order_id,
-    d.status,
+    d.status AS delivery_status,
     o.order_status,
     o.total_amount,
     o.delivery_fee,
@@ -130,9 +151,9 @@ export const GET_RIDER_DELIVERIES = `
 `;
 
 export const GET_RIDER_PROFILE = `
-SELECT id, name, phone, profile_image, status 
+SELECT users.id, name, phone, profile_image, status
 FROM users join riders ON users.id = riders.user_id
-WHERE id = $1
+WHERE users.id = $1
 `;
 
 export const GET_ACTIVE_DELIVERY_FOR_RIDER = `
@@ -192,7 +213,7 @@ LEFT JOIN delivery_location_history dlh
   )
 
 WHERE d.rider_id = $1 
-  AND d.status IN ('accepted', 'arrived_at_store', 'picked_up') 
+  AND d.status IN ('accepted', 'arrived_at_store', 'picked_up', 'arrived_at_destination')
 
 ORDER BY d.assigned_at DESC NULLS LAST 
 LIMIT 1

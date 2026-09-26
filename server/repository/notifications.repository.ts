@@ -5,11 +5,21 @@ import {
   FIND_NOTIFICATIONS,
   MARK_ALL_READ,
   MARK_READ,
+  COUNT_UNREAD_NOTIFICATIONS,
 } from "../query/notification.query";
+import type { NotificationList } from "@/types/notification";
 
-export const findNotifications = async (userId: number) => {
-  const result = await pool.query(FIND_NOTIFICATIONS, [userId]);
-  return toCamelCase(result.rows);
+export const findNotifications = async (
+  userId: number,
+): Promise<NotificationList> => {
+  const [items, count] = await Promise.all([
+    pool.query(FIND_NOTIFICATIONS, [userId]),
+    pool.query(COUNT_UNREAD_NOTIFICATIONS, [userId]),
+  ]);
+  return {
+    items: toCamelCase(items.rows),
+    unreadCount: Number(count.rows[0]?.unread_count ?? 0),
+  };
 };
 
 export const insertNotification = async (
@@ -33,6 +43,5 @@ export const markRead = async (notificationId: number, userId: number) => {
 };
 
 export const markAllRead = async (userId: number) => {
-  const result = await pool.query(MARK_ALL_READ, [userId]);
-  return toCamelCase(result.rows);
+  await pool.query(MARK_ALL_READ, [userId]);
 };

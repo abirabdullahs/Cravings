@@ -26,17 +26,25 @@ export function useRestaurantDetails(restaurantId: number) {
     enabled: !!restaurantId, // Prevent query execution if ID is invalid
   });
 }
-export function useCartItems(restaurantId: number | null) {
+export function useCartItems(restaurantId: number | null, enabled = true) {
   return useQuery<Cart[]>({
     queryKey: ["cart", restaurantId],
     queryFn: () => fetchCartItems(restaurantId),
+    enabled,
   });
 }
 
-export function useOrderHistory() {
+export function useOrderHistory(enabled = true) {
   return useQuery<OrderHistoryItem[]>({
     queryKey: ["orders", "history"],
     queryFn: fetchOrderHistory,
+    enabled,
+    refetchInterval: (query) =>
+      query.state.data?.some(
+        (order) => !["delivered", "cancelled"].includes(order.orderStatus),
+      )
+        ? 15000
+        : false,
   });
 }
 
@@ -83,7 +91,12 @@ export function useOrder() {
   const placeOrderMutation = useMutation({
     mutationFn: (input: CreateOrderInput) => placeOrder(input),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["cart"] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["cart"] }),
+        queryClient.invalidateQueries({ queryKey: ["user", "coupons"] }),
+        queryClient.invalidateQueries({ queryKey: ["order-quote"] }),
+        queryClient.invalidateQueries({ queryKey: ["orders"] }),
+      ]);
     },
   });
 
@@ -96,10 +109,10 @@ export function useOrder() {
   });
 
   const addCouponMutation = useMutation({
-    mutationFn: ({ couponId, cartId }: { couponId: number; cartId: number }) => {
+    mutationFn: ({ userCouponId, cartId }: { userCouponId: number | null; cartId: number }) => {
       return apiRequest("/api/coupons", {
         method: "POST",
-        body: JSON.stringify({ couponId, cartId }),
+        body: JSON.stringify({ userCouponId, cartId }),
       });
     },
     onSuccess: async () => {
@@ -120,7 +133,7 @@ export function useOrder() {
     submitReview: (input: SubmitReviewInput) =>
       submitReviewMutation.mutateAsync(input),
     isSubmittingReview: submitReviewMutation.isPending,
-    addCoupon: (input: { couponId: number; cartId: number }) =>
+    addCoupon: (input: { userCouponId: number | null; cartId: number }) =>
       addCouponMutation.mutateAsync(input),
     isAddingCoupon: addCouponMutation.isPending,
   };

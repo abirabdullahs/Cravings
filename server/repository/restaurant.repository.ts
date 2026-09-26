@@ -1,9 +1,13 @@
 import { pool } from "@/lib/db";
 import {
   DELETE_CATEGORY,
-  DELETE_MENU_ITEM,
-  DELETE_RESTAURANT,
+  ARCHIVE_MENU_ITEM,
+  ARCHIVE_RESTAURANT,
+  RESTORE_MENU_ITEM,
+  RESTORE_RESTAURANT,
   FIND_CATEGORIES,
+  FIND_CATEGORY_FOR_RESTAURANT,
+  FIND_ARCHIVED_MENU,
   FIND_MENU,
   FIND_RESTAURANT_BY_OWNER,
   FIND_RESTAURANT_BY_ID,
@@ -40,6 +44,9 @@ interface RestaurantRow {
   rating?: number | string | null;
   cuisines?: string[] | null;
   area?: string | null;
+  latitude?: number | string | null;
+  longitude?: number | string | null;
+  archived_at?: string | null;
 }
 
 interface CategoryRow {
@@ -56,9 +63,10 @@ interface MenuItemRow {
   is_available: boolean;
   category_id: number | null;
   category_name: string | null;
+  archived_at?: string | null;
 }
 
-type SqlValue = string | number | boolean | null;
+type SqlValue = string | number | boolean | string[] | null;
 
 const numberValue = (value: number | string | null | undefined) =>
   Number(value ?? 0);
@@ -74,6 +82,9 @@ function toRestaurantSummary(row: RestaurantRow): RestaurantSummary {
     isActive: row.active_status,
     cuisines: row.cuisines ?? [],
     area: row.area ?? undefined,
+    latitude: row.latitude == null ? null : Number(row.latitude),
+    longitude: row.longitude == null ? null : Number(row.longitude),
+    archivedAt: row.archived_at ?? null,
   };
 }
 
@@ -103,19 +114,20 @@ function toMenuItem(row: MenuItemRow): MenuItem {
     isAvailable: row.is_available,
     categoryId: row.category_id ?? undefined,
     categoryName: row.category_name ?? undefined,
+    archivedAt: row.archived_at ?? null,
   };
 }
 function getSortClause(sort?: string): string {
   switch (sort) {
     case "top-rated":
-      return "ORDER BY R.active_status DESC, R.rating DESC NULLS LAST";
+      return "ORDER BY active_status DESC, R.rating DESC NULLS LAST";
     case "cheapest":
-      return "ORDER BY R.active_status DESC, R.minimum_order ASC";
+      return "ORDER BY active_status DESC, R.minimum_order ASC";
     case "popular":
-      return `ORDER BY R.active_status DESC,
+      return `ORDER BY active_status DESC,
         (SELECT COUNT(*) FROM orders o WHERE o.restaurant_id = R.id) DESC`;
     default:
-      return "ORDER BY R.active_status DESC, R.name ASC";
+      return "ORDER BY active_status DESC, R.name ASC";
   }
 }
 export const findRestaurants = async (
@@ -142,9 +154,10 @@ export const findRestaurantDetails = async (restaurantId: string) => {
 
 export const findRestaurantsByOwner = async (
   ownerId: string,
+  archived = false,
 ): Promise<Restaurant[]> =>
   (
-    await pool.query<RestaurantRow>(FIND_RESTAURANTS_BY_OWNER, [ownerId])
+    await pool.query<RestaurantRow>(FIND_RESTAURANTS_BY_OWNER, [ownerId, archived])
   ).rows.map(toRestaurant);
 
 export const findRestaurantById = async (
@@ -181,13 +194,27 @@ export const updateRestaurant = async (
   return result.rows[0] ? toRestaurant(result.rows[0]) : undefined;
 };
 
-export const deleteRestaurant = async (restaurantId: string, ownerId: string) =>
-  (await pool.query(DELETE_RESTAURANT, [restaurantId, ownerId])).rowCount;
+export const archiveRestaurant = async (restaurantId: string, ownerId: string) =>
+  (await pool.query(ARCHIVE_RESTAURANT, [restaurantId, ownerId])).rowCount;
+
+export const restoreRestaurant = async (restaurantId: string, ownerId: string) =>
+  (await pool.query(RESTORE_RESTAURANT, [restaurantId, ownerId])).rowCount;
 
 export const findCategories = async (restaurantId: string) =>
   (await pool.query<CategoryRow>(FIND_CATEGORIES, [restaurantId])).rows.map(
     toCategory,
   );
+
+export const findCategoryForRestaurant = async (
+  categoryId: string,
+  restaurantId: string,
+) => {
+  const result = await pool.query<CategoryRow>(FIND_CATEGORY_FOR_RESTAURANT, [
+    categoryId,
+    restaurantId,
+  ]);
+  return result.rows[0] ? toCategory(result.rows[0]) : undefined;
+};
 
 export const insertCategory = async (restaurantId: string, name: string) =>
   (await pool.query<CategoryRow>(INSERT_CATEGORY, [restaurantId, name]))
@@ -200,6 +227,11 @@ export const deleteCategory = async (
 
 export const findMenu = async (restaurantId: string) =>
   (await pool.query<MenuItemRow>(FIND_MENU, [restaurantId])).rows.map(
+    toMenuItem,
+  );
+
+export const findArchivedMenu = async (restaurantId: string) =>
+  (await pool.query<MenuItemRow>(FIND_ARCHIVED_MENU, [restaurantId])).rows.map(
     toMenuItem,
   );
 
@@ -230,5 +262,8 @@ export const setAvailability = async (
     ])
   ).rows[0];
 
-export const deleteMenuItem = async (itemId: string, restaurantId: string) =>
-  (await pool.query(DELETE_MENU_ITEM, [itemId, restaurantId])).rowCount;
+export const archiveMenuItem = async (itemId: string, restaurantId: string) =>
+  (await pool.query(ARCHIVE_MENU_ITEM, [itemId, restaurantId])).rowCount;
+
+export const restoreMenuItem = async (itemId: string, restaurantId: string) =>
+  (await pool.query(RESTORE_MENU_ITEM, [itemId, restaurantId])).rowCount;

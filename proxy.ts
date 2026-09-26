@@ -64,7 +64,7 @@ export default auth(async (req) => {
       return NextResponse.redirect(new URL("/rider", req.url));
     }
     if (userRole === "owner") {
-      return NextResponse.redirect(new URL("/restaurant", req.url));
+      return NextResponse.redirect(new URL("/owner", req.url));
     }
     if (userRole === "admin") {
       return NextResponse.redirect(new URL("/admin", req.url));
@@ -82,8 +82,7 @@ export default auth(async (req) => {
 
   // 5. Rider & Restaurant Route Protection with DB Approval Check
   const isRiderRoute = pathname.startsWith("/rider");
-  const isRestaurantRoute =
-    pathname.startsWith("/restaurant") || pathname.startsWith("/owner");
+  const isRestaurantRoute = pathname.startsWith("/owner");
   const expectedRole = isRiderRoute
     ? "rider"
     : isRestaurantRoute

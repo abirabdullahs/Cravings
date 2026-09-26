@@ -6,12 +6,10 @@ import {
   createRoleRequest,
   listRoleRequests,
   updateRoleRequestStatus,
-  approveRoleRequest,
   updateUserProfile,
   findRoleRequestByUser,
   getRoleRequestById,
-  insertRiderProfile,
-  insertRestaurantOwnerProfile,
+  approveRoleRequestWithProfile,
 } from "../repository/auth.repository";
 import { hashPassword } from "../utils/password";
 import { AppError } from "@/lib/errors/AppError";
@@ -230,19 +228,35 @@ export const reviewRoleRequest = async ({
   }
 
   if (status === "APPROVED") {
-    await approveRoleRequest({
-      userId: String(request.user_id),
-      requestedRole: request.requested_role,
-    });
-
-    if (request.requested_role === "rider") {
-      await insertRiderProfile({
-        userId: String(request.user_id),
-        vehicleType: request.verification_data?.vehicle_type ?? "BIKE",
-        licensePlate: request.verification_data?.license_number ?? null,
+    try {
+      const approved = await approveRoleRequestWithProfile({
+        requestId,
+        reviewedBy,
+        reviewNote,
       });
-    } else if (request.requested_role === "owner") {
-      await insertRestaurantOwnerProfile(String(request.user_id));
+      if (!approved) {
+        throw new AppError(
+          ErrorCode.INVALID_STATUS,
+          "This request has already been reviewed",
+        );
+      }
+      return approved;
+    } catch (error) {
+      const databaseError = error as { code?: string; constraint?: string };
+      if (
+        databaseError.code === "DUPLICATE_NID" ||
+        (databaseError.code === "23505" &&
+          databaseError.constraint?.toLowerCase().includes("nid"))
+      ) {
+        throw new AppError(ErrorCode.DUPLICATE_IDENTITY);
+      }
+      if (databaseError.code === "23505") {
+        throw new AppError(
+          ErrorCode.INVALID_INPUT,
+          "The rider vehicle or licence number is already assigned to another account",
+        );
+      }
+      throw error;
     }
   }
 

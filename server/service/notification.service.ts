@@ -26,5 +26,5 @@ export const markNotificationRead = async (
 };
 
 export const markAllNotificationsRead = async (userId: number) => {
-  return await markAllRead(userId);
+  await markAllRead(userId);
 };

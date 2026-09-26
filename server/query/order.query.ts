@@ -34,10 +34,22 @@ SELECT
   o.total_amount, 
   o.order_status, 
   o.created_at,
-  COUNT(oi.id)::int AS total_items
+  o.delivery_instructions,
+  COALESCE(SUM(oi.quantity), 0)::int AS total_items,
+  COALESCE(
+    json_agg(
+      json_build_object(
+        'id', oi.id,
+        'name', mi.item_name,
+        'quantity', oi.quantity
+      ) ORDER BY oi.id
+    ) FILTER (WHERE oi.id IS NOT NULL),
+    '[]'::json
+  ) AS items
 FROM orders o
 JOIN users u ON u.id = o.user_id
 LEFT JOIN order_items oi ON oi.order_id = o.id
+LEFT JOIN menu_items mi ON mi.id = oi.menu_item_id
 WHERE o.restaurant_id = $1
   AND o.order_status IN ('pending', 'confirmed', 'preparing', 'ready')
 GROUP BY o.id, u.name
