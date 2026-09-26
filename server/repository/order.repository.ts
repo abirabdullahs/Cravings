@@ -14,6 +14,7 @@ import {
   MARK_ORDER_READY,
   GET_ORDER_QUOTE,
 } from "../query/order.query";
+import { INSERT_ORDER_NOTIFICATION } from "../query/notification.query";
 
 export const createOrder = async ({
   userId,
@@ -104,13 +105,32 @@ export const findUserOrders = async (userId: number) => {
 
 export const findRestaurantOrders = async (restaurantId: number) => {
   const rows = (await pool.query(GET_RESTAURANT_ORDERS, [restaurantId])).rows;
-  return toCamelCase(rows);
+  return rows.map((row) => ({
+    ...toCamelCase(row),
+    totalAmount: Number(row.total_amount),
+    totalItems: Number(row.total_items),
+    items: (row.items ?? []).map(
+      (item: { id: number; name: string; quantity: number | string }) => ({
+        id: Number(item.id),
+        name: item.name,
+        quantity: Number(item.quantity),
+      }),
+    ),
+  }));
 };
 
-export const markOrderReady = async (orderId: number, restaurantId: number) => {
-  const result = await pool.query(MARK_ORDER_READY, [orderId, restaurantId]);
-  return result.rows[0] ? toCamelCase(result.rows[0]) : null;
-};
+export const markOrderReady = async (orderId: number, restaurantId: number) =>
+  withTransaction(async (client) => {
+    const result = await client.query(MARK_ORDER_READY, [orderId, restaurantId]);
+    if (result.rowCount !== 1) return null;
+
+    await client.query(INSERT_ORDER_NOTIFICATION, [
+      orderId,
+      "Order ready",
+      "Your order is ready and waiting for a rider.",
+    ]);
+    return toCamelCase(result.rows[0]);
+  });
 
 export const findOrderDetail = async (orderId: number, customerId: number) => {
   const result = await pool.query(FIND_ORDER_DETAIL, [orderId, customerId]);

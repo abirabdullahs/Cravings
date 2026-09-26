@@ -87,6 +87,10 @@ export const ERROR_CONFIG: Record<
     status: 409,
     message: "A restaurant with this name already exists",
   },
+  [ErrorCode.DUPLICATE_IDENTITY]: {
+    status: 409,
+    message: "This identity document is already used by another approved account",
+  },
 
   // Not Found (404)
   [ErrorCode.NOT_FOUND]: {

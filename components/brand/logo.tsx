@@ -25,10 +25,10 @@ export function Logo({
       {/* Icon Graphic */}
       <div className="relative h-9 w-9 shrink-0">
         <Image
-          src={logoImg}
-          alt="Cravings Icon"
+          src={logoImg} 
+          alt="Logo"
           fill
-          priority
+          sizes="(max-width: 768px) 100vw, 33vw" 
           className="object-contain"
         />
       </div>

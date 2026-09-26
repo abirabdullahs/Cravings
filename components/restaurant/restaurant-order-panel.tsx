@@ -10,7 +10,7 @@ type RestaurantOrderPanelProps = {
   items: OrderLine[];
   cartId?: number;
   restaurantId: number;
-  onChange: (item: MenuItem, amount: number) => void;
+  onChange: (item: MenuItem, amount: number) => Promise<void>;
 };
 
 export function RestaurantOrderPanel({
@@ -49,7 +49,7 @@ export function RestaurantOrderPanel({
                   <div className="flex shrink-0 items-center gap-2 border border-border px-1.5 py-1">
                     <button
                       type="button"
-                      onClick={() => onChange(item, item.quantity - 1)}
+                      onClick={() => void onChange(item, item.quantity - 1)}
                       aria-label={`Remove one ${item.name}`}
                       className="text-muted-foreground hover:text-primary"
                     >
@@ -60,7 +60,7 @@ export function RestaurantOrderPanel({
                     </span>
                     <button
                       type="button"
-                      onClick={() => onChange(item, item.quantity + 1)}
+                      onClick={() => void onChange(item, item.quantity + 1)}
                       aria-label={`Add one ${item.name}`}
                       className="text-muted-foreground hover:text-primary"
                     >

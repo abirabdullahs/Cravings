@@ -48,7 +48,11 @@ export function useRider() {
   const acceptMutation = useMutation({
     mutationFn: (orderId: number) => acceptDeliveryRequest(orderId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["rider", "requests"] });
+      void Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["rider", "requests"] }),
+        queryClient.invalidateQueries({ queryKey: ["rider", "activeDelivery"] }),
+        queryClient.invalidateQueries({ queryKey: ["rider", "profile"] }),
+      ]);
     },
   });
 

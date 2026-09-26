@@ -8,6 +8,7 @@ import { use, useRef, useState } from "react";
 
 import { AddressButton } from "@/components/address/AddressSelection";
 import { useAddresses } from "@/hooks/useAddressManager";
+import { useSelectedAddress } from "@/components/address/useSelectedAddress";
 import {
   useCartItems,
   useOrder,
@@ -42,14 +43,15 @@ export function CheckoutPage({
   } = useOrder();
 
   const router = useRouter();
-  const [selectedAddressId, setSelectedAddressId] = useState<number | null>(
-    null,
-  );
-  const [paymentMethod, setPaymentMethod] =
-    useState<PaymentMethod>("cash");
+  const {
+    selectedAddress: activeAddress,
+    selectedAddressId: activeAddressId,
+    selectAddress,
+  } = useSelectedAddress(addresses);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
   const [selectedCouponId, setSelectedCouponId] = useState<
-    number | string | null
-  >(null);
+    number | null | undefined
+  >(undefined);
   const [instructions, setInstructions] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isMockConfirmationOpen, setIsMockConfirmationOpen] = useState(false);
@@ -61,9 +63,12 @@ export function CheckoutPage({
   const selectedCart = cartId
     ? carts.find((cart) => cart.id === cartId)
     : carts[0];
-  const activeAddressId = selectedAddressId ?? addresses[0]?.id ?? null;
-  const activeAddress =
-    addresses.find((addr) => addr.id === activeAddressId) ?? addresses[0];
+  const effectiveCouponId =
+    selectedCouponId === undefined
+      ? (coupons.some((coupon) => coupon.id === selectedCart?.userCouponId)
+          ? (selectedCart?.userCouponId ?? null)
+          : null)
+      : selectedCouponId;
   const {
     data: quote,
     error: quoteError,
@@ -79,7 +84,7 @@ export function CheckoutPage({
   }));
   const restaurantName = selectedCart?.restaurantName ?? "Restaurant";
 
-  const activeCoupon = coupons.find((c) => c.id === selectedCouponId);
+  const activeCoupon = coupons.find((c) => c.id === effectiveCouponId);
   const subtotal = quote?.subtotal ?? 0;
   const couponDiscount = quote?.discount ?? 0;
   const vatTaxes = quote?.tax ?? 0;
@@ -101,6 +106,11 @@ export function CheckoutPage({
         quantity,
       });
     } catch (requestError) {
+      setQuantityOverrides((current) => {
+        const next = { ...current };
+        delete next[item.id];
+        return next;
+      });
       setError(
         requestError instanceof Error
           ? requestError.message
@@ -110,15 +120,15 @@ export function CheckoutPage({
   };
 
   // Attach Coupon directly to Cart
-  const handleApplyCoupon = async (couponId: number) => {
+  const handleApplyCoupon = async (couponId: number | null) => {
     setSelectedCouponId(couponId);
-    if (!selectedCart || !couponId) return;
+    if (!selectedCart) return;
 
     setError(null);
     try {
       await addCoupon({
         cartId: selectedCart.id,
-        couponId,
+        userCouponId: couponId,
       });
     } catch (requestError) {
       setError(
@@ -356,9 +366,8 @@ export function CheckoutPage({
                     Delivery Address
                   </span>
                   <AddressButton
-                    onAddressSelect={(addr) =>
-                      setSelectedAddressId(addr.id ?? null)
-                    }
+                    selectedAddress={activeAddress}
+                    onAddressSelect={selectAddress}
                     triggerClassName="p-0 text-xs font-semibold text-muted-foreground hover:text-foreground h-auto bg-transparent border-none shadow-none"
                   />
                 </div>
@@ -398,10 +407,10 @@ export function CheckoutPage({
                 <select
                   id="coupon-select"
                   disabled={isAddingCoupon}
-                  value={selectedCouponId ?? ""}
+                  value={effectiveCouponId ?? ""}
                   onChange={(e) =>
-                    handleApplyCoupon(
-                     Number(e.target.value)
+                    void handleApplyCoupon(
+                      e.target.value ? Number(e.target.value) : null,
                     )
                   }
                   className="mt-2 w-full border border-border bg-background p-3 text-xs text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
@@ -536,7 +545,7 @@ export function CheckoutPage({
                   ? "Placing order..."
                   : isQuoteFetching
                     ? "Calculating total..."
-                  : `Place Order (Payable ${formatPrice(total)})`}
+                    : `Place Order (Payable ${formatPrice(total)})`}
               </button>
             </div>
           </aside>

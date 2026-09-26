@@ -2,11 +2,13 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { UploadButton } from "@/lib/uploadthing";
 import {
   useNotifications,
   useMarkNotificationRead,
 } from "@/hooks/useNotifications";
+import type { Restaurant } from "@/types/restaurant";
 
 type Role = "admin" | "owner" | "rider" | "customer";
 
@@ -51,7 +53,9 @@ export default function ProfilePage() {
   const [error, setError] = useState("");
   const [form, setForm] = useState({ name: "", phone: "", profile_image: "" });
   const [coupons, setCoupons] = useState<Coupon[]>([]);
-  const { data: notifications = [] } = useNotifications();
+  const [ownerRestaurants, setOwnerRestaurants] = useState<Restaurant[]>([]);
+  const { data: notificationData } = useNotifications();
+  const notifications = notificationData?.items ?? [];
   const markNotification = useMarkNotificationRead();
 
   useEffect(() => {
@@ -87,6 +91,23 @@ export default function ProfilePage() {
     void fetch("/api/coupons")
       .then((response) => (response.ok ? response.json() :[] ))
       .then((payload) => setCoupons(payload ?? []));
+  }, [profile?.role]);
+
+  useEffect(() => {
+    if (profile?.role !== "owner") return;
+    void fetch("/api/owner/restaurants")
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Unable to load restaurant details");
+        return response.json();
+      })
+      .then((payload) => setOwnerRestaurants(payload ?? []))
+      .catch((loadError) =>
+        setError(
+          loadError instanceof Error
+            ? loadError.message
+            : "Unable to load restaurant details",
+        ),
+      );
   }, [profile?.role]);
 
   async function saveProfile(event: React.FormEvent) {
@@ -309,6 +330,91 @@ export default function ProfilePage() {
         </aside>
 
         <main className="space-y-8">
+          {profile.role === "owner" && (
+            <section className="rounded border border-border bg-card p-6">
+              <div className="mb-4 flex items-center justify-between gap-4">
+                <div>
+                  <h2 className="font-serif text-2xl font-bold">
+                    My restaurants
+                  </h2>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Branch contact, service, and delivery-location details
+                  </p>
+                </div>
+                <Link
+                  href="/owner"
+                  className="text-xs font-semibold text-primary hover:underline"
+                >
+                  Manage restaurants
+                </Link>
+              </div>
+              <div className="grid gap-4">
+                {ownerRestaurants.map((restaurant) => (
+                  <article
+                    key={restaurant.id}
+                    className="border border-border bg-background p-4"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <h3 className="font-semibold">{restaurant.name}</h3>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          {restaurant.address}
+                          {restaurant.area ? `, ${restaurant.area}` : ""}
+                        </p>
+                      </div>
+                      <span className="text-xs font-semibold uppercase tracking-wide text-primary">
+                        {restaurant.isActive ? "Enabled" : "Disabled"}
+                      </span>
+                    </div>
+                    <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+                      <div>
+                        <dt className="text-xs text-muted-foreground">Contact</dt>
+                        <dd>{restaurant.phone || restaurant.email || "Not set"}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-xs text-muted-foreground">Hours</dt>
+                        <dd>
+                          {restaurant.openingTime && restaurant.closingTime
+                            ? `${restaurant.openingTime}–${restaurant.closingTime}`
+                            : "Not set"}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-xs text-muted-foreground">Cuisines</dt>
+                        <dd>{restaurant.cuisines.join(", ") || "Not set"}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-xs text-muted-foreground">
+                          Delivery terms
+                        </dt>
+                        <dd>
+                          ৳{restaurant.deliveryFee} fee · ৳{restaurant.minimumOrder}{" "}
+                          minimum
+                        </dd>
+                      </div>
+                      <div className="sm:col-span-2">
+                        <dt className="text-xs text-muted-foreground">
+                          Map coordinates
+                        </dt>
+                        <dd>
+                          {restaurant.latitude != null &&
+                          restaurant.longitude != null
+                            ? `${restaurant.latitude}, ${restaurant.longitude}`
+                            : "Not selected"}
+                        </dd>
+                      </div>
+                    </dl>
+                  </article>
+                ))}
+                {!ownerRestaurants.length && (
+                  <p className="text-sm text-muted-foreground">
+                    No restaurant branches yet.
+                  </p>
+                )}
+              </div>
+            </section>
+          )}
+
           {profile.role === "customer" && (
             <section className="rounded border border-border bg-card p-6">
               <div className="mb-4 flex items-center justify-between">
@@ -352,11 +458,7 @@ export default function ProfilePage() {
             <div className="mb-4 flex items-center justify-between">
               <h2 className="font-serif text-2xl font-bold">Notifications</h2>
               <span className="text-xs uppercase tracking-wide text-muted-foreground">
-                {
-                  notifications.filter((notification) => !notification.isRead)
-                    .length
-                }{" "}
-                unread
+                {notificationData?.unreadCount ?? 0} unread
               </span>
             </div>
             <div className="space-y-3">

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CirclePlus } from "lucide-react";
+import { CirclePlus, RotateCcw } from "lucide-react";
 import { ErrorBanner } from "@/components/ui/ErrorBanner";
 import { CategoryPanel } from "@/components/restaurant-manager/CategoryPanel";
 import { MenuPanel } from "@/components/restaurant-manager/MenuPanel";
@@ -15,18 +15,22 @@ import type { Restaurant, RestaurantInput } from "@/types/restaurant";
 export default function RestaurantManager() {
   const {
     restaurants,
+    archivedRestaurants,
     selectedRestaurant,
     categories,
     items,
+    archivedItems,
     error,
     busy,
     setSelectedId,
     setError,
     saveRestaurant,
     deleteRestaurant,
+    restoreRestaurant,
     saveMenuItem,
     toggleMenuItemAvailability,
     deleteMenuItem,
+    restoreMenuItem,
     addCategory,
     deleteCategory,
   } = useRestaurantManager();
@@ -56,7 +60,7 @@ export default function RestaurantManager() {
   async function handleDeleteRestaurant() {
     if (!selectedRestaurant) return;
     const confirmed = window.confirm(
-      `Delete ${selectedRestaurant.name}? Its menu will also be deleted.`,
+      `Archive ${selectedRestaurant.name}? Its menu and order history will be preserved.`,
     );
     if (confirmed) await deleteRestaurant();
   }
@@ -86,11 +90,41 @@ export default function RestaurantManager() {
       <ErrorBanner message={error} onDismiss={() => setError("")} />
 
       <div className="grid gap-8 lg:grid-cols-[280px_1fr]">
-        <RestaurantSidebar
-          restaurants={restaurants}
-          selectedId={selectedRestaurant?.id ?? null}
-          onSelect={setSelectedId}
-        />
+        <div>
+          <RestaurantSidebar
+            restaurants={restaurants}
+            selectedId={selectedRestaurant?.id ?? null}
+            onSelect={setSelectedId}
+          />
+          {archivedRestaurants.length > 0 && (
+            <div className="mt-7 border-t border-border pt-5">
+              <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Archived branches
+              </p>
+              <div className="grid gap-2">
+                {archivedRestaurants.map((restaurant) => (
+                  <div
+                    key={restaurant.id}
+                    className="flex items-center justify-between gap-3 border border-border px-3 py-2"
+                  >
+                    <span className="truncate text-sm text-muted-foreground">
+                      {restaurant.name}
+                    </span>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => void restoreRestaurant(restaurant.id)}
+                      aria-label={`Restore ${restaurant.name}`}
+                      className="text-primary disabled:opacity-50"
+                    >
+                      <RotateCcw className="size-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
 
         <section className="min-w-0">
           {selectedRestaurant ? (
@@ -104,11 +138,13 @@ export default function RestaurantManager() {
               <div className="mt-7 grid gap-8 xl:grid-cols-[1fr_260px]">
                 <MenuPanel
                   items={items}
+                  archivedItems={archivedItems}
                   categories={categories}
                   busy={busy}
                   onSave={saveMenuItem}
                   onToggleAvailability={toggleMenuItemAvailability}
                   onDelete={deleteMenuItem}
+                  onRestore={restoreMenuItem}
                 />
                 <CategoryPanel
                   categories={categories}
@@ -127,6 +163,7 @@ export default function RestaurantManager() {
 
       {showRestaurantForm && (
         <RestaurantFormDialog
+          key={editingRestaurant?.id ?? "new"}
           initialValue={
             editingRestaurant
               ? restaurantToInput(editingRestaurant)
@@ -152,11 +189,15 @@ function restaurantToInput(restaurant: Restaurant): RestaurantInput {
     phone: restaurant.phone ?? "",
     email: restaurant.email ?? "",
     address: restaurant.address,
+    area: restaurant.area ?? "",
+    latitude: restaurant.latitude ?? null,
+    longitude: restaurant.longitude ?? null,
+    cuisines: restaurant.cuisines,
     openingTime: restaurant.openingTime ?? "",
     closingTime: restaurant.closingTime ?? "",
     deliveryFee: restaurant.deliveryFee,
     minimumOrder: restaurant.minimumOrder,
     isActive: restaurant.isActive,
-    imageUrl: restaurant.imageUrl??"",
+    imageUrl: restaurant.imageUrl ?? "",
   };
 }

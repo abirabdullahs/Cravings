@@ -9,8 +9,8 @@ import { NextResponse } from "next/server";
 type Context = { params: Promise<{ restaurantId: string }> };
 
 export async function POST(request: Request, { params }: Context) {
-  const user = await requireOwner();
   try {
+    const user = await requireOwner();
     const { restaurantId } = await params;
     const { name } = await request.json();
     const data = await addCategory(restaurantId, user.id, name);
@@ -21,8 +21,8 @@ export async function POST(request: Request, { params }: Context) {
 }
 
 export async function DELETE(request: Request, { params }: Context) {
-  const user = await requireOwner();
   try {
+    const user = await requireOwner();
     const { restaurantId } = await params;
     const categoryId = new URL(request.url).searchParams.get("categoryId");
     if (!categoryId)

@@ -145,6 +145,7 @@ CREATE TABLE restaurants (
   cuisines VARCHAR[] NOT NULL DEFAULT '{}',
   rating NUMERIC(2,1) DEFAULT 0.0,
   image VARCHAR,
+  archived_at TIMESTAMPTZ,
   created_at TIMESTAMP NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
   CONSTRAINT fk_restaurants_owner FOREIGN KEY (owner_id) REFERENCES users (id) DEFERRABLE INITIALLY IMMEDIATE,
@@ -154,6 +155,7 @@ CREATE TABLE restaurants (
 );
 
 CREATE INDEX ix_restaurants_owner ON restaurants (owner_id);
+CREATE INDEX ix_restaurants_owner_archived ON restaurants (owner_id, archived_at);
 
 CREATE TRIGGER trg_restaurants_updated_at
   BEFORE UPDATE ON restaurants
@@ -178,6 +180,7 @@ CREATE TABLE menu_items (
   price NUMERIC(10,2) NOT NULL,
   item_img VARCHAR,
   is_available BOOLEAN NOT NULL DEFAULT TRUE,
+  archived_at TIMESTAMPTZ,
   updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
   CONSTRAINT fk_menu_items_restaurant FOREIGN KEY (restaurant_id) REFERENCES restaurants (id) ON DELETE CASCADE DEFERRABLE INITIALLY IMMEDIATE,
   CONSTRAINT fk_menu_items_category FOREIGN KEY (category_id) REFERENCES categories (id) ON DELETE SET NULL DEFERRABLE INITIALLY IMMEDIATE,
@@ -186,6 +189,7 @@ CREATE TABLE menu_items (
 
 CREATE INDEX ix_menu_items_restaurant ON menu_items (restaurant_id, is_available);
 CREATE INDEX ix_menu_items_category ON menu_items (category_id);
+CREATE INDEX ix_menu_items_restaurant_archived ON menu_items (restaurant_id, archived_at);
 
 CREATE TRIGGER trg_menu_items_updated_at
   BEFORE UPDATE ON menu_items
@@ -229,6 +233,8 @@ CREATE TABLE user_coupons (
 );
 
 CREATE INDEX ix_user_coupons_user ON user_coupons (user_id);
+CREATE UNIQUE INDEX uq_user_coupons_user_coupon
+  ON user_coupons (user_id, coupon_id);
 
 CREATE TABLE carts (
   id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -239,7 +245,7 @@ CREATE TABLE carts (
   CONSTRAINT uq_cart_user_restaurant UNIQUE (user_id, restaurant_id),
   CONSTRAINT fk_cart_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE DEFERRABLE INITIALLY IMMEDIATE,
   CONSTRAINT fk_cart_restaurant FOREIGN KEY (restaurant_id) REFERENCES restaurants (id) DEFERRABLE INITIALLY IMMEDIATE,
-  CONSTRAINT fk_cart_coupon FOREIGN KEY (user_coupon_id) REFERENCES user_coupons (id) DEFERRABLE INITIALLY IMMEDIATE
+  CONSTRAINT fk_cart_coupon FOREIGN KEY (user_coupon_id) REFERENCES user_coupons (id) ON DELETE SET NULL DEFERRABLE INITIALLY IMMEDIATE
 );
 
 CREATE INDEX ix_carts_user ON carts (user_id);

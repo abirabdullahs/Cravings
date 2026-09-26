@@ -63,8 +63,8 @@ export async function PATCH() {
 
   try {
     const userId = Number(session.user.id);
-    const result = await markAllNotificationsRead(userId);
-    return NextResponse.json(result);
+    await markAllNotificationsRead(userId);
+    return new Response(null, { status: 204 });
   } catch (error) {
     return handleApiError(error);
   }

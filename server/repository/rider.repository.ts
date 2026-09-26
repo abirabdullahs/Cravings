@@ -16,30 +16,38 @@ import {
   INSERT_DELIVERY_LOCATION,
   LOCK_RIDER_FOR_ACCEPT,
   GET_RIDER_DELIVERIES,
-  CANCELL_ALL,
+  HAS_ACTIVE_DELIVERY,
+  REQUEUE_STALE_DELIVERIES,
   MARK_ARRIVED_AT_DESTINATION,
 } from "../query/rider.query";
+import { INSERT_ORDER_NOTIFICATION } from "../query/notification.query";
 import { AppError } from "@/lib/errors/AppError";
 import { ErrorCode } from "@/lib/errors/errorCodes";
 import { toCamelCase } from "@/lib/case";
 
-export const findAvailableRequests = async () =>
-  toCamelCase((await pool.query(GET_AVAILABLE_REQUESTS)).rows);
+export const findAvailableRequests = async () => {
+  await pool.query(REQUEUE_STALE_DELIVERIES);
+  return toCamelCase((await pool.query(GET_AVAILABLE_REQUESTS)).rows);
+};
 
 export const acceptRequest = async (orderId: number, riderId: number) =>
   withTransaction(async (client) => {
+    await client.query(REQUEUE_STALE_DELIVERIES);
     const rider = await client.query(LOCK_RIDER_FOR_ACCEPT, [riderId]);
-    await client.query(
-      CANCELL_ALL,
-      [riderId],
-    );
     if (rider.rowCount !== 1) {
       throw new AppError(ErrorCode.RIDER_NOT_FOUND);
     }
-    if (rider.rows[0].status !== "idle") {
+    const active = await client.query(HAS_ACTIVE_DELIVERY, [riderId]);
+    if (active.rows[0]?.has_active) {
       throw new AppError(
         ErrorCode.INVALID_STATUS,
         "You already have an active delivery",
+      );
+    }
+    if (rider.rows[0].status === "offline") {
+      throw new AppError(
+        ErrorCode.INVALID_STATUS,
+        "Go online before accepting a delivery",
       );
     }
 
@@ -49,6 +57,11 @@ export const acceptRequest = async (orderId: number, riderId: number) =>
     }
 
     await client.query(SET_RIDER_STATUS, [riderId, "busy"]);
+    await client.query(INSERT_ORDER_NOTIFICATION, [
+      orderId,
+      "Rider assigned",
+      "A rider accepted your delivery and is heading to the restaurant.",
+    ]);
     return toCamelCase(result.rows[0]);
   });
 export const markArrivedAtStore = async (
@@ -102,6 +115,12 @@ export const markPickedUp = async (
       latitude,
       longitude,
       "picked_up",
+    ]);
+
+    await client.query(INSERT_ORDER_NOTIFICATION, [
+      orderId,
+      "Order picked up",
+      "Your order is on the way.",
     ]);
 
     return {
@@ -165,6 +184,11 @@ export const markDelivered = async (
     ]);
 
     await client.query(SET_RIDER_STATUS, [riderId, "idle"]);
+    await client.query(INSERT_ORDER_NOTIFICATION, [
+      orderId,
+      "Order delivered",
+      "Your order has been delivered. Enjoy your meal!",
+    ]);
     return {
       delivery: toCamelCase(delivery.rows[0]),
       order: toCamelCase(order.rows[0]),
@@ -197,7 +221,9 @@ export const findRiderDeliveries = async (riderId: number, date: string | null) 
 export const findRiderProfile = async (riderId: number) =>
   toCamelCase((await pool.query(GET_RIDER_PROFILE, [riderId])).rows[0]);
 
-export const findActiveDeliveryForRider = async (riderId: number) =>
-  toCamelCase(
+export const findActiveDeliveryForRider = async (riderId: number) => {
+  await pool.query(REQUEUE_STALE_DELIVERIES);
+  return toCamelCase(
     (await pool.query(GET_ACTIVE_DELIVERY_FOR_RIDER, [riderId])).rows[0],
   );
+};

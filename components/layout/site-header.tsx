@@ -36,7 +36,6 @@ export async function SiteHeader({
   const isCustomer = role === "customer";
   const isOwner = role === "owner";
   const isRider = role === "rider";
-  const isAdmin = role === "admin";
   const canBrowse = isGuest || isCustomer;
 
   return (
@@ -66,6 +65,12 @@ export async function SiteHeader({
           {isCustomer && (
             <>
               <Link
+                href="/orders"
+                className="text-sm font-medium text-foreground transition-colors hover:text-primary"
+              >
+                Orders
+              </Link>
+              <Link
                 href="/cart"
                 className="relative inline-flex items-center gap-1.5 text-sm font-medium text-foreground transition-colors hover:text-primary"
               >
@@ -89,14 +94,14 @@ export async function SiteHeader({
           {/* Role Navigations */}
           {isOwner && <NavLinks links={ownerLinks} />}
           {isRider && <NavLinks links={riderLinks} />}
-          {isAdmin && (
+          {/* {isAdmin && (
             <Link
               href="/admin"
               className="text-sm font-medium text-foreground transition-colors hover:text-primary"
             >
               Admin Panel
             </Link>
-          )}
+          )} */}
 
           {/* User Profile Avatar */}
           {user && (

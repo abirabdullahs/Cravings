@@ -4,14 +4,15 @@ import {
   removeMenuItem,
   setMenuAvailability,
   modifyMenuItem,
+  unarchiveMenuItem,
 } from "@/server/service/restaurant.service";
 import { NextResponse } from "next/server";
 
 type Context = { params: Promise<{ restaurantId: string; itemId: string }> };
 
 export async function PUT(request: Request, { params }: Context) {
-  const user = await requireOwner();
   try {
+    const user = await requireOwner();
     const { restaurantId, itemId } = await params;
     const body = await request.json();
     if (typeof body.available === "boolean") {
@@ -34,14 +35,27 @@ export async function PUT(request: Request, { params }: Context) {
 }
 
 export async function DELETE(_: Request, { params }: Context) {
-  const user = await requireOwner();
   try {
+    const user = await requireOwner();
     const { restaurantId, itemId } = await params;
     const count = await removeMenuItem(itemId, restaurantId, user.id);
     return count
       ? NextResponse.json({ success: true })
       : NextResponse.json({ error: "Not found" }, { status: 404 });
   } catch (error) {
-    return handleApiError(error, "Unable to delete menu item");
+    return handleApiError(error, "Unable to archive menu item");
+  }
+}
+
+export async function PATCH(_: Request, { params }: Context) {
+  try {
+    const user = await requireOwner();
+    const { restaurantId, itemId } = await params;
+    const count = await unarchiveMenuItem(itemId, restaurantId, user.id);
+    return count
+      ? NextResponse.json({ success: true })
+      : NextResponse.json({ error: "Not found" }, { status: 404 });
+  } catch (error) {
+    return handleApiError(error, "Unable to restore menu item");
   }
 }
