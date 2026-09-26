@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { markNotificationRead } from "@/server/service/notification.service"; // Adjust import path as needed
+import { markNotificationRead } from "@/server/service/notification.service";
 import { handleApiError } from "@/lib/errors/handleApiError";
 
 // PATCH: Mark a single notification as read by ID
@@ -28,6 +28,12 @@ export async function PATCH(
       notificationId,
       Number(session.user.id),
     );
+    if (!updated) {
+      return NextResponse.json(
+        { error: "Notification not found" },
+        { status: 404 },
+      );
+    }
     return NextResponse.json(updated);
   } catch (error) {
     return handleApiError(error);

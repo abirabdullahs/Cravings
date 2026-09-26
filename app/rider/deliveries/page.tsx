@@ -2,14 +2,11 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { useRiderDeliveries } from "@/hooks/useRider";
-import { TodaysSummaryCard } from "@/components/rider-dashboard/TodaysSummaryCard";
 import {
   MapPin,
   Store,
   Clock,
-  ChevronRight,
   PackageCheck,
   AlertCircle,
 } from "lucide-react";

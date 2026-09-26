@@ -192,7 +192,17 @@ BEGIN
     C.restaurant_id,
     C.user_coupon_id,
     R.minimum_order,
-    R.active_status
+    (R.active_status AND R.archived_at IS NULL AND
+      CASE
+        WHEN R.opening_time IS NULL OR R.closing_time IS NULL
+          OR R.opening_time = R.closing_time THEN TRUE
+        WHEN R.opening_time < R.closing_time THEN
+          (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Dhaka')::time >= R.opening_time
+          AND (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Dhaka')::time < R.closing_time
+        ELSE
+          (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Dhaka')::time >= R.opening_time
+          OR (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Dhaka')::time < R.closing_time
+      END)
   INTO
     v_restaurant_id,
     v_cart_coupon_id,
@@ -248,6 +258,7 @@ BEGIN
     COUNT(*) FILTER (
       WHERE MI.restaurant_id <> v_restaurant_id
         OR MI.is_available = FALSE
+        OR MI.archived_at IS NOT NULL
     )::INT
   INTO v_item_count, v_invalid_item_count
   FROM cart_items CI
@@ -288,7 +299,10 @@ BEGIN
   END IF;
 
   IF v_cart_coupon_id IS NOT NULL AND v_user_coupon_id IS NULL THEN
-    RAISE EXCEPTION 'Coupon is no longer valid';
+    -- Expired/used coupons should not block checkout. The quote already
+    -- ignored it, so detach the stale selection and continue without it.
+    UPDATE carts SET user_coupon_id = NULL WHERE id = p_cart_id;
+    v_cart_coupon_id := NULL;
   END IF;
 
   INSERT INTO orders (
@@ -366,6 +380,14 @@ BEGIN
 
   INSERT INTO deliveries (order_id, rider_id, status)
   VALUES (p_order_id, NULL, 'unassigned');
+
+  INSERT INTO notifications (user_id, order_id, title, message)
+  VALUES (
+    p_user_id,
+    p_order_id,
+    'Order placed',
+    'Your order has been placed and sent to the restaurant.'
+  );
 
   IF v_user_coupon_id IS NOT NULL THEN
     UPDATE user_coupons

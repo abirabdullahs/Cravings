@@ -1,16 +1,17 @@
 "use client";
 
-import { useState } from "react";
 import { AddressButton } from "@/components/address/AddressSelection";
-import type { UserAddress } from "@/types/order";
+import { useAddresses } from "@/hooks/useAddressManager";
+import { useSelectedAddress } from "@/components/address/useSelectedAddress";
 
 export function LocationAddress() {
-  const [address, setAddress] = useState<UserAddress>();
+  const { data: addresses = [] } = useAddresses();
+  const { selectedAddress, selectAddress } = useSelectedAddress(addresses);
 
   return (
     <AddressButton
-      selectedAddress={address}
-      onAddressSelect={setAddress}
+      selectedAddress={selectedAddress}
+      onAddressSelect={selectAddress}
       triggerClassName="hidden sm:inline-flex"
     />
   );

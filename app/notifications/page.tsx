@@ -8,11 +8,12 @@ import {
 import { Bell, CheckCheck, Loader2 } from "lucide-react";
 
 export default function NotificationsPage() {
-  const { data: notifications = [], isLoading } = useNotifications();
+  const { data, isLoading } = useNotifications();
+  const notifications = data?.items ?? [];
   const markRead = useMarkNotificationRead();
   const markAllRead = useMarkAllNotificationsRead();
 
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
+  const unreadCount = data?.unreadCount ?? 0;
 
   return (
     <div className="container max-w-3xl mx-auto py-8 px-4">

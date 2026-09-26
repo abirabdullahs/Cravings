@@ -9,22 +9,31 @@ interface IncomingOrderCardProps {
   onDecline: () => void;
 }
 
-function useMinutesAgo(iso: string) {
-  const [, setTick] = useState(0);
+export function useMinutesAgo(iso: string) {
+  const [minutes, setMinutes] = useState(() => minutesSince(iso));
+
   useEffect(() => {
-    const interval = setInterval(() => setTick((value) => value + 1), 30000);
-    return () => clearInterval(interval);
+    const update = () => setMinutes(minutesSince(iso));
+    const initialUpdate = window.setTimeout(update, 0);
+    const timer = setInterval(() => {
+      update();
+    }, 60000);
+
+    return () => {
+      window.clearTimeout(initialUpdate);
+      clearInterval(timer);
+    };
   }, [iso]);
-  return minutesSince(iso);
+
+  return minutes;
 }
 
-function minutesSince(iso: string): number {
+function minutesSince(iso: string) {
   return Math.max(
     0,
-    Math.round((Date.now() - new Date(iso).getTime()) / 60000),
+    Math.floor((Date.now() - new Date(iso).getTime()) / 60000),
   );
 }
-
 // NOTE: the original design had pickup/dropoff addresses, distance, ETA,
 // and an expiry countdown. GET_AVAILABLE_REQUESTS only returns orderId,
 // restaurantId, restaurantName, totalAmount, createdAt — so this shows

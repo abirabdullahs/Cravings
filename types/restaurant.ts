@@ -10,6 +10,7 @@ export interface RestaurantSummary {
   area?: string;
   latitude?: number | null;
   longitude?: number | null;
+  archivedAt?: string | null;
 }
 
 export interface Restaurant extends RestaurantSummary {
@@ -35,11 +36,13 @@ export interface MenuItem {
   isAvailable: boolean;
   categoryId?: number;
   categoryName?: string;
+  archivedAt?: string | null;
 }
 
 export interface RestaurantMenu {
   categories: MenuCategory[];
   items: MenuItem[];
+  archivedItems: MenuItem[];
 }
 
 export interface RestaurantSearchFilter {
@@ -59,12 +62,16 @@ export interface RestaurantInput {
   phone: string;
   email: string;
   address: string;
+  area: string;
+  latitude: number | null;
+  longitude: number | null;
+  cuisines: string[];
   openingTime: string;
   closingTime: string;
   deliveryFee: number;
   minimumOrder: number;
   isActive: boolean;
-  imageUrl: string ;
+  imageUrl: string;
 }
 
 export interface MenuItemInput {
@@ -81,6 +88,10 @@ export const emptyRestaurantInput: RestaurantInput = {
   phone: "",
   email: "",
   address: "",
+  area: "",
+  latitude: null,
+  longitude: null,
+  cuisines: [],
   openingTime: "",
   closingTime: "",
   deliveryFee: 0,

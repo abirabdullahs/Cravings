@@ -3,6 +3,7 @@ import {
   FIND_CART,
   INSERT_CART,
   UPSERT_CART_ITEM,
+  DELETE_CART_ITEM,
   FIND_CART_ITEMS,
 } from "../query/cart.query";
 import type { CartItem } from "@/types/order";
@@ -12,6 +13,7 @@ interface CartItemsRow {
   menu_item_id: number;
   cart_id: number;
   restaurant_id: number;
+  user_coupon_id: number | null;
   menu_item_name: string;
   restaurant_name: string;
   description: string | null;
@@ -72,6 +74,17 @@ export const upsertCartItem = async ({
   return data.rows[0];
 };
 
+export const deleteCartItem = async ({
+  menuItemId,
+  cartId,
+}: {
+  menuItemId: number;
+  cartId: number;
+}) => {
+  const data = await pool.query(DELETE_CART_ITEM, [cartId, menuItemId]);
+  return data.rows[0] ?? null;
+};
+
 export const findCartItems = async ({
   userId,
   restaurantId,
@@ -88,6 +101,7 @@ const cleanId = restaurantId === null ? null : Number(restaurantId);
       id: number;
       restaurantId: number;
       restaurantName: string;
+      userCouponId: number | null;
       cartItems: CartItem[];
     }
   >();
@@ -96,6 +110,7 @@ const cleanId = restaurantId === null ? null : Number(restaurantId);
       id: row.cart_id,
       restaurantId: row.restaurant_id,
       restaurantName: row.restaurant_name,
+      userCouponId: row.user_coupon_id,
       cartItems: [] as CartItem[],
     };
     cart.cartItems.push(toCartItem(row));

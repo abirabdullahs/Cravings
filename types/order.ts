@@ -23,6 +23,7 @@ export interface Cart {
   restaurantId: number;
   restaurantName: string;
   discount: number | null;
+  userCouponId: number | null;
   cartItems: CartItem[];
 }
 
@@ -110,7 +111,15 @@ export interface RestaurantOrder {
   orderStatus: string;
   createdAt: string;
   totalItems: number;
-  totalAmount?: number;
+  totalAmount: number;
+  deliveryInstructions: string | null;
+  items: RestaurantOrderItem[];
+}
+
+export interface RestaurantOrderItem {
+  id: number;
+  name: string;
+  quantity: number;
 }
 
 export interface SubmitReviewInput {

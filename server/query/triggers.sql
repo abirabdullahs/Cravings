@@ -1,17 +1,5 @@
-CREATE OR REPLACE FUNCTION fn_delete_empty_items()
-RETURNS TRIGGER AS
-$$
-BEGIN
-  IF(NEW.quantity <= 0) THEN
-    DELETE FROM cart_items WHERE id = NEW.id;
-    RETURN NULL;
-  END IF;
-  RETURN NEW;
-END;
-$$
-LANGUAGE plpgsql;
-
-CREATE TRIGGER tr_delete_empty_items
-AFTER UPDATE ON cart_items
-FOR EACH ROW
-EXECUTE FUNCTION fn_delete_empty_items();
+-- Quantity zero is handled as an explicit DELETE by cart.service.ts.
+-- Keeping CHECK (quantity > 0) protects the table from invalid rows; an
+-- AFTER UPDATE trigger cannot delete a zero row because the check runs first.
+DROP TRIGGER IF EXISTS tr_delete_empty_items ON cart_items;
+DROP FUNCTION IF EXISTS fn_delete_empty_items();

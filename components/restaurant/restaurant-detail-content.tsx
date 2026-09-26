@@ -1,7 +1,7 @@
 "use client";
 
 import { Search } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Chip } from "@/components/common/chip";
 import type { MenuItem, RestaurantMenu } from "@/types/restaurant";
 import { RestaurantMenuSection } from "@/components/restaurant/restaurant-menu-section";
@@ -14,15 +14,18 @@ export function RestaurantDetailContent({
   cartId,
   restaurantId,
   onAddItem,
+  isLoading = false,
 }: {
-  menu: RestaurantMenu;
+  menu?: RestaurantMenu;
   cartItems?: CartItem[];
   cartId?: number;
-  restaurantId: number;
-  onAddItem: (item: MenuItem, quantity: number) => void;
+  restaurantId?: number;
+  onAddItem?: (item: MenuItem, quantity: number) => Promise<void>;
+  isLoading?: boolean;
 }) {
   const [activeCategory, setActiveCategory] = useState<number | null>(null);
   const [search, setSearch] = useState("");
+  const [cartError, setCartError] = useState<string | null>(null);
   const [order, setOrder] = useState<Array<MenuItem & { quantity: number }>>(
     cartItems?.map((item) => ({
       id: item.menuItemId,
@@ -34,7 +37,8 @@ export function RestaurantDetailContent({
       quantity: item.quantity,
     })) ?? [],
   );
-  const visibleItems = useMemo(() => {
+  const visibleItems = (() => {
+    if (!menu?.items) return [];
     const query = search.trim().toLowerCase();
     return menu.items.filter((item) => {
       const matchesCategory =
@@ -45,37 +49,50 @@ export function RestaurantDetailContent({
         item.description?.toLowerCase().includes(query);
       return matchesCategory && matchesSearch;
     });
-  }, [activeCategory, menu.items, search]);
+  })();
+
   const categoryTitle =
-    menu.categories.find((category) => category.id === activeCategory)?.name ??
+    menu?.categories.find((category) => category.id === activeCategory)?.name ??
     "Menu";
 
-  function addItem(item: MenuItem) {
-    setOrder((current) => {
-      const existing = current.find((line) => line.id === item.id);
-      return existing
-        ? current.map((line) =>
-            line.id === item.id
-              ? { ...line, quantity: line.quantity + 1 }
-              : line,
-          )
-        : [...current, { ...item, quantity: 1 }];
-    });
-    const quantity =
-      (order.find((line) => line.id === item.id)?.quantity || 0) + 1;
-
-    onAddItem(item, quantity);
+  if (isLoading || !menu || !restaurantId || !onAddItem) {
+    // return <RestaurantDetailSkeleton />;
+    return <>lodaing</>;
   }
 
-  function changeItem(item: MenuItem, amount: number) {
-    setOrder((current) =>
-      current
-        .map((line) =>
-          line.id === item.id ? { ...line, quantity: amount } : line,
-        )
-        .filter((line) => line.quantity > 0),
-    );
-    if (amount > 0) onAddItem(item, amount);
+  async function addItem(item: MenuItem) {
+    const quantity =
+      (order.find((line) => line.id === item.id)?.quantity || 0) + 1;
+    setCartError(null);
+    try {
+      await onAddItem!(item, quantity);
+      setOrder((current) => {
+        const existing = current.find((line) => line.id === item.id);
+        return existing
+          ? current.map((line) =>
+              line.id === item.id ? { ...line, quantity } : line,
+            )
+          : [...current, { ...item, quantity }];
+      });
+    } catch (error) {
+      setCartError(error instanceof Error ? error.message : "Unable to update cart");
+    }
+  }
+
+  async function changeItem(item: MenuItem, amount: number) {
+    setCartError(null);
+    try {
+      await onAddItem!(item, amount);
+      setOrder((current) =>
+        current
+          .map((line) =>
+            line.id === item.id ? { ...line, quantity: amount } : line,
+          )
+          .filter((line) => line.quantity > 0),
+      );
+    } catch (error) {
+      setCartError(error instanceof Error ? error.message : "Unable to update cart");
+    }
   }
 
   return (
@@ -135,6 +152,9 @@ export function RestaurantDetailContent({
           restaurantId={restaurantId}
           onChange={changeItem}
         />
+        {cartError && (
+          <p className="text-sm text-destructive lg:col-start-2">{cartError}</p>
+        )}
       </div>
     </div>
   );

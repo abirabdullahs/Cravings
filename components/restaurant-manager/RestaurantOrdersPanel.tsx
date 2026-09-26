@@ -37,7 +37,7 @@ export function RestaurantOrdersPanel({
             return (
               <article
                 key={order.id}
-                className="flex flex-col gap-4 border border-border bg-card p-4 sm:flex-row sm:items-center sm:justify-between"
+                className="grid gap-4 border border-border bg-card p-4 sm:grid-cols-[1fr_auto] sm:items-start"
               >
                 <div>
                   <div className="flex items-center gap-2">
@@ -49,9 +49,22 @@ export function RestaurantOrdersPanel({
                     </span>
                   </div>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    {order.customerName} · {order.totalItems} item
+                    {order.customerName} - {order.totalItems} item
                     {order.totalItems === 1 ? "" : "s"}
                   </p>
+                  <ul className="mt-3 grid gap-1 text-sm text-foreground">
+                    {order.items.map((item) => (
+                      <li key={item.id}>
+                        <span className="font-semibold">{item.quantity}x</span>{" "}
+                        {item.name}
+                      </li>
+                    ))}
+                  </ul>
+                  {order.deliveryInstructions && (
+                    <p className="mt-3 border-l-2 border-primary pl-3 text-xs text-muted-foreground">
+                      Note: {order.deliveryInstructions}
+                    </p>
+                  )}
                 </div>
                 <button
                   type="button"

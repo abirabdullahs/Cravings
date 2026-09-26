@@ -7,7 +7,7 @@ import type { MenuItem } from "@/types/restaurant";
 type RestaurantMenuSectionProps = {
   title: string;
   items: MenuItem[];
-  onAdd: (item: MenuItem) => void;
+  onAdd: (item: MenuItem) => void | Promise<void>;
 };
 
 export function RestaurantMenuSection({

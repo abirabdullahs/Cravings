@@ -15,6 +15,7 @@ import {
   INSERT_RESTAURANT_OWNER_PROFILE,
 } from "../query/auth.query";
 import { User } from "../../types/user";
+import { withTransaction } from "@/lib/dblib";
 
 export const findUserByEmail = async (email: string) => {
   const result = await pool.query(FIND_USER_BY_EMAIL, [email]);
@@ -143,6 +144,73 @@ export const approveRoleRequest = async ({
   ]);
   return result.rows[0];
 };
+
+export const approveRoleRequestWithProfile = async ({
+  requestId,
+  reviewedBy,
+  reviewNote,
+}: {
+  requestId: string;
+  reviewedBy: string;
+  reviewNote?: string;
+}) =>
+  withTransaction(async (client) => {
+    const requestResult = await client.query(
+      `SELECT * FROM role_requests WHERE id = $1 FOR UPDATE`,
+      [requestId],
+    );
+    const request = requestResult.rows[0];
+    if (!request || request.status !== "PENDING") return null;
+
+    const nid = String(request.verification_data?.nid_number ?? "")
+      .replace(/\s+/g, "")
+      .toLowerCase();
+    if (nid) {
+      const duplicate = await client.query(
+        `SELECT id
+         FROM role_requests
+         WHERE id <> $1
+           AND user_id <> $3
+           AND status = 'APPROVED'
+           AND LOWER(REGEXP_REPLACE(COALESCE(verification_data->>'nid_number', ''), '\\s+', '', 'g')) = $2
+         LIMIT 1`,
+        [requestId, nid, request.user_id],
+      );
+      if (duplicate.rowCount) {
+        const error = new Error("DUPLICATE_NID") as Error & { code: string };
+        error.code = "DUPLICATE_NID";
+        throw error;
+      }
+    }
+
+    await client.query(APPROVE_ROLE_REQUEST, [
+      String(request.user_id),
+      request.requested_role,
+    ]);
+
+    if (request.requested_role === "rider") {
+      await client.query(INSERT_RIDER_PROFILE, [
+        String(request.user_id),
+        request.verification_data?.vehicle_type ?? "BIKE",
+        request.verification_data?.vehicle_plate ??
+          request.verification_data?.license_number ??
+          `RIDER-${request.user_id}`,
+      ]);
+    } else if (request.requested_role === "owner") {
+      await client.query(INSERT_RESTAURANT_OWNER_PROFILE, [
+        String(request.user_id),
+      ]);
+    }
+
+    const reviewed = await client.query(UPDATE_ROLE_REQUEST_STATUS, [
+      "APPROVED",
+      reviewedBy,
+      reviewNote ?? "",
+      "",
+      requestId,
+    ]);
+    return reviewed.rows[0];
+  });
 
 export const updateUserProfile = async ({
   id,

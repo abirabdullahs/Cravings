@@ -77,25 +77,37 @@ export default function AdminOperationsPage() {
     requestId: number,
     status: "APPROVED" | "REJECTED",
   ) {
-    const response = await fetch("/api/admin/requests", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        requestId,
-        status,
-        reviewNote: "Reviewed by admin",
-        rejectionReason:
-          status === "REJECTED"
-            ? "Verification details did not pass review"
-            : "",
-      }),
-    });
-    if (response.ok) {
+    setError("");
+    try {
+      const response = await fetch("/api/admin/requests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          requestId,
+          status,
+          reviewNote: "Reviewed by admin",
+          rejectionReason:
+            status === "REJECTED"
+              ? "Verification details did not pass review"
+              : "",
+        }),
+      });
       const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(
+          payload.error?.message ?? payload.error ?? "Could not review request",
+        );
+      }
       setRequests((current) =>
         current.map((request) =>
           request.id === requestId ? payload.request : request,
         ),
+      );
+    } catch (reviewError) {
+      setError(
+        reviewError instanceof Error
+          ? reviewError.message
+          : "Could not review request",
       );
     }
   }

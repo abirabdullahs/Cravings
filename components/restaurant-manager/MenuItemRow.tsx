@@ -1,4 +1,4 @@
-import { Pencil, Trash2, Utensils } from "lucide-react";
+import { Archive, Pencil, Utensils } from "lucide-react";
 import type { MenuItem } from "@/types/restaurant";
 
 interface MenuItemRowProps {
@@ -52,10 +52,10 @@ export function MenuItemRow({
       </button>
       <button
         onClick={() => onDelete(item)}
-        aria-label={`Delete ${item.name}`}
+        aria-label={`Archive ${item.name}`}
         className="p-1.5 text-muted-foreground hover:text-destructive"
       >
-        <Trash2 className="size-3.5" />
+        <Archive className="size-3.5" />
       </button>
     </div>
   );

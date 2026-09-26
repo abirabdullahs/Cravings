@@ -1,14 +1,7 @@
 import { apiRequest } from "@/lib/http";
+import type { NotificationItem, NotificationList } from "@/types/notification";
 
-export interface NotificationItem {
-  id: number;
-  userId: number;
-  orderId?: number;
-  title: string;
-  message: string;
-  isRead: boolean;
-  createdAt: string;
-}
+export type { NotificationItem } from "@/types/notification";
 
 export interface CreateNotificationPayload {
   userId: number;
@@ -17,8 +10,8 @@ export interface CreateNotificationPayload {
   message: string;
 }
 
-export const fetchNotifications = async (): Promise<NotificationItem[]> =>
-  apiRequest<NotificationItem[]>("/api/notifications");
+export const fetchNotifications = async (): Promise<NotificationList> =>
+  apiRequest<NotificationList>("/api/notifications");
 
 export const createNotification = async (
   payload: CreateNotificationPayload,
@@ -32,13 +25,11 @@ export const createNotification = async (
 export const markNotificationRead = async (
   id: number,
 ): Promise<NotificationItem> =>
-  apiRequest<NotificationItem>(`/api/notifications/${id}/read`, {
+  apiRequest<NotificationItem>(`/api/notifications/${id}`, {
     method: "PATCH",
   });
 
-export const markAllNotificationsRead = async (): Promise<{
-  success: boolean;
-}> =>
-  apiRequest<{ success: boolean }>("/api/notifications", {
+export const markAllNotificationsRead = async (): Promise<void> =>
+  apiRequest<void>("/api/notifications", {
     method: "PATCH",
   });

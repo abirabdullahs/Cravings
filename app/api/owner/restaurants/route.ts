@@ -4,25 +4,26 @@ import {
   addRestaurant,
   getOwnerRestaurants,
 } from "@/server/service/restaurant.service";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-export async function GET() {
-  const user = await requireOwner();
+export async function GET(request: NextRequest) {
   try {
-    return NextResponse.json(await getOwnerRestaurants(user.id));
+    const user = await requireOwner();
+    const archived = request.nextUrl.searchParams.get("archived") === "true";
+    return NextResponse.json(await getOwnerRestaurants(user.id, archived));
   } catch (error) {
-    handleApiError(error, "Unable to fetch restaurants");
+    return handleApiError(error, "Unable to fetch restaurants");
   }
 }
 
 export async function POST(request: Request) {
-  const user = await requireOwner();
   try {
+    const user = await requireOwner();
     return NextResponse.json(
       await addRestaurant(user.id, await request.json()),
       { status: 201 },
     );
   } catch (error) {
-    handleApiError(error, "Unable to add restaurant");
+    return handleApiError(error, "Unable to add restaurant");
   }
 }

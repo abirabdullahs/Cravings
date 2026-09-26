@@ -7,6 +7,7 @@ FROM restaurants r
 JOIN users u ON u.id = r.owner_id
 LEFT JOIN menu_items mi ON mi.restaurant_id = r.id
 LEFT JOIN orders o ON o.restaurant_id = r.id
+WHERE r.archived_at IS NULL
 GROUP BY r.id, u.name, u.phone
 ORDER BY r.name
 `;
@@ -15,7 +16,7 @@ export const UPDATE_RESTAURANT_STATUS_BY_ADMIN = `
 UPDATE restaurants
 SET active_status = $2,
     updated_at = NOW()
-WHERE id = $1
+WHERE id = $1 AND archived_at IS NULL
 RETURNING id, active_status
 `;
 
@@ -86,11 +87,14 @@ RETURNING user_id AS id, status
 export const GET_ADMIN_USERS = `
 SELECT u.id, u.name, u.email, u.phone, u.role, u.created_at,
        COUNT(DISTINCT o.id)::int AS order_count,
-       COUNT(DISTINCT uc.id)::int AS coupon_count,
+       COUNT(DISTINCT available_coupon.id)::int AS coupon_count,
        COUNT(DISTINCT rr.id)::int AS role_request_count
 FROM users u
 LEFT JOIN orders o ON o.user_id = u.id
-LEFT JOIN user_coupons uc ON uc.user_id = u.id
+LEFT JOIN user_coupons uc ON uc.user_id = u.id AND uc.used = FALSE
+LEFT JOIN coupons available_coupon
+  ON available_coupon.id = uc.coupon_id
+ AND (available_coupon.expiry_date IS NULL OR available_coupon.expiry_date >= CURRENT_DATE)
 LEFT JOIN role_requests rr ON rr.user_id = u.id
 WHERE ($1::text = '' OR u.role::text = $1)
   AND ($2::text = '' OR u.name ILIKE '%' || $2 || '%' OR u.email ILIKE '%' || $2 || '%' OR COALESCE(u.phone, '') ILIKE '%' || $2 || '%')
@@ -103,11 +107,14 @@ export const GET_ADMIN_USER_DETAILS = `
 SELECT u.id, u.name, u.email, u.phone, u.role, u.created_at,
        COUNT(DISTINCT o.id)::int AS order_count,
        COALESCE(SUM(CASE WHEN o.order_status <> 'cancelled' THEN o.total_amount ELSE 0 END), 0) AS total_spend,
-       COUNT(DISTINCT uc.id)::int AS coupon_count,
+       COUNT(DISTINCT available_coupon.id)::int AS coupon_count,
        COUNT(DISTINCT rr.id)::int AS role_request_count
 FROM users u
 LEFT JOIN orders o ON o.user_id = u.id
-LEFT JOIN user_coupons uc ON uc.user_id = u.id
+LEFT JOIN user_coupons uc ON uc.user_id = u.id AND uc.used = FALSE
+LEFT JOIN coupons available_coupon
+  ON available_coupon.id = uc.coupon_id
+ AND (available_coupon.expiry_date IS NULL OR available_coupon.expiry_date >= CURRENT_DATE)
 LEFT JOIN role_requests rr ON rr.user_id = u.id
 WHERE u.id = $1
 GROUP BY u.id

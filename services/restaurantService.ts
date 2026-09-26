@@ -14,6 +14,10 @@ export const restaurantService = {
     return apiRequest<Restaurant[]>("/api/owner/restaurants");
   },
 
+  async listArchived(): Promise<Restaurant[]> {
+    return apiRequest<Restaurant[]>("/api/owner/restaurants?archived=true");
+  },
+
   async create(input: RestaurantInput): Promise<Restaurant> {
     return apiRequest<Restaurant>("/api/owner/restaurants", {
       method: "POST",
@@ -30,6 +34,10 @@ export const restaurantService = {
 
   async remove(id: number): Promise<void> {
     await apiRequest(`/api/owner/restaurants/${id}`, { method: "DELETE" });
+  },
+
+  async restore(id: number): Promise<void> {
+    await apiRequest(`/api/owner/restaurants/${id}`, { method: "PATCH" });
   },
 
   async getMenu(restaurantId: number): Promise<RestaurantMenu> {
@@ -89,6 +97,12 @@ export const restaurantService = {
   async removeMenuItem(restaurantId: number, itemId: number): Promise<void> {
     await apiRequest(`/api/owner/restaurants/${restaurantId}/menu/${itemId}`, {
       method: "DELETE",
+    });
+  },
+
+  async restoreMenuItem(restaurantId: number, itemId: number): Promise<void> {
+    await apiRequest(`/api/owner/restaurants/${restaurantId}/menu/${itemId}`, {
+      method: "PATCH",
     });
   },
 
