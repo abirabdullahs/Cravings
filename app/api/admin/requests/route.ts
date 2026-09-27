@@ -1,8 +1,10 @@
 import { auth } from "@/auth";
 import { NextResponse } from "next/server";
 import { listRequests, reviewRoleRequest } from "@/server/service/auth.service";
+import { handleApiError } from "@/lib/errors/handleApiError";
 
 export async function GET(request: Request) {
+  try{
   const session = await auth();
   if (!session?.user?.id || String(session.user.role ?? "").toLowerCase() !== "admin") {
     return NextResponse.json({ error: "Admin access required" }, { status: 403 });
@@ -13,9 +15,13 @@ export async function GET(request: Request) {
   const requestedRole = url.searchParams.get("requestedRole") ?? url.searchParams.get("requested_role") ?? undefined;
   const rows = await listRequests({ status, requestedRole });
   return NextResponse.json({ requests: rows });
+}catch(error){
+  return handleApiError(error);
+}
 }
 
 export async function POST(request: Request) {
+  try{
   const session = await auth();
   if (!session?.user?.id || String(session.user.role ?? "").toLowerCase() !== "admin") {
     return NextResponse.json({ error: "Admin access required" }, { status: 403 });
@@ -37,4 +43,7 @@ export async function POST(request: Request) {
   });
 
   return NextResponse.json({ request: row });
+}catch(error){
+  return handleApiError(error);
+}
 }

@@ -1,9 +1,9 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import { CUISINES } from "@/lib/restaurants";
-import type { RestaurantSummary } from "@/types/restaurant";
 import { RestaurantCard } from "@/components/restaurant/restaurant-card";
+import { useRestaurants } from "@/hooks/useRestaurants";
 import {
   ResultsToolbar,
   type SortKey,
@@ -20,8 +20,12 @@ export function SearchResults({
   const [area, setArea] = useState("all");
   const [sort, setSort] = useState<SortKey>("recommended");
 
-  const [results, setResults] = useState<RestaurantSummary[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data: results = [], isLoading } = useRestaurants({
+    search: query || undefined,
+    cuisine: cuisine === "all" ? undefined : cuisine,
+    area: area === "all" ? undefined : area,
+    sort: sort === "recommended" ? undefined : sort,
+  });
 
   const cuisineOptions = useMemo(
     () => [
@@ -44,40 +48,6 @@ export function SearchResults({
     ],
     [],
   );
-
-  useEffect(() => {
-    let isMounted = true;
-
-    async function fetchRestaurants() {
-      setIsLoading(true);
-      try {
-        const params = new URLSearchParams();
-        if (query) params.set("search", query);
-        if (cuisine !== "all") params.set("cuisine", cuisine);
-        if (area !== "all") params.set("area", area);
-        params.set("sort", sort);
-
-        const res = await fetch(`/api/restaurants?${params.toString()}`);
-        if (!res.ok) throw new Error("Failed to fetch restaurants");
-
-        const data: RestaurantSummary[] = await res.json();
-        if (isMounted) {
-          setResults(data);
-        }
-      } catch (err) {
-        console.error("Error fetching restaurant data:", err);
-        if (isMounted) setResults([]);
-      } finally {
-        if (isMounted) setIsLoading(false);
-      }
-    }
-
-    fetchRestaurants();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [query, cuisine, area, sort]);
 
   return (
     <div className="mx-auto px-2 pb-16 pt-8 sm:px-14">

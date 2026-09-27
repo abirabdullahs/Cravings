@@ -4,7 +4,7 @@ import { toErrorMessage } from "@/lib/http";
 import { restaurantService } from "@/services/restaurantService";
 import { MenuItem, MenuItemInput, RestaurantInput } from "@/types/restaurant";
 
-export function useRestaurantManager() {
+export function useRestaurantManager({ includeOrders = false } = {}) {
   const queryClient = useQueryClient();
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [error, setError] = useState("");
@@ -12,7 +12,12 @@ export function useRestaurantManager() {
     queryKey: ["owner", "restaurants"],
     queryFn: restaurantService.list,
   });
+  const archivedRestaurantsQuery = useQuery({
+    queryKey: ["owner", "restaurants", "archived"],
+    queryFn: restaurantService.listArchived,
+  });
   const restaurants = restaurantsQuery.data ?? [];
+  const archivedRestaurants = archivedRestaurantsQuery.data ?? [];
   const selectedRestaurant =
     restaurants.find((restaurant) => restaurant.id === selectedId) ??
     restaurants[0];
@@ -21,6 +26,20 @@ export function useRestaurantManager() {
     queryKey: menuKey,
     queryFn: () => restaurantService.getMenu(selectedRestaurant!.id),
     enabled: Boolean(selectedRestaurant),
+  });
+  const ordersKey = ["owner", "restaurants", selectedRestaurant?.id, "orders"];
+  const ordersQuery = useQuery({
+    queryKey: ordersKey,
+    queryFn: () => restaurantService.getOrders(selectedRestaurant!.id),
+    enabled: includeOrders && Boolean(selectedRestaurant),
+    refetchInterval: 10000,
+  });
+  const readyOrderMutation = useMutation({
+    mutationFn: (orderId: number) =>
+      restaurantService.markOrderReady(selectedRestaurant!.id, orderId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ordersKey }),
+    onError: (reason) =>
+      setError(toErrorMessage(reason, "Could not update order")),
   });
 
   const invalidateMenu = () =>
@@ -50,7 +69,14 @@ export function useRestaurantManager() {
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ["owner", "restaurants"] }),
     onError: (reason) =>
-      setError(toErrorMessage(reason, "Could not delete restaurant")),
+      setError(toErrorMessage(reason, "Could not archive restaurant")),
+  });
+  const restoreRestaurant = useMutation({
+    mutationFn: (id: number) => restaurantService.restore(id),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["owner", "restaurants"] }),
+    onError: (reason) =>
+      setError(toErrorMessage(reason, "Could not restore restaurant")),
   });
   const saveMenuItem = useMutation({
     mutationFn: ({ input, id }: { input: MenuItemInput; id: number | null }) =>
@@ -77,7 +103,14 @@ export function useRestaurantManager() {
       restaurantService.removeMenuItem(selectedRestaurant!.id, item.id),
     onSuccess: invalidateMenu,
     onError: (reason) =>
-      setError(toErrorMessage(reason, "Could not delete item")),
+      setError(toErrorMessage(reason, "Could not archive item")),
+  });
+  const restoreMenuItem = useMutation({
+    mutationFn: (item: MenuItem) =>
+      restaurantService.restoreMenuItem(selectedRestaurant!.id, item.id),
+    onSuccess: invalidateMenu,
+    onError: (reason) =>
+      setError(toErrorMessage(reason, "Could not restore item")),
   });
   const addCategory = useMutation({
     mutationFn: (name: string) =>
@@ -96,25 +129,34 @@ export function useRestaurantManager() {
   const busy = [
     saveRestaurant,
     deleteRestaurant,
+    restoreRestaurant,
     saveMenuItem,
     updateAvailability,
     deleteMenuItem,
+    restoreMenuItem,
     addCategory,
     deleteCategory,
   ].some((mutation) => mutation.isPending);
 
   return {
     restaurants,
+    archivedRestaurants,
     selectedRestaurant,
     categories: menuQuery.data?.categories ?? [],
     items: menuQuery.data?.items ?? [],
+    archivedItems: menuQuery.data?.archivedItems ?? [],
+    orders: ordersQuery.data ?? [],
+    markOrderReady: (orderId: number) =>
+      readyOrderMutation.mutateAsync(orderId),
     error:
       error ||
       (restaurantsQuery.error
         ? toErrorMessage(restaurantsQuery.error, "Could not load restaurants")
         : menuQuery.error
           ? toErrorMessage(menuQuery.error, "Could not load menu")
-          : ""),
+          : ordersQuery.error
+            ? toErrorMessage(ordersQuery.error, "Could not load orders")
+            : ""),
     busy,
     setSelectedId,
     setError,
@@ -122,6 +164,7 @@ export function useRestaurantManager() {
       saveRestaurant.mutateAsync({ input, id }),
     deleteRestaurant: () =>
       selectedRestaurant && deleteRestaurant.mutateAsync(selectedRestaurant.id),
+    restoreRestaurant: (id: number) => restoreRestaurant.mutateAsync(id),
     saveMenuItem: async (input: MenuItemInput, id: number | null) => {
       if (selectedRestaurant) await saveMenuItem.mutateAsync({ input, id });
     },
@@ -129,6 +172,8 @@ export function useRestaurantManager() {
       selectedRestaurant && updateAvailability.mutateAsync(item),
     deleteMenuItem: (item: MenuItem) =>
       selectedRestaurant && deleteMenuItem.mutateAsync(item),
+    restoreMenuItem: (item: MenuItem) =>
+      selectedRestaurant && restoreMenuItem.mutateAsync(item),
     addCategory: async (name: string) => {
       if (selectedRestaurant) await addCategory.mutateAsync(name);
     },

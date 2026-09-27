@@ -1,6 +1,10 @@
 export const FIND_CART = `SELECT * FROM carts WHERE user_id = $1 AND restaurant_id = $2;`;
 
-export const INSERT_CART = `INSERT INTO carts (user_id, restaurant_id) values($1, $2);`;
+export const INSERT_CART = `
+  INSERT INTO carts (user_id, restaurant_id)
+  VALUES ($1, $2)
+  RETURNING *;
+`;
 
 export const UPSERT_CART_ITEM = `INSERT INTO cart_items (menu_item_id, quantity, cart_id) 
   VALUES ($1, $2, $3)
@@ -8,7 +12,13 @@ export const UPSERT_CART_ITEM = `INSERT INTO cart_items (menu_item_id, quantity,
   DO UPDATE SET quantity =  EXCLUDED.quantity
   RETURNING *;`;
 
-export const FIND_CART_ITEMS = `SELECT CI.id, CI.menu_item_id, cart_id, C.restaurant_id, MI.item_name AS menu_item_name, MI.description, MI.price, quantity, R.name AS restaurant_name , MI.item_img AS image
+export const DELETE_CART_ITEM = `
+  DELETE FROM cart_items
+  WHERE cart_id = $1 AND menu_item_id = $2
+  RETURNING id, cart_id, menu_item_id;
+`;
+
+export const FIND_CART_ITEMS = `SELECT CI.id, CI.menu_item_id, cart_id, C.restaurant_id, C.user_coupon_id, MI.item_name AS menu_item_name, MI.description, MI.price, quantity, R.name AS restaurant_name , MI.item_img AS image
   FROM cart_items CI
   JOIN carts C ON C.id = CI.cart_id
   JOIN menu_items MI ON MI.id = CI.menu_item_id

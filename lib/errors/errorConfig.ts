@@ -65,6 +65,10 @@ export const ERROR_CONFIG: Record<
     status: 400,
     message: "Quantity must be greater than 0",
   },
+  [ErrorCode.INVALID_STATUS]: {
+    status: 400,
+    message: "Invalid status provided",
+  },
 
   // Conflicts (409)
   [ErrorCode.USER_EXISTS]: {
@@ -83,8 +87,16 @@ export const ERROR_CONFIG: Record<
     status: 409,
     message: "A restaurant with this name already exists",
   },
+  [ErrorCode.DUPLICATE_IDENTITY]: {
+    status: 409,
+    message: "This identity document is already used by another approved account",
+  },
 
   // Not Found (404)
+  [ErrorCode.NOT_FOUND]: {
+    status: 404,
+    message: "Resource not found",
+  },
   [ErrorCode.USER_NOT_FOUND]: {
     status: 404,
     message: "User not found",

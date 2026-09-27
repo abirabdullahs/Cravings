@@ -10,7 +10,7 @@ type RestaurantOrderPanelProps = {
   items: OrderLine[];
   cartId?: number;
   restaurantId: number;
-  onChange: (item: MenuItem, amount: number) => void;
+  onChange: (item: MenuItem, amount: number) => Promise<void>;
 };
 
 export function RestaurantOrderPanel({
@@ -23,9 +23,6 @@ export function RestaurantOrderPanel({
     (sum, item) => sum + item.price * item.quantity,
     0,
   );
-  const delivery = items.length ? 45 : 0;
-  const total = subtotal + delivery;
-
   return (
     <aside className="lg:sticky lg:top-[9.5rem] lg:self-start">
       <div className="border border-border bg-card">
@@ -52,7 +49,7 @@ export function RestaurantOrderPanel({
                   <div className="flex shrink-0 items-center gap-2 border border-border px-1.5 py-1">
                     <button
                       type="button"
-                      onClick={() => onChange(item, item.quantity - 1)}
+                      onClick={() => void onChange(item, item.quantity - 1)}
                       aria-label={`Remove one ${item.name}`}
                       className="text-muted-foreground hover:text-primary"
                     >
@@ -63,7 +60,7 @@ export function RestaurantOrderPanel({
                     </span>
                     <button
                       type="button"
-                      onClick={() => onChange(item, item.quantity + 1)}
+                      onClick={() => void onChange(item, item.quantity + 1)}
                       aria-label={`Add one ${item.name}`}
                       className="text-muted-foreground hover:text-primary"
                     >
@@ -80,11 +77,11 @@ export function RestaurantOrderPanel({
               </div>
               <div className="flex justify-between">
                 <span>Delivery fee</span>
-                <span>৳{delivery}</span>
+                <span>Calculated at checkout</span>
               </div>
               <div className="flex justify-between pt-2 text-sm font-semibold text-foreground">
-                <span>Total</span>
-                <span>৳{total}</span>
+                <span>Estimated subtotal</span>
+                <span>৳{subtotal.toFixed(2)}</span>
               </div>
             </div>
             <Link

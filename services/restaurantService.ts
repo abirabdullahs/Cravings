@@ -1,5 +1,4 @@
 import { apiRequest } from "@/lib/http";
-import { getRestaurantDetails } from "@/server/service/restaurant.service";
 import type {
   MenuCategory,
   MenuItem,
@@ -8,10 +7,15 @@ import type {
   RestaurantInput,
   RestaurantMenu,
 } from "@/types/restaurant";
+import type { RestaurantOrder } from "@/types/order";
 
 export const restaurantService = {
   async list(): Promise<Restaurant[]> {
     return apiRequest<Restaurant[]>("/api/owner/restaurants");
+  },
+
+  async listArchived(): Promise<Restaurant[]> {
+    return apiRequest<Restaurant[]>("/api/owner/restaurants?archived=true");
   },
 
   async create(input: RestaurantInput): Promise<Restaurant> {
@@ -32,9 +36,29 @@ export const restaurantService = {
     await apiRequest(`/api/owner/restaurants/${id}`, { method: "DELETE" });
   },
 
+  async restore(id: number): Promise<void> {
+    await apiRequest(`/api/owner/restaurants/${id}`, { method: "PATCH" });
+  },
+
   async getMenu(restaurantId: number): Promise<RestaurantMenu> {
     return apiRequest<RestaurantMenu>(
       `/api/owner/restaurants/${restaurantId}/menu`,
+    );
+  },
+
+  async getOrders(restaurantId: number): Promise<RestaurantOrder[]> {
+    return apiRequest<RestaurantOrder[]>(
+      `/api/owner/restaurants/${restaurantId}/orders`,
+    );
+  },
+
+  async markOrderReady(restaurantId: number, orderId: number) {
+    return apiRequest<{ id: number; orderStatus: string }>(
+      `/api/owner/restaurants/${restaurantId}/orders`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({ orderId, status: "ready" }),
+      },
     );
   },
 
@@ -76,6 +100,12 @@ export const restaurantService = {
     });
   },
 
+  async restoreMenuItem(restaurantId: number, itemId: number): Promise<void> {
+    await apiRequest(`/api/owner/restaurants/${restaurantId}/menu/${itemId}`, {
+      method: "PATCH",
+    });
+  },
+
   async createCategory(
     restaurantId: number,
     name: string,
@@ -95,7 +125,4 @@ export const restaurantService = {
       { method: "DELETE" },
     );
   },
-
- 
-
 };

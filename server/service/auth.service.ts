@@ -6,10 +6,10 @@ import {
   createRoleRequest,
   listRoleRequests,
   updateRoleRequestStatus,
-  approveRoleRequest,
   updateUserProfile,
   findRoleRequestByUser,
   getRoleRequestById,
+  approveRoleRequestWithProfile,
 } from "../repository/auth.repository";
 import { hashPassword } from "../utils/password";
 import { AppError } from "@/lib/errors/AppError";
@@ -18,7 +18,9 @@ import { ErrorCode } from "@/lib/errors/errorCodes";
 const roles = new Set(["customer", "owner", "rider", "admin"]);
 
 export function normalizeRole(value: string) {
-  const normalized = String(value ?? "").toLowerCase().trim();
+  const normalized = String(value ?? "")
+    .toLowerCase()
+    .trim();
   if (normalized === "restaurant_owner" || normalized === "owner") {
     return "owner";
   }
@@ -63,7 +65,10 @@ export const createAccount = async (user: {
     throw new AppError(ErrorCode.USER_EXISTS);
   }
 
-  const persistedRole = requestedRole === "owner" || requestedRole === "rider" ? "customer" : requestedRole;
+  const persistedRole =
+    requestedRole === "owner" || requestedRole === "rider"
+      ? "customer"
+      : requestedRole;
 
   const data = await createUser({
     email: user.email,
@@ -98,7 +103,14 @@ export const completeProfile = async ({
   verificationData?: Record<string, unknown>;
 }) => {
   const normalizedRole = normalizeRole(role);
-  const data = await completeUser({ role: normalizedRole === "owner" || normalizedRole === "rider" ? "customer" : normalizedRole, phone, id });
+  const data = await completeUser({
+    role:
+      normalizedRole === "owner" || normalizedRole === "rider"
+        ? "customer"
+        : normalizedRole,
+    phone,
+    id,
+  });
 
   if (normalizedRole === "owner" || normalizedRole === "rider") {
     await createRoleRequest({
@@ -133,7 +145,7 @@ export const submitRoleRequest = async ({
     throw new AppError(ErrorCode.INVALID_ROLE);
   }
 
-  if (!(["owner", "rider"].includes(normalizedRequestedRole))) {
+  if (!["owner", "rider"].includes(normalizedRequestedRole)) {
     throw new AppError(ErrorCode.INVALID_ROLE);
   }
 
@@ -165,13 +177,24 @@ type RoleRequestRow = {
   source_role_from_user?: string;
 };
 
-export const listRequests = async (filters?: { status?: string; requestedRole?: string }) => {
+export const listRequests = async (filters?: {
+  status?: string;
+  requestedRole?: string;
+}) => {
   const rows = await listRoleRequests();
   return rows.filter((row: RoleRequestRow) => {
-    if (filters?.status && String(row.status ?? "").toUpperCase() !== String(filters.status).toUpperCase()) {
+    if (
+      filters?.status &&
+      String(row.status ?? "").toUpperCase() !==
+        String(filters.status).toUpperCase()
+    ) {
       return false;
     }
-    if (filters?.requestedRole && String(row.requested_role ?? row.requestedRole ?? "").toLowerCase() !== String(filters.requestedRole).toLowerCase()) {
+    if (
+      filters?.requestedRole &&
+      String(row.requested_role ?? row.requestedRole ?? "").toLowerCase() !==
+        String(filters.requestedRole).toLowerCase()
+    ) {
       return false;
     }
     return true;
@@ -205,10 +228,36 @@ export const reviewRoleRequest = async ({
   }
 
   if (status === "APPROVED") {
-    await approveRoleRequest({
-      userId: String(request.user_id),
-      requestedRole: request.requested_role,
-    });
+    try {
+      const approved = await approveRoleRequestWithProfile({
+        requestId,
+        reviewedBy,
+        reviewNote,
+      });
+      if (!approved) {
+        throw new AppError(
+          ErrorCode.INVALID_STATUS,
+          "This request has already been reviewed",
+        );
+      }
+      return approved;
+    } catch (error) {
+      const databaseError = error as { code?: string; constraint?: string };
+      if (
+        databaseError.code === "DUPLICATE_NID" ||
+        (databaseError.code === "23505" &&
+          databaseError.constraint?.toLowerCase().includes("nid"))
+      ) {
+        throw new AppError(ErrorCode.DUPLICATE_IDENTITY);
+      }
+      if (databaseError.code === "23505") {
+        throw new AppError(
+          ErrorCode.INVALID_INPUT,
+          "The rider vehicle or licence number is already assigned to another account",
+        );
+      }
+      throw error;
+    }
   }
 
   return await updateRoleRequestStatus({

@@ -2,14 +2,24 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { MinusIcon, PlusIcon } from "lucide-react";
-import { use, useState } from "react";
-import { useAddresses, useCartItems, useOrder } from "@/hooks/useOrder";
+import { useRouter } from "next/navigation";
+import { ClockIcon, MinusIcon, PlusIcon, TagIcon } from "lucide-react";
+import { use, useRef, useState } from "react";
+
+import { AddressButton } from "@/components/address/AddressSelection";
+import { useAddresses } from "@/hooks/useAddressManager";
+import { useSelectedAddress } from "@/components/address/useSelectedAddress";
+import {
+  useCartItems,
+  useOrder,
+  useOrderQuote,
+  useUserCoupons,
+} from "@/hooks/useOrder";
 import type { CartItem } from "@/types/order";
 
-const formatPrice = (amount: number) => `৳${amount.toFixed(0)}`;
+const formatPrice = (amount: number) => `৳${amount.toFixed(2)}`;
 
-type PaymentMethod = "card" | "mobile_banking" | "bank_transfer" | "cash";
+type PaymentMethod = "cash" | "bkash" | "nagad" | "card";
 
 export function CheckoutPage({
   cartId,
@@ -22,37 +32,85 @@ export function CheckoutPage({
     restaurantId ?? null,
   );
   const { data: addresses = [], isLoading: isAddressLoading } = useAddresses();
-  const { createCartItem, isCreating, placeOrder, isPlacingOrder } = useOrder();
-  const [selectedAddressId, setSelectedAddressId] = useState<number | null>(
-    null,
-  );
+  const { data: coupons = [], isLoading: isCouponsLoading } = useUserCoupons();
+  const {
+    createCartItem,
+    isCreating,
+    placeOrder,
+    isPlacingOrder,
+    addCoupon,
+    isAddingCoupon,
+  } = useOrder();
+
+  const router = useRouter();
+  const {
+    selectedAddress: activeAddress,
+    selectedAddressId: activeAddressId,
+    selectAddress,
+  } = useSelectedAddress(addresses);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
+  const [selectedCouponId, setSelectedCouponId] = useState<
+    number | null | undefined
+  >(undefined);
+  const [instructions, setInstructions] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [isPlaced, setIsPlaced] = useState(false);
+  const [isMockConfirmationOpen, setIsMockConfirmationOpen] = useState(false);
+  const checkoutAttemptRef = useRef<{
+    cartId: number;
+    idempotencyKey: string;
+  } | null>(null);
 
   const selectedCart = cartId
     ? carts.find((cart) => cart.id === cartId)
     : carts[0];
-  const activeAddressId = selectedAddressId ?? addresses[0]?.id ?? null;
-  const items = selectedCart?.cartItems ?? [];
-  const restaurantName = selectedCart?.restaurantName ?? "Restaurant";
-  const deliveryFee = items.length ? 60 : 0;
-  const subtotal = items.reduce(
-    (sum, item) => sum + Number(item.price) * item.quantity,
-    0,
-  );
-  const total = subtotal + deliveryFee;
+  const effectiveCouponId =
+    selectedCouponId === undefined
+      ? (coupons.some((coupon) => coupon.id === selectedCart?.userCouponId)
+          ? (selectedCart?.userCouponId ?? null)
+          : null)
+      : selectedCouponId;
+  const {
+    data: quote,
+    error: quoteError,
+    isFetching: isQuoteFetching,
+  } = useOrderQuote(selectedCart?.id ?? null, activeAddressId);
 
+  const [quantityOverrides, setQuantityOverrides] = useState<
+    Record<number, number>
+  >({});
+  const items = (selectedCart?.cartItems ?? []).map((item) => ({
+    ...item,
+    quantity: quantityOverrides[item.id] ?? item.quantity,
+  }));
+  const restaurantName = selectedCart?.restaurantName ?? "Restaurant";
+
+  const activeCoupon = coupons.find((c) => c.id === effectiveCouponId);
+  const subtotal = quote?.subtotal ?? 0;
+  const couponDiscount = quote?.discount ?? 0;
+  const vatTaxes = quote?.tax ?? 0;
+  const deliveryFee = quote?.deliveryFee ?? 0;
+  const total = quote?.finalTotal ?? 0;
+
+  // Update item quantity on cart
   const updateQuantity = async (item: CartItem, quantity: number) => {
-    if (quantity < 1) return;
+    if (quantity < 0) return;
+    setQuantityOverrides((current) => ({
+      ...current,
+      [item.id]: quantity,
+    }));
     setError(null);
     try {
-      await createCartItem(
-        item.menuItemId,
-        selectedCart!.restaurantId,
+      await createCartItem({
+        menuItemId: item.menuItemId,
+        restaurantId: selectedCart!.restaurantId,
         quantity,
-      );
+      });
     } catch (requestError) {
+      setQuantityOverrides((current) => {
+        const next = { ...current };
+        delete next[item.id];
+        return next;
+      });
       setError(
         requestError instanceof Error
           ? requestError.message
@@ -61,6 +119,27 @@ export function CheckoutPage({
     }
   };
 
+  // Attach Coupon directly to Cart
+  const handleApplyCoupon = async (couponId: number | null) => {
+    setSelectedCouponId(couponId);
+    if (!selectedCart) return;
+
+    setError(null);
+    try {
+      await addCoupon({
+        cartId: selectedCart.id,
+        userCouponId: couponId,
+      });
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Unable to apply coupon to cart",
+      );
+    }
+  };
+
+  // Submit Order (Copies cart state on backend)
   const submitOrder = async () => {
     if (!selectedCart || activeAddressId === null) {
       setError("Select a delivery address before placing your order.");
@@ -68,13 +147,21 @@ export function CheckoutPage({
     }
     setError(null);
     try {
-      await placeOrder({
+      if (checkoutAttemptRef.current?.cartId !== selectedCart.id) {
+        checkoutAttemptRef.current = {
+          cartId: selectedCart.id,
+          idempotencyKey: crypto.randomUUID(),
+        };
+      }
+
+      const order = await placeOrder({
         cartId: selectedCart.id,
         addressId: activeAddressId,
-        deliveryFee,
         paymentMethod,
+        idempotencyKey: checkoutAttemptRef.current.idempotencyKey,
+        deliveryInstructions: instructions,
       });
-      setIsPlaced(true);
+      router.push(`/orders/${order.id}`);
     } catch (requestError) {
       setError(
         requestError instanceof Error
@@ -84,220 +171,429 @@ export function CheckoutPage({
     }
   };
 
-  if (isCartLoading || isAddressLoading) {
+  const handlePlaceOrder = () => {
+    if (paymentMethod === "cash") {
+      void submitOrder();
+      return;
+    }
+
+    setIsMockConfirmationOpen(true);
+  };
+
+  if (isCartLoading || isAddressLoading || isCouponsLoading) {
     return (
-      <div className="px-4 py-16 text-center text-sm text-muted-foreground">
+      <div className="px-4 py-20 text-center text-sm text-muted-foreground">
         Loading checkout...
       </div>
     );
   }
 
-  if (isPlaced) {
-    return (
-      <div className="mx-auto max-w-xl px-4 py-20 text-center">
-        <h1 className="font-serif text-3xl font-bold text-foreground">
-          Order placed
-        </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Your restaurant has received the order.
-        </p>
-        <Link
-          href="/"
-          className="mt-6 inline-flex bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground"
-        >
-          Continue browsing
-        </Link>
-      </div>
-    );
-  }
-
   return (
-    <div className="bg-background">
-      <div className="mx-auto px-4 pb-14 pt-5 sm:px-14 lg:pt-6">
-        <p className="text-[10px] text-muted-foreground">
+    <div className="min-h-screen bg-background pb-16 pt-6">
+      <div className="mx-auto max-w-7xl px-4 sm:px-8">
+        {/* Breadcrumb Navigation */}
+        <p className="text-xs text-muted-foreground">
           Home <span className="px-1">/</span> {restaurantName}{" "}
           <span className="px-1">/</span>{" "}
-          <span className="text-primary">Secure Checkout</span>
+          <span className="font-semibold text-primary">Secure Checkout</span>
         </p>
-        <div className="mt-5 grid gap-8 lg:grid-cols-[minmax(0,1fr)_370px] lg:gap-8">
-          <section>
-            <h1 className="font-serif text-2xl font-bold text-foreground sm:text-3xl">
-              Your Selection
-            </h1>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Ordering from {restaurantName}
-            </p>
+
+        {/* Main Layout Grid */}
+        <div className="mt-6 grid gap-8 lg:grid-cols-[1fr_400px]">
+          {/* Left Column: Items & Receipt */}
+          <div className="space-y-6">
+            <div className="flex items-baseline justify-between">
+              <h1 className="font-serif text-2xl font-bold text-foreground sm:text-3xl">
+                Your Selection
+              </h1>
+              <span className="text-xs font-medium text-primary">
+                Ordering from {restaurantName}
+              </span>
+            </div>
+
+            {/* Cart Items List */}
             {!items.length ? (
-              <div className="mt-5 border border-dashed border-border px-5 py-12 text-center text-sm text-muted-foreground">
+              <div className="border border-dashed border-border bg-card px-5 py-12 text-center text-sm text-muted-foreground">
                 Your cart is empty.{" "}
                 <Link href="/" className="text-primary underline">
                   Browse restaurants
                 </Link>
               </div>
             ) : (
-              <div className="mt-5 space-y-2">
+              <div className="space-y-3">
                 {items.map((item) => (
                   <article
                     key={item.id}
-                    className="flex gap-3 border border-border bg-card p-2 sm:gap-4 sm:p-3"
+                    className="flex items-center gap-4 border border-border bg-card p-4"
                   >
-                    <div className="relative size-12 shrink-0 overflow-hidden bg-secondary sm:size-14">
+                    <div className="relative size-16 shrink-0 bg-secondary">
                       {item.image && (
                         <Image
                           src={item.image}
                           alt={item.menuItemName}
                           fill
                           className="object-cover"
-                          sizes="56px"
+                          sizes="64px"
                         />
                       )}
                     </div>
+
                     <div className="min-w-0 flex-1">
-                      <h2 className="truncate text-sm font-bold text-foreground">
+                      <h2 className="font-serif text-base font-bold text-foreground">
                         {item.menuItemName}
                       </h2>
-                      <p className="mt-0.5 text-[10px] text-muted-foreground">
-                        {item.description}
-                      </p>
-                      <p className="mt-0.5 text-[10px] text-muted-foreground">
-                        {formatPrice(Number(item.price))} each
+                      {item.description && (
+                        <p className="mt-0.5 text-xs text-muted-foreground line-clamp-1">
+                          {item.description}
+                        </p>
+                      )}
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {formatPrice(Number(item.price))} per serving
                       </p>
                     </div>
-                    <div className="flex shrink-0 flex-col items-end justify-between">
-                      <div className="flex items-center border border-border bg-background">
-                        <button
-                          type="button"
-                          disabled={isCreating}
-                          onClick={() =>
-                            updateQuantity(item, item.quantity - 1)
-                          }
-                          className="grid size-6 place-items-center text-muted-foreground hover:text-primary"
-                          aria-label={`Remove one ${item.menuItemName}`}
-                        >
-                          <MinusIcon className="size-3" aria-hidden="true" />
-                        </button>
-                        <span className="w-5 text-center text-xs font-semibold">
-                          {item.quantity}
-                        </span>
-                        <button
-                          type="button"
-                          disabled={isCreating}
-                          onClick={() =>
-                            updateQuantity(item, item.quantity + 1)
-                          }
-                          className="grid size-6 place-items-center text-muted-foreground hover:text-primary"
-                          aria-label={`Add one ${item.menuItemName}`}
-                        >
-                          <PlusIcon className="size-3" aria-hidden="true" />
-                        </button>
-                      </div>
-                      <p className="text-xs font-bold text-foreground">
+
+                    {/* Quantity Controls */}
+                    <div className="flex items-center border border-border bg-background px-2 py-1">
+                      <button
+                        type="button"
+                        disabled={isCreating}
+                        onClick={() => updateQuantity(item, item.quantity - 1)}
+                        className="p-1 text-muted-foreground hover:text-foreground disabled:opacity-50"
+                        aria-label={`Decrease ${item.menuItemName}`}
+                      >
+                        <MinusIcon className="size-3" />
+                      </button>
+                      <span className="w-6 text-center text-xs font-bold">
+                        {item.quantity}
+                      </span>
+                      <button
+                        type="button"
+                        disabled={isCreating}
+                        onClick={() => updateQuantity(item, item.quantity + 1)}
+                        className="p-1 text-muted-foreground hover:text-foreground disabled:opacity-50"
+                        aria-label={`Increase ${item.menuItemName}`}
+                      >
+                        <PlusIcon className="size-3" />
+                      </button>
+                    </div>
+
+                    {/* Price and Remove */}
+                    <div className="text-right">
+                      <p className="font-serif text-base font-bold text-foreground">
                         {formatPrice(Number(item.price) * item.quantity)}
                       </p>
+                      <button
+                        type="button"
+                        onClick={() => updateQuantity(item, 0)}
+                        className="mt-0.5 text-xs text-muted-foreground hover:text-destructive hover:underline"
+                      >
+                        Remove
+                      </button>
                     </div>
                   </article>
                 ))}
               </div>
             )}
-          </section>
 
-          <aside className="h-fit border border-border bg-card p-4 sm:p-5">
+            <div>
+              <Link
+                href={`/restaurant/${selectedCart?.restaurantId}`}
+                className="inline-block text-xs font-semibold text-primary hover:underline"
+              >
+                + Add More Items to Your Order
+              </Link>
+            </div>
+
+            {/* Receipt Summary Card */}
+            <div className="border border-border bg-card p-6">
+              <h2 className="font-serif text-xl font-bold text-foreground">
+                Receipt Summary
+              </h2>
+
+              <dl className="mt-4 space-y-3 text-xs">
+                <div className="flex justify-between text-muted-foreground">
+                  <dt>Cart Subtotal</dt>
+                  <dd className="font-semibold text-foreground">
+                    {formatPrice(subtotal)}
+                  </dd>
+                </div>
+                <div className="flex justify-between text-muted-foreground">
+                  <dt>Govt VAT & Taxes</dt>
+                  <dd className="font-semibold text-foreground">
+                    {formatPrice(vatTaxes)}
+                  </dd>
+                </div>
+                <div className="flex justify-between text-muted-foreground">
+                  <dt>Delivery Partner Fee</dt>
+                  <dd className="font-semibold text-foreground">
+                    {formatPrice(deliveryFee)}
+                  </dd>
+                </div>
+
+                {couponDiscount > 0 && (
+                  <div className="flex justify-between text-emerald-600">
+                    <dt className="flex items-center gap-1 font-semibold">
+                      <TagIcon className="size-3" /> Coupon Discount
+                      {activeCoupon?.code ? ` (${activeCoupon.code})` : ""}
+                    </dt>
+                    <dd className="font-semibold">
+                      -{formatPrice(couponDiscount)}
+                    </dd>
+                  </div>
+                )}
+
+                <div className="flex justify-between border-t border-border pt-4 font-serif text-lg font-bold text-foreground">
+                  <dt>Total Payable</dt>
+                  <dd className="text-xl font-extrabold text-foreground">
+                    {formatPrice(total)}
+                  </dd>
+                </div>
+              </dl>
+            </div>
+          </div>
+
+          {/* Right Column: Checkout Details Sidebar */}
+          <aside className="h-fit border border-border bg-card p-6">
             <h2 className="font-serif text-xl font-bold text-foreground">
               Checkout Details
             </h2>
-            <div className="mt-5 space-y-5">
-              <fieldset>
-                <legend className="text-[9px] uppercase text-primary">
-                  Delivery Address
-                </legend>
-                {addresses.length ? (
-                  <div className="mt-2 space-y-2">
-                    {addresses.map((address) => (
+
+            <div className="mt-6 space-y-6">
+              {/* Delivery Address Section */}
+              <section>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-primary">
+                    Delivery Address
+                  </span>
+                  <AddressButton
+                    selectedAddress={activeAddress}
+                    onAddressSelect={selectAddress}
+                    triggerClassName="p-0 text-xs font-semibold text-muted-foreground hover:text-foreground h-auto bg-transparent border-none shadow-none"
+                  />
+                </div>
+
+                {activeAddress ? (
+                  <div className="mt-2 border border-border bg-background p-4">
+                    <div className="flex items-center gap-2">
+                      <span className="font-serif text-xs font-bold text-foreground">
+                        {activeAddress.label || "Home (Primary Address)"}
+                      </span>
+                      <span className="bg-emerald-100 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-800">
+                        Deliver To
+                      </span>
+                    </div>
+                    <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                      {activeAddress.address}, {activeAddress.city}
+                      {activeAddress.postalCode
+                        ? `, ${activeAddress.postalCode}`
+                        : ""}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="mt-2 border border-dashed border-border p-3 text-xs text-muted-foreground">
+                    No delivery address selected.
+                  </p>
+                )}
+              </section>
+
+              {/* Coupon Selection -> Calls addCoupon on Cart */}
+              <section>
+                <label
+                  htmlFor="coupon-select"
+                  className="block text-[10px] font-bold uppercase tracking-wider text-primary"
+                >
+                  Apply Coupon to Cart
+                </label>
+                <select
+                  id="coupon-select"
+                  disabled={isAddingCoupon}
+                  value={effectiveCouponId ?? ""}
+                  onChange={(e) =>
+                    void handleApplyCoupon(
+                      e.target.value ? Number(e.target.value) : null,
+                    )
+                  }
+                  className="mt-2 w-full border border-border bg-background p-3 text-xs text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50"
+                >
+                  <option value="">No coupon selected</option>
+                  {coupons.map((coupon) => (
+                    <option key={coupon.id} value={coupon.id}>
+                      {coupon.code} —{" "}
+                      {`${coupon.discountValue}${coupon.discountType === "percentage" ? "%" : "৳"} Off`}
+                    </option>
+                  ))}
+                </select>
+              </section>
+
+              {/* Payment Method Section */}
+              <section>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-primary">
+                  Select Payment Method
+                </span>
+
+                <div className="mt-2 space-y-2">
+                  {[
+                    {
+                      id: "cash",
+                      title: "Cash on Delivery",
+                      subtitle: "Pay with cash at your door",
+                    },
+                    {
+                      id: "bkash",
+                      title: "bKash",
+                      subtitle: "Mock payment for this demo",
+                    },
+                    {
+                      id: "nagad",
+                      title: "Nagad",
+                      subtitle: "Mock payment for this demo",
+                    },
+                    {
+                      id: "card",
+                      title: "Credit / Debit Card",
+                      subtitle: "Mock card payment for this demo",
+                    },
+                  ].map((option) => {
+                    const isSelected = paymentMethod === option.id;
+                    return (
                       <label
-                        key={address.id}
-                        className={`block cursor-pointer border p-3 text-[10px] ${selectedAddressId === address.id ? "border-primary bg-primary/10" : "border-border"}`}
+                        key={option.id}
+                        className={`flex cursor-pointer items-start gap-3 border p-3 transition-colors ${
+                          isSelected
+                            ? "border-primary bg-primary/10"
+                            : "border-border bg-card"
+                        }`}
                       >
                         <input
                           type="radio"
-                          name="address"
-                          checked={activeAddressId === address.id}
-                          onChange={() => setSelectedAddressId(address.id)}
-                          className="mr-2 accent-primary"
+                          name="payment"
+                          value={option.id}
+                          checked={isSelected}
+                          onChange={() =>
+                            setPaymentMethod(option.id as PaymentMethod)
+                          }
+                          className="mt-1 size-3.5 accent-primary"
                         />
-                        <span className="font-semibold">
-                          {address.label || "Delivery address"}
-                        </span>
-                        <span className="mt-1 block text-muted-foreground">
-                          {address.address}, {address.city}
-                          {address.postalCode ? ` ${address.postalCode}` : ""}
-                        </span>
+                        <div>
+                          <p className="font-serif text-xs font-bold text-foreground">
+                            {option.title}
+                          </p>
+                          <p className="text-[10px] text-muted-foreground">
+                            {option.subtitle}
+                          </p>
+                        </div>
                       </label>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="mt-2 border border-dashed border-border p-3 text-[10px] text-muted-foreground">
-                    Add a delivery address to place an order.
+                    );
+                  })}
+                </div>
+              </section>
+
+              {/* Delivery Instructions (Optional) */}
+              <section>
+                <label
+                  htmlFor="instructions"
+                  className="block text-[10px] font-bold uppercase tracking-wider text-primary"
+                >
+                  Delivery Instructions (Optional)
+                </label>
+                <textarea
+                  id="instructions"
+                  rows={2}
+                  value={instructions}
+                  onChange={(e) => setInstructions(e.target.value)}
+                  placeholder="E.g., Leave with security guard, knock quietly..."
+                  className="mt-2 w-full border border-border bg-background p-3 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+              </section>
+
+              {/* Estimated Delivery Banner */}
+              <div className="flex items-start gap-3 border border-emerald-200 bg-emerald-50/70 p-3 text-emerald-900">
+                <ClockIcon className="mt-0.5 size-4 shrink-0 text-emerald-700" />
+                <div>
+                  <p className="text-xs font-bold">
+                    Estimated Delivery: 45 - 55 Minutes
                   </p>
-                )}
-              </fieldset>
-              <fieldset>
-                <legend className="text-[9px] uppercase text-primary">
-                  Select Payment Method
-                </legend>
-                <div className="mt-2 space-y-1">
-                  {(
-                    [
-                      ["cash", "Cash on Delivery"],
-                      ["mobile_banking", "bKash / Mobile Wallet"],
-                      ["card", "Credit / Debit Card"],
-                    ] as const
-                  ).map(([value, label]) => (
-                    <label
-                      key={value}
-                      className={`flex cursor-pointer items-center gap-2 border p-2.5 text-[10px] ${paymentMethod === value ? "border-primary bg-primary/10" : "border-border"}`}
-                    >
-                      <input
-                        type="radio"
-                        name="payment"
-                        value={value}
-                        checked={paymentMethod === value}
-                        onChange={() => setPaymentMethod(value)}
-                        className="accent-primary"
-                      />
-                      {label}
-                    </label>
-                  ))}
+                  <p className="mt-0.5 text-[10px] text-emerald-700">
+                    Your curator will bring your order hot in thermal bags.
+                  </p>
                 </div>
-              </fieldset>
-              <dl className="space-y-2 border-t border-border pt-4 text-xs text-muted-foreground">
-                <div className="flex justify-between">
-                  <dt>Cart subtotal</dt>
-                  <dd>{formatPrice(subtotal)}</dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt>Delivery fee</dt>
-                  <dd>{formatPrice(deliveryFee)}</dd>
-                </div>
-                <div className="flex justify-between pt-2 text-sm font-semibold text-foreground">
-                  <dt>Total payable</dt>
-                  <dd className="text-primary">{formatPrice(total)}</dd>
-                </div>
-              </dl>
-              {error && <p className="text-xs text-red-700">{error}</p>}
+              </div>
+
+              {error && <p className="text-xs text-destructive">{error}</p>}
+              {quoteError && (
+                <p className="text-xs text-destructive">
+                  {quoteError instanceof Error
+                    ? quoteError.message
+                    : "Unable to calculate order total"}
+                </p>
+              )}
+
+              {/* Submit Order Button */}
               <button
                 type="button"
-                disabled={!items.length || !addresses.length || isPlacingOrder}
-                onClick={submitOrder}
-                className="w-full bg-primary px-4 py-3 text-xs font-bold text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={
+                  !items.length ||
+                  !addresses.length ||
+                  !quote ||
+                  isQuoteFetching ||
+                  isPlacingOrder
+                }
+                onClick={handlePlaceOrder}
+                className="w-full bg-primary py-3.5 text-xs font-bold text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isPlacingOrder
                   ? "Placing order..."
-                  : `Place Order (Payable ${formatPrice(total)})`}
+                  : isQuoteFetching
+                    ? "Calculating total..."
+                    : `Place Order (Payable ${formatPrice(total)})`}
               </button>
             </div>
           </aside>
         </div>
       </div>
+
+      {isMockConfirmationOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="mock-payment-title"
+            className="w-full max-w-md border border-border bg-card p-6 shadow-xl"
+          >
+            <h2
+              id="mock-payment-title"
+              className="font-serif text-xl font-bold text-foreground"
+            >
+              Confirm mock {paymentMethod.toUpperCase()} payment
+            </h2>
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+              This is a demonstration payment. No real account or card will be
+              charged. Confirming will create a completed mock payment for
+              {` ${formatPrice(total)}`}.
+            </p>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setIsMockConfirmationOpen(false)}
+                className="border border-border px-4 py-2 text-xs font-semibold text-foreground"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isPlacingOrder}
+                onClick={() => {
+                  setIsMockConfirmationOpen(false);
+                  void submitOrder();
+                }}
+                className="bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground disabled:opacity-50"
+              >
+                Confirm mock payment
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

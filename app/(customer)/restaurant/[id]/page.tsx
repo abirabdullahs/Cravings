@@ -5,6 +5,8 @@ import { RestaurantDetailContent } from "@/components/restaurant/restaurant-deta
 import { RestaurantDetailHero } from "@/components/restaurant/restaurant-detail-hero";
 import { MenuItem } from "@/types/restaurant";
 import { useOrder, useCartItems, useRestaurantDetails } from "@/hooks/useOrder";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 export default function RestaurantPage({
   params,
@@ -12,38 +14,45 @@ export default function RestaurantPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  const router = useRouter();
+  const { status: sessionStatus } = useSession();
 
   const { createCartItem } = useOrder();
   const { data, isLoading, isError } = useRestaurantDetails(Number(id));
-  const { data: cartData } = useCartItems(Number(id));
+  const { data: cartData } = useCartItems(
+    Number(id),
+    sessionStatus === "authenticated",
+  );
   const cartItems = cartData?.[0]?.cartItems;
   const cartId = cartData?.[0]?.id;
-
-  if (isLoading) {
-    return <div>Loading restaurant details...</div>;
-  }
-
-  if (isError || !data) {
+  if (!isLoading && (isError || !data)) {
     notFound();
   }
-  const handleAddCartItem = (item: MenuItem, quantity: number) => {
-    createCartItem(item.id, data.restaurant.id, quantity);
+  const handleAddCartItem = async (item: MenuItem, quantity: number) => {
+    if (sessionStatus !== "authenticated") {
+      router.push(`/login?callbackUrl=${encodeURIComponent(`/restaurant/${id}`)}`);
+      throw new Error("Please sign in to add items to your cart.");
+    }
+    await createCartItem({
+      menuItemId: item.id,
+      restaurantId: Number(data?.restaurant.id),
+      quantity,
+    });
   };
 
   return (
     <main className="bg-background">
-      <RestaurantDetailHero restaurant={data.restaurant} />
+      {data && <RestaurantDetailHero restaurant={data.restaurant} />}
       <RestaurantDetailContent
-        key={
-          cartItems
-            ?.map((item) => `${item.menuItemId}:${item.quantity}`)
-            .join("|") ?? "loading"
-        }
-        menu={data.menu}
+        key={cartItems
+          ?.map((item) => `${item.id}:${item.quantity}`)
+          .join("|") ?? "empty-cart"}
+        menu={data?.menu}
         cartItems={cartItems}
         cartId={cartId}
-        restaurantId={data.restaurant.id}
+        restaurantId={data?.restaurant.id}
         onAddItem={handleAddCartItem}
+        isLoading={isLoading}
       />
     </main>
   );

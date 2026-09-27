@@ -7,6 +7,7 @@ FROM restaurants r
 JOIN users u ON u.id = r.owner_id
 LEFT JOIN menu_items mi ON mi.restaurant_id = r.id
 LEFT JOIN orders o ON o.restaurant_id = r.id
+WHERE r.archived_at IS NULL
 GROUP BY r.id, u.name, u.phone
 ORDER BY r.name
 `;
@@ -15,7 +16,7 @@ export const UPDATE_RESTAURANT_STATUS_BY_ADMIN = `
 UPDATE restaurants
 SET active_status = $2,
     updated_at = NOW()
-WHERE id = $1
+WHERE id = $1 AND archived_at IS NULL
 RETURNING id, active_status
 `;
 
@@ -86,11 +87,14 @@ RETURNING user_id AS id, status
 export const GET_ADMIN_USERS = `
 SELECT u.id, u.name, u.email, u.phone, u.role, u.created_at,
        COUNT(DISTINCT o.id)::int AS order_count,
-       COUNT(DISTINCT uc.id)::int AS coupon_count,
+       COUNT(DISTINCT available_coupon.id)::int AS coupon_count,
        COUNT(DISTINCT rr.id)::int AS role_request_count
 FROM users u
 LEFT JOIN orders o ON o.user_id = u.id
-LEFT JOIN user_coupons uc ON uc.user_id = u.id
+LEFT JOIN user_coupons uc ON uc.user_id = u.id AND uc.used = FALSE
+LEFT JOIN coupons available_coupon
+  ON available_coupon.id = uc.coupon_id
+ AND (available_coupon.expiry_date IS NULL OR available_coupon.expiry_date >= CURRENT_DATE)
 LEFT JOIN role_requests rr ON rr.user_id = u.id
 WHERE ($1::text = '' OR u.role::text = $1)
   AND ($2::text = '' OR u.name ILIKE '%' || $2 || '%' OR u.email ILIKE '%' || $2 || '%' OR COALESCE(u.phone, '') ILIKE '%' || $2 || '%')
@@ -103,11 +107,14 @@ export const GET_ADMIN_USER_DETAILS = `
 SELECT u.id, u.name, u.email, u.phone, u.role, u.created_at,
        COUNT(DISTINCT o.id)::int AS order_count,
        COALESCE(SUM(CASE WHEN o.order_status <> 'cancelled' THEN o.total_amount ELSE 0 END), 0) AS total_spend,
-       COUNT(DISTINCT uc.id)::int AS coupon_count,
+       COUNT(DISTINCT available_coupon.id)::int AS coupon_count,
        COUNT(DISTINCT rr.id)::int AS role_request_count
 FROM users u
 LEFT JOIN orders o ON o.user_id = u.id
-LEFT JOIN user_coupons uc ON uc.user_id = u.id
+LEFT JOIN user_coupons uc ON uc.user_id = u.id AND uc.used = FALSE
+LEFT JOIN coupons available_coupon
+  ON available_coupon.id = uc.coupon_id
+ AND (available_coupon.expiry_date IS NULL OR available_coupon.expiry_date >= CURRENT_DATE)
 LEFT JOIN role_requests rr ON rr.user_id = u.id
 WHERE u.id = $1
 GROUP BY u.id
@@ -133,20 +140,46 @@ LIMIT $4 OFFSET $5
 `;
 
 export const GET_ADMIN_ORDER_DETAILS = `
-SELECT o.id, o.total_amount, o.delivery_fee, o.discount, o.order_status, o.created_at,
-       u.name AS customer_name, u.email AS customer_email, u.phone AS customer_phone,
-       r.name AS restaurant_name, r.address AS restaurant_address,
-      p.status AS payment_status, p.payment_method, p.transaction_id,
-      d.status AS delivery_status, d.rider_id, rider.name AS rider_name, rider.phone AS rider_phone
+SELECT 
+  o.id, 
+  COALESCE(item_totals.subtotal, 0)::NUMERIC(10,2) AS subtotal, 
+  o.total_amount, 
+  o.delivery_fee, 
+  o.discount,
+  ROUND(
+    o.total_amount - COALESCE(item_totals.subtotal, 0) + o.discount - o.delivery_fee, 
+    2
+  ) AS tax,
+  o.delivery_instructions, 
+  o.order_status, 
+  o.created_at,
+  u.name AS customer_name, 
+  u.email AS customer_email, 
+  u.phone AS customer_phone,
+  r.name AS restaurant_name, 
+  r.address AS restaurant_address,
+  p.status AS payment_status, 
+  p.payment_method, 
+  p.amount AS payment_amount,
+  p.paid_at, 
+  p.transaction_id,
+  d.status AS delivery_status, 
+  d.rider_id, 
+  rider.name AS rider_name, 
+  rider.phone AS rider_phone
 FROM orders o
 JOIN users u ON u.id = o.user_id
 JOIN restaurants r ON r.id = o.restaurant_id
+LEFT JOIN (
+  SELECT order_id, SUM(subtotal)::NUMERIC(10,2) AS subtotal
+  FROM order_items
+  GROUP BY order_id
+) item_totals ON item_totals.order_id = o.id
 LEFT JOIN payments p ON p.order_id = o.id
 LEFT JOIN deliveries d ON d.order_id = o.id
 LEFT JOIN users rider ON rider.id = d.rider_id
-WHERE o.id = $1
+WHERE o.id = $1;
 `;
-
 export const GET_ADMIN_ORDER_ITEMS = `
 SELECT oi.id, mi.item_name, oi.quantity, oi.unit_price, oi.subtotal
 FROM order_items oi
@@ -174,9 +207,13 @@ RETURNING order_id, rider_id, status
 
 export const UPDATE_ADMIN_PAYMENT_STATUS = `
 UPDATE payments
-SET status = $2
+SET status = $2,
+    paid_at = CASE
+      WHEN $2 = 'completed' THEN COALESCE(paid_at, NOW())
+      ELSE paid_at
+    END
 WHERE order_id = $1
-RETURNING order_id, status
+RETURNING order_id, status, paid_at, transaction_id
 `;
 
 export const GET_WEEKLY_PLATFORM_PROFIT = `

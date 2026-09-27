@@ -9,10 +9,21 @@ export interface CartItem {
   quantity: number;
 }
 
+export interface Coupon {
+  id: number;
+  code: string;
+  discountType: string;
+  discountValue: number;
+  minimumOrder: number;
+  expiryDate: string | null;
+}
+
 export interface Cart {
   id: number;
   restaurantId: number;
   restaurantName: string;
+  discount: number | null;
+  userCouponId: number | null;
   cartItems: CartItem[];
 }
 
@@ -23,20 +34,31 @@ export interface CartItemInput {
 }
 
 export interface UserAddress {
-  id: number;
+  id?: number;
   label?: string;
   address: string;
   street?: string;
   apartmentName?: string;
   city: string;
   postalCode?: string;
+  longitude?: number | null;
+  latitude?: number | null;
 }
 
 export interface CreateOrderInput {
   cartId: number;
   addressId: number;
+  paymentMethod: "cash" | "bkash" | "nagad" | "card";
+  idempotencyKey: string;
+  deliveryInstructions: string;
+}
+
+export interface OrderQuote {
+  subtotal: number;
+  discount: number;
   deliveryFee: number;
-  paymentMethod: "card" | "mobile_banking" | "bank_transfer" | "cash";
+  tax: number;
+  finalTotal: number;
 }
 
 export interface CreatedOrder {
@@ -46,4 +68,65 @@ export interface CreatedOrder {
   deliveryFee: number;
   discount: number;
   status: string;
+}
+
+export interface OrderHistoryItem {
+  id: number;
+  restaurantId: number;
+  restaurantName: string;
+  orderStatus: string;
+  createdAt: string;
+  totalItems: number;
+  totalAmount: number;
+  riderId: number | null;
+  riderName: string | null;
+  isReviewed: boolean;
+}
+
+export interface OrderDetailItem {
+  id: number;
+  name: string;
+  quantity: number;
+  unitPrice: number;
+  subtotal: number;
+}
+
+export interface OrderDetail {
+  orderId: number;
+  items: OrderDetailItem[];
+  subtotal: number;
+  discount: number;
+  deliveryFee: number;
+  tax: number;
+  totalAmount: number;
+  paidAt: string | null;
+  transactionId: string | null;
+  deliveryInstructions: string | null;
+}
+
+
+export interface RestaurantOrder {
+  id: number;
+  customerName: string;
+  orderStatus: string;
+  createdAt: string;
+  totalItems: number;
+  totalAmount: number;
+  deliveryInstructions: string | null;
+  items: RestaurantOrderItem[];
+}
+
+export interface RestaurantOrderItem {
+  id: number;
+  name: string;
+  quantity: number;
+}
+
+export interface SubmitReviewInput {
+  orderId: number;
+  restaurantId: number;
+  riderId?: number | null;
+  rating: number;
+  riderRating: number | null;
+  comment: string;
 }

@@ -1,4 +1,4 @@
-import { Pencil, Trash2 } from "lucide-react";
+import { Archive, Pencil } from "lucide-react";
 import type { Restaurant } from "@/types/restaurant";
 
 interface RestaurantHeaderProps {
@@ -48,7 +48,7 @@ export function RestaurantHeader({
           disabled={busy}
           className="inline-flex items-center gap-1.5 border border-destructive/30 px-3 py-2 text-xs font-semibold text-destructive hover:bg-destructive/10"
         >
-          <Trash2 className="size-3.5" /> Delete
+          <Archive className="size-3.5" /> Archive
         </button>
       </div>
     </div>

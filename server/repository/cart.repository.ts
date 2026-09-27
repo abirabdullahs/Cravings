@@ -3,6 +3,7 @@ import {
   FIND_CART,
   INSERT_CART,
   UPSERT_CART_ITEM,
+  DELETE_CART_ITEM,
   FIND_CART_ITEMS,
 } from "../query/cart.query";
 import type { CartItem } from "@/types/order";
@@ -12,6 +13,7 @@ interface CartItemsRow {
   menu_item_id: number;
   cart_id: number;
   restaurant_id: number;
+  user_coupon_id: number | null;
   menu_item_name: string;
   restaurant_name: string;
   description: string | null;
@@ -37,8 +39,8 @@ export const findCart = async ({
   userId,
   restaurantId,
 }: {
-  userId: string;
-  restaurantId: string;
+  userId: number;
+  restaurantId: number;
 }) => {
   const data = await pool.query(FIND_CART, [userId, restaurantId]);
   return data.rows[0];
@@ -48,8 +50,8 @@ export const insertCart = async ({
   userId,
   restaurantId,
 }: {
-  userId: string;
-  restaurantId: string;
+  userId: number;
+  restaurantId: number;
 }) => {
   const data = await pool.query(INSERT_CART, [userId, restaurantId]);
   return data.rows[0];
@@ -60,9 +62,9 @@ export const upsertCartItem = async ({
   quantity,
   cartId,
 }: {
-  menuItemId: string;
+  menuItemId: number;
   quantity: number;
-  cartId: string;
+  cartId: number;
 }) => {
   const data = await pool.query(UPSERT_CART_ITEM, [
     menuItemId,
@@ -70,6 +72,17 @@ export const upsertCartItem = async ({
     cartId,
   ]);
   return data.rows[0];
+};
+
+export const deleteCartItem = async ({
+  menuItemId,
+  cartId,
+}: {
+  menuItemId: number;
+  cartId: number;
+}) => {
+  const data = await pool.query(DELETE_CART_ITEM, [cartId, menuItemId]);
+  return data.rows[0] ?? null;
 };
 
 export const findCartItems = async ({
@@ -88,6 +101,7 @@ const cleanId = restaurantId === null ? null : Number(restaurantId);
       id: number;
       restaurantId: number;
       restaurantName: string;
+      userCouponId: number | null;
       cartItems: CartItem[];
     }
   >();
@@ -96,6 +110,7 @@ const cleanId = restaurantId === null ? null : Number(restaurantId);
       id: row.cart_id,
       restaurantId: row.restaurant_id,
       restaurantName: row.restaurant_name,
+      userCouponId: row.user_coupon_id,
       cartItems: [] as CartItem[],
     };
     cart.cartItems.push(toCartItem(row));
@@ -105,7 +120,7 @@ const cleanId = restaurantId === null ? null : Number(restaurantId);
   return [...carts.values()];
 };
 
-export const findUserAddresses = async (userId: string) => {
+export const findUserAddresses = async (userId: number) => {
   const data = await pool.query(
     `SELECT id, label, address, street, apartment_name, city, postal_code
      FROM user_addresses
