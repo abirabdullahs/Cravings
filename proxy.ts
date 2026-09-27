@@ -1,8 +1,8 @@
-// middleware.ts
 import { auth } from "@/auth";
 import { NextResponse } from "next/server";
+import { findRoleRequestByUser } from "@/server/repository/auth.repository";
 
-export default auth((req) => {
+export default auth(async (req) => {
   const isLoggedIn = !!req.auth?.user;
   const user = req.auth?.user;
   const userRole = user?.role?.toLowerCase();
@@ -50,8 +50,15 @@ export default auth((req) => {
     return NextResponse.redirect(new URL("/unauthorized", req.url));
   }
 
-  if (pathname === "/restaurant" && userRole !== "owner") {
+  if (pathname.startsWith("/restaurant") && userRole !== "owner") {
     return NextResponse.redirect(new URL("/unauthorized", req.url));
+  }
+
+  const expectedRole = pathname.startsWith("/rider") ? "rider" : pathname.startsWith("/restaurant") ? "owner" : "";
+  if (expectedRole && user?.id) {
+    const requestRow = await findRoleRequestByUser(String(user.id));
+    const approved = requestRow?.status === "APPROVED" && requestRow?.requested_role === expectedRole;
+    if (!approved) return NextResponse.redirect(new URL("/unauthorized", req.url));
   }
 
   return NextResponse.next();
