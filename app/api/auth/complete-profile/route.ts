@@ -1,4 +1,8 @@
-import { completeProfile, normalizeRole } from "@/server/service/auth.service";
+import {
+  completeProfile,
+  normalizeRole,
+  validatePhone,
+} from "@/server/service/auth.service";
 import { auth, unstable_update } from "@/auth";
 import { NextResponse } from "next/server";
 
@@ -12,6 +16,13 @@ export async function POST(request: Request) {
 
     const requestedRole = typeof role === "string" ? role : "customer";
     const normalizedRole = normalizeRole(requestedRole);
+    const trimmedPhone = typeof phone === "string" ? phone.trim() : "";
+    if (!validatePhone(trimmedPhone)) {
+      return NextResponse.json(
+        { error: "Please provide a valid phone number" },
+        { status: 400 },
+      );
+    }
     if (normalizedRole === "admin") {
       return NextResponse.json(
         { error: "Admin role cannot be assigned during profile completion" },
@@ -23,7 +34,7 @@ export async function POST(request: Request) {
       const id = session?.user?.id as string;
       const data = await completeProfile({
         role: requestedRole,
-        phone,
+        phone: trimmedPhone,
         id,
         verificationData,
       });

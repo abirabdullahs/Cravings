@@ -25,18 +25,25 @@ export const COMPLETE_USER = `
 `;
 
 export const INSERT_RIDER_PROFILE = `
-INSERT INTO riders (user_id, vehicle_type, vehicle_number, status, is_approved)
-VALUES ($1, $2, $3, 'offline', TRUE)
+INSERT INTO riders (user_id, vehicle_type, vehicle_plate, license_number, nid_number, status, updated_at)
+VALUES ($1, $2, $3, $4, $5, 'idle', NOW())
 ON CONFLICT (user_id) DO UPDATE SET
   vehicle_type = EXCLUDED.vehicle_type,
-  vehicle_number = EXCLUDED.vehicle_number,
-  is_approved = TRUE
+  vehicle_plate = EXCLUDED.vehicle_plate,
+  license_number = EXCLUDED.license_number,
+  nid_number = EXCLUDED.nid_number,
+  status = 'idle',
+  updated_at = NOW()
 RETURNING *;`;
 
 export const INSERT_RESTAURANT_OWNER_PROFILE = `
-INSERT INTO restaurant_owners (user_id)
-VALUES ($1)
-ON CONFLICT (user_id) DO NOTHING
+INSERT INTO restaurant_owners (user_id, nid_number, business_name, trade_licence, address)
+VALUES ($1, $2, $3, $4, $5)
+ON CONFLICT (user_id) DO UPDATE SET
+  nid_number = EXCLUDED.nid_number,
+  business_name = EXCLUDED.business_name,
+  trade_licence = EXCLUDED.trade_licence,
+  address = EXCLUDED.address
 RETURNING *;`;
 
 export const INSERT_ROLE_REQUEST = `

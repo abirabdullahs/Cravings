@@ -1,5 +1,9 @@
 import { AppError } from "@/lib/errors/AppError";
-import { createAccount, toSafeUserDTO } from "@/server/service/auth.service";
+import {
+  createAccount,
+  toSafeUserDTO,
+  validateRegistrationInput,
+} from "@/server/service/auth.service";
 import { NextResponse } from "next/server";
 
 export const POST = async (request: Request) => {
@@ -20,15 +24,19 @@ export const POST = async (request: Request) => {
       );
     }
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email.trim())) {
+    const validation = validateRegistrationInput(data);
+    if (!validation.valid) {
       return NextResponse.json(
-        { error: "Please provide a valid email address" },
+        { error: Object.values(validation.errors)[0] },
         { status: 400 },
       );
     }
 
-    email = data.email.trim().toLowerCase();
+    email = validation.normalized.email;
     data.email = email;
+    data.name = validation.normalized.name;
+    data.phone = validation.normalized.phone;
+    data.role = validation.normalized.role;
     const user = await createAccount({
       ...data,
       role: "customer",

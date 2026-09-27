@@ -6,6 +6,7 @@ import {
   toSafeUserDTO,
   stripBodyUserOverride,
 } from "../server/service/auth-security.ts";
+import { validateRegistrationInput, validatePhone } from "../server/service/auth.service.ts";
 
 test("public registration always falls back to customer", () => {
   assert.equal(sanitizePublicRegistrationRole("admin"), "customer");
@@ -44,4 +45,22 @@ test("request body user id is ignored for authenticated orders", () => {
   assert.equal(payload.userId, "42");
   assert.equal(payload.cartId, 2);
   assert.equal(payload.addressId, 3);
+});
+
+test("registration validation rejects malformed payloads and admin role requests", () => {
+  const invalid = validateRegistrationInput({
+    name: "A",
+    email: "bad-email",
+    password: "short",
+    phone: "abc",
+    role: "admin",
+  });
+
+  assert.equal(invalid.valid, false);
+  assert.match(invalid.errors.email, /valid email/i);
+  assert.match(invalid.errors.password, /at least 8/i);
+  assert.match(invalid.errors.phone, /valid phone/i);
+  assert.match(invalid.errors.role, /Invalid account role/i);
+  assert.equal(validatePhone("+1234567890"), true);
+  assert.equal(validatePhone("bad"), false);
 });
