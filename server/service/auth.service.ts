@@ -14,29 +14,16 @@ import {
 import { hashPassword } from "../utils/password";
 import { AppError } from "@/lib/errors/AppError";
 import { ErrorCode } from "@/lib/errors/errorCodes";
+import {
+  sanitizePublicRegistrationRole,
+  toSafeUserDTO,
+  stripBodyUserOverride,
+  normalizeRole,
+} from "./auth-security";
 
 const roles = new Set(["customer", "owner", "rider", "admin"]);
 
-export function normalizeRole(value: string) {
-  const normalized = String(value ?? "")
-    .toLowerCase()
-    .trim();
-  if (normalized === "restaurant_owner" || normalized === "owner") {
-    return "owner";
-  }
-  if (normalized === "restaurant-owner") return "owner";
-  if (normalized === "restaurant_owner") return "owner";
-  if (normalized === "restaurantowner") return "owner";
-  if (normalized === "customer") return "customer";
-  if (normalized === "rider") return "rider";
-  if (normalized === "admin") return "admin";
-
-  if (!roles.has(normalized)) {
-    throw new AppError(ErrorCode.INVALID_ROLE);
-  }
-
-  return normalized;
-}
+export { sanitizePublicRegistrationRole, toSafeUserDTO, stripBodyUserOverride, normalizeRole };
 
 export const getUserByEmail = (email: string) => {
   return findUserByEmail(email);
@@ -65,10 +52,11 @@ export const createAccount = async (user: {
     throw new AppError(ErrorCode.USER_EXISTS);
   }
 
+  const publicRole = sanitizePublicRegistrationRole(user.role);
   const persistedRole =
     requestedRole === "owner" || requestedRole === "rider"
       ? "customer"
-      : requestedRole;
+      : publicRole;
 
   const data = await createUser({
     email: user.email,
@@ -88,7 +76,11 @@ export const createAccount = async (user: {
     });
   }
 
-  return { ...data, role: persistedRole, requested_role: requestedRole };
+  return toSafeUserDTO({
+    ...data,
+    role: persistedRole,
+    requested_role: requestedRole,
+  });
 };
 
 export const completeProfile = async ({
@@ -122,7 +114,7 @@ export const completeProfile = async ({
     });
   }
 
-  return data;
+  return toSafeUserDTO(data);
 };
 
 export const submitRoleRequest = async ({

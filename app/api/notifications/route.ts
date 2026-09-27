@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
+import { getUserByEmail } from "@/server/service/auth.service";
 import {
   getNotifications,
   createNotification,
@@ -33,6 +34,20 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const { userId, orderId, title, message } = body;
+    const currentUser = session?.user?.email
+      ? await getUserByEmail(String(session.user.email))
+      : null;
+
+    if (!currentUser) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    if (String(currentUser.role ?? "").toLowerCase() !== "admin") {
+      return NextResponse.json(
+        { error: "Only admins can create notifications for other users" },
+        { status: 403 },
+      );
+    }
 
     if (!userId || !title || !message) {
       return NextResponse.json(
@@ -44,8 +59,8 @@ export async function POST(req: Request) {
     const notification = await createNotification(
       Number(userId),
       orderId == null ? null : Number(orderId),
-      title,
-      message,
+      String(title),
+      String(message),
     );
 
     return NextResponse.json(notification, { status: 201 });

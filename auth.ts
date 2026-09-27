@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
 
@@ -42,7 +43,17 @@ export const { handlers, auth, signIn, signOut, unstable_update } = NextAuth({
 
         user = await getUserByEmail(email);
 
-        if (!user || !(await comparePassword(password, user.password_hash))) {
+        if (!user) {
+          throw new Error("Invalid credentials.");
+        }
+
+        const passwordHash = String(user.password_hash ?? "");
+        const looksLikeBcrypt = passwordHash.startsWith("$2");
+        if (!passwordHash || !looksLikeBcrypt) {
+          throw new Error("Invalid credentials.");
+        }
+
+        if (!(await comparePassword(password, passwordHash))) {
           throw new Error("Invalid credentials.");
         }
 
@@ -61,7 +72,7 @@ export const { handlers, auth, signIn, signOut, unstable_update } = NextAuth({
             await createAccount({
               name: user.name as string,
               email: user.email as string,
-              password: "passdummy",
+              password: randomBytes(32).toString("hex"),
               phone: "",
               role: "customer",
             });

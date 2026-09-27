@@ -1,5 +1,5 @@
-  import { ErrorCode } from "./errorCodes";
-  import { ERROR_CONFIG } from "./errorConfig";
+  import { ErrorCode } from "./errorCodes.ts";
+  import { ERROR_CONFIG } from "./errorConfig.ts";
 
   /**
    * Standardized error class for the entire application.
