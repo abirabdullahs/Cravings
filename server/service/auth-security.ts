@@ -18,11 +18,12 @@ export function toSafeUserDTO<T extends Record<string, unknown>>(user: T) {
   return safeUser;
 }
 
-export function stripBodyUserOverride(
-  input: Record<string, unknown>,
+export function stripBodyUserOverride<T extends Record<string, unknown>>(
+  input: T,
   authenticatedUserId: string,
-) {
-  const { userId: _ignoredUserId, ...rest } = input;
+): Omit<T, "userId"> & { userId: string } {
+  const rest = { ...input } as Omit<T, "userId">;
+  delete (rest as Record<string, unknown>).userId;
   return {
     ...rest,
     userId: authenticatedUserId,

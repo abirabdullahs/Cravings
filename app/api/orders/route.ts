@@ -8,7 +8,14 @@ export async function POST(request: NextRequest) {
   try {
     const user = await getAuthenticatedUser();
     const input = stripBodyUserOverride(
-      (await request.json()) as Record<string, unknown>,
+      (await request.json()) as {
+        userId?: string;
+        cartId: unknown;
+        addressId: unknown;
+        paymentMethod: unknown;
+        idempotencyKey: unknown;
+        deliveryInstructions: unknown;
+      },
       user.id,
     );
     const order = await placeOrder({

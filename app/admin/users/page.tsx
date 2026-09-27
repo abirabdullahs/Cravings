@@ -9,16 +9,25 @@ export default function AdminUsersPage() {
   const [role, setRole] = useState("");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const [selected, setSelected] = useState<AdminUser | null>(null);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
       async function load() {
         setLoading(true);
-        const query = new URLSearchParams({ role, search });
-        const response = await fetch(`/api/admin/users?${query}`);
-        if (response.ok) setUsers((await response.json()).users ?? []);
-        setLoading(false);
+        setError("");
+        try {
+          const query = new URLSearchParams({ role, search });
+          const response = await fetch(`/api/admin/users?${query}`);
+          const payload = await response.json();
+          if (response.ok) setUsers(payload.users ?? []);
+          else setError(payload.error || "Could not load users.");
+        } catch {
+          setError("Could not load users.");
+        } finally {
+          setLoading(false);
+        }
       }
       void load();
     }, 250);
@@ -36,6 +45,11 @@ export default function AdminUsersPage() {
           Search accounts and inspect roles, orders, and requests.
         </p>
       </header>
+      {error && (
+        <p className="mb-4 border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+          {error}
+        </p>
+      )}
       <UserManagementTable
         users={users}
         loading={loading}
