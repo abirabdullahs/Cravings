@@ -3,14 +3,20 @@
 
 ALTER TABLE riders ADD COLUMN IF NOT EXISTS nid_number VARCHAR;
 ALTER TABLE riders ADD COLUMN IF NOT EXISTS is_approved BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE riders ADD COLUMN IF NOT EXISTS vehicle_plate VARCHAR;
+ALTER TABLE riders ADD COLUMN IF NOT EXISTS license_number VARCHAR;
 ALTER TABLE riders ADD COLUMN IF NOT EXISTS vehicle_number VARCHAR;
 DO $$
 BEGIN
   IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'riders' AND column_name = 'vehicle_plate') THEN
-    UPDATE riders SET vehicle_number = COALESCE(vehicle_number, vehicle_plate) WHERE vehicle_number IS NULL;
+    UPDATE riders
+    SET vehicle_number = COALESCE(vehicle_number, vehicle_plate)
+    WHERE vehicle_number IS NULL;
   END IF;
   IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'riders' AND column_name = 'license_number') THEN
-    UPDATE riders SET license_number = COALESCE(license_number, 'UNKNOWN') WHERE license_number IS NULL;
+    UPDATE riders
+    SET license_number = COALESCE(license_number, 'UNKNOWN')
+    WHERE license_number IS NULL;
   END IF;
 END $$;
 ALTER TABLE riders ALTER COLUMN vehicle_number DROP NOT NULL;

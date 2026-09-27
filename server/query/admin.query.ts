@@ -21,7 +21,7 @@ RETURNING id, active_status
 `;
 
 export const GET_RESTAURANT_PRODUCT_SALES = `
-SELECT p.id, p.name, p.price,
+SELECT p.id, p.item_name AS name, p.price,
        COUNT(oi.id) AS total_sold,
        COALESCE(SUM(oi.subtotal), 0) AS total_revenue
 FROM menu_items p
@@ -30,8 +30,8 @@ LEFT JOIN orders o ON o.id = oi.order_id
 WHERE p.restaurant_id = $1
   AND (o.created_at IS NULL OR (o.created_at >= NOW() - ($2::int * INTERVAL '1 day')
        AND o.order_status <> 'cancelled'))
-GROUP BY p.id, p.name, p.price
-ORDER BY total_revenue DESC, p.name
+GROUP BY p.id, p.item_name, p.price
+ORDER BY total_revenue DESC, name
 `;
 
 export const GET_RESTAURANT_REVIEWS = `
@@ -70,7 +70,7 @@ WHERE created_at >= NOW() - ($1::int * INTERVAL '1 day')
 `;
 
 export const GET_ALL_RIDERS = `
-SELECT u.id, u.name, u.phone, r.vehicle_type, r.vehicle_number, r.status
+SELECT u.id, u.name, u.phone, r.vehicle_type, r.vehicle_plate AS vehicle_number, r.status
 FROM users u
 JOIN riders r ON r.user_id = u.id
 WHERE u.role = 'rider'

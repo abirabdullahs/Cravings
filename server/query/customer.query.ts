@@ -1,7 +1,7 @@
 export const GET_RESTAURANTS_BY_LOCATION = `
 SELECT id, name, address, image
 FROM restaurants
-WHERE active_status = true AND archived_at IS NULL AND location_area = $1
+WHERE active_status = true AND archived_at IS NULL AND area = $1
 ORDER BY name
 `;
 
@@ -14,10 +14,10 @@ WHERE active_status = true AND archived_at IS NULL AND name ILIKE '%' || $1 || '
 export const SEARCH_RESTAURANTS_BY_PRODUCT_NAME = `
 SELECT DISTINCT r.id, r.name, r.address, r.image, 'product' AS match_type
 FROM restaurants r
-JOIN menuItems p ON p.restaurant_id = r.id
+JOIN menu_items p ON p.restaurant_id = r.id
 WHERE r.active_status = true AND r.archived_at IS NULL
   AND p.is_available = true
-  AND p.name ILIKE '%' || $1 || '%'
+  AND p.item_name ILIKE '%' || $1 || '%'
 `;
 
 export const FIND_RESTAURANT_DETAILS = `

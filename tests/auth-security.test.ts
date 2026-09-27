@@ -7,6 +7,11 @@ import {
   stripBodyUserOverride,
 } from "../server/service/auth-security.ts";
 import { validateRegistrationInput, validatePhone } from "../server/service/auth.service.ts";
+import {
+  GET_RESTAURANTS_BY_LOCATION,
+  SEARCH_RESTAURANTS_BY_PRODUCT_NAME,
+} from "../server/query/customer.query.ts";
+import { FIND_BRANCH_EARNINGS } from "../server/query/restaurant.query.ts";
 
 test("public registration always falls back to customer", () => {
   assert.equal(sanitizePublicRegistrationRole("admin"), "customer");
@@ -63,4 +68,13 @@ test("registration validation rejects malformed payloads and admin role requests
   assert.match(invalid.errors.role, /Invalid account role/i);
   assert.equal(validatePhone("+1234567890"), true);
   assert.equal(validatePhone("bad"), false);
+});
+
+test("customer search queries use the current schema fields", () => {
+  assert.match(GET_RESTAURANTS_BY_LOCATION, /area = \$1/i);
+  assert.doesNotMatch(GET_RESTAURANTS_BY_LOCATION, /location_area/i);
+  assert.match(SEARCH_RESTAURANTS_BY_PRODUCT_NAME, /menu_items/i);
+  assert.match(SEARCH_RESTAURANTS_BY_PRODUCT_NAME, /item_name/i);
+  assert.doesNotMatch(SEARCH_RESTAURANTS_BY_PRODUCT_NAME, /menuItems|p\.name/i);
+  assert.doesNotMatch(FIND_BRANCH_EARNINGS, /sell_inquiry/i);
 });
