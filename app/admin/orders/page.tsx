@@ -36,6 +36,9 @@ export default function AdminOrdersPage() {
   const [details, setDetails] = useState<OrderDetails | null>(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const limit = 50;
 
   async function openDetails(orderId: number) {
     setDetailsLoading(true);
@@ -101,15 +104,26 @@ export default function AdminOrdersPage() {
         orderStatus,
         paymentStatus,
         deliveryStatus,
+        page: String(page),
+        limit: String(limit),
       });
-      const response = await fetch(`/api/admin/orders?${query}`);
-      const payload = await response.json();
-      if (response.ok) setOrders(payload.orders ?? []);
-      else setError(payload.error || "Could not load orders.");
-      setLoading(false);
+      try {
+        const response = await fetch(`/api/admin/orders?${query}`);
+        const payload = await response.json();
+        if (response.ok) {
+          setOrders(payload.orders ?? []);
+          setTotal(Number(payload.total ?? 0));
+        } else setError(payload.error || "Could not load orders.");
+      } catch {
+        setError("Could not load orders.");
+      } finally {
+        setLoading(false);
+      }
     }
     void load();
-  }, [orderStatus, paymentStatus, deliveryStatus]);
+  }, [orderStatus, paymentStatus, deliveryStatus, page]);
+
+  useEffect(() => setPage(1), [orderStatus, paymentStatus, deliveryStatus]);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-12">
@@ -230,6 +244,13 @@ export default function AdminOrdersPage() {
         {loading && (
           <p className="p-4 text-sm text-muted-foreground">Loading orders...</p>
         )}
+      </div>
+      <div className="mt-4 flex items-center justify-between text-sm">
+        <span className="text-muted-foreground">Page {page} of {Math.max(Math.ceil(total / limit), 1)}</span>
+        <div className="flex gap-2">
+          <button type="button" disabled={page === 1 || loading} onClick={() => setPage((current) => current - 1)} className="border border-border px-3 py-2 disabled:opacity-50">Previous</button>
+          <button type="button" disabled={page >= Math.ceil(total / limit) || loading} onClick={() => setPage((current) => current + 1)} className="border border-border px-3 py-2 disabled:opacity-50">Next</button>
+        </div>
       </div>
       {(detailsLoading || details) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">

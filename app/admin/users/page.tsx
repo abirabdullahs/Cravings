@@ -11,6 +11,9 @@ export default function AdminUsersPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [selected, setSelected] = useState<AdminUser | null>(null);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const limit = 50;
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -18,10 +21,13 @@ export default function AdminUsersPage() {
         setLoading(true);
         setError("");
         try {
-          const query = new URLSearchParams({ role, search });
+          const query = new URLSearchParams({ role, search, page: String(page), limit: String(limit) });
           const response = await fetch(`/api/admin/users?${query}`);
           const payload = await response.json();
-          if (response.ok) setUsers(payload.users ?? []);
+          if (response.ok) {
+            setUsers(payload.users ?? []);
+            setTotal(Number(payload.total ?? 0));
+          }
           else setError(payload.error || "Could not load users.");
         } catch {
           setError("Could not load users.");
@@ -32,7 +38,9 @@ export default function AdminUsersPage() {
       void load();
     }, 250);
     return () => window.clearTimeout(timer);
-  }, [role, search]);
+  }, [role, search, page]);
+
+  useEffect(() => setPage(1), [role, search]);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-12">
@@ -60,6 +68,13 @@ export default function AdminUsersPage() {
         selected={selected}
         onSelect={setSelected}
       />
+      <div className="mt-4 flex items-center justify-between text-sm">
+        <span className="text-muted-foreground">Page {page} of {Math.max(Math.ceil(total / limit), 1)}</span>
+        <div className="flex gap-2">
+          <button type="button" disabled={page === 1 || loading} onClick={() => setPage((current) => current - 1)} className="border border-border px-3 py-2 disabled:opacity-50">Previous</button>
+          <button type="button" disabled={page >= Math.ceil(total / limit) || loading} onClick={() => setPage((current) => current + 1)} className="border border-border px-3 py-2 disabled:opacity-50">Next</button>
+        </div>
+      </div>
     </div>
   );
 }

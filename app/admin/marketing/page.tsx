@@ -48,57 +48,67 @@ export default function AdminMarketingPage() {
   async function sendNotification(event: React.FormEvent) {
     event.preventDefault();
     setLoading(true);
-    const response = await fetch("/api/admin/notifications", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(notification),
-    });
-    const payload = await response.json();
-    setMessage(
-      response.ok
-        ? `Notification sent to ${payload.sentCount} customers.`
-        : payload.error || "Could not send notification",
-    );
-    if (response.ok)
-      setNotification({ title: "", message: "", audience: "all", userIds: [] });
-    setLoading(false);
+    try {
+      const response = await fetch("/api/admin/notifications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(notification),
+      });
+      const payload = await response.json();
+      setMessage(
+        response.ok
+          ? `Notification sent to ${payload.sentCount} customers.`
+          : payload.error || "Could not send notification",
+      );
+      if (response.ok)
+        setNotification({ title: "", message: "", audience: "all", userIds: [] });
+    } catch {
+      setMessage("Could not send notification. Check your connection and try again.");
+    } finally {
+      setLoading(false);
+    }
   }
   async function createCoupon(event: React.FormEvent) {
     event.preventDefault();
     setLoading(true);
-    const response = await fetch("/api/admin/coupons", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(coupon),
-    });
-    const payload = await response.json();
-    setMessage(
-      response.ok
-        ? "Coupon created."
-        : payload.error || "Could not create coupon",
-    );
-    if (response.ok) {
-      setCoupons((current) => [
-        {
-          ...payload.coupon,
-          assigned_count:
-            coupon.assignMode === "all"
-              ? customers.length
-              : coupon.userIds.length,
-        },
-        ...current,
-      ]);
-      setCoupon({
-        code: "",
-        discountType: "percentage",
-        discountValue: "",
-        minimumOrder: "0",
-        expiryDate: "",
-        assignMode: "all",
-        userIds: [],
+    try {
+      const response = await fetch("/api/admin/coupons", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(coupon),
       });
+      const payload = await response.json();
+      setMessage(
+        response.ok
+          ? "Coupon created."
+          : payload.error || "Could not create coupon",
+      );
+      if (response.ok) {
+        setCoupons((current) => [
+          {
+            ...payload.coupon,
+            assigned_count:
+              coupon.assignMode === "all"
+                ? customers.length
+                : coupon.userIds.length,
+          },
+          ...current,
+        ]);
+        setCoupon({
+          code: "",
+          discountType: "percentage",
+          discountValue: "",
+          minimumOrder: "0",
+          expiryDate: "",
+          assignMode: "all",
+          userIds: [],
+        });
+      }
+    } catch {
+      setMessage("Could not create coupon. Check your connection and try again.");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   return (

@@ -14,7 +14,7 @@ export async function GET(request: Request) {
     const page = Math.max(Number(params.get("page") ?? 1), 1);
     const limit = Math.min(Math.max(Number(params.get("limit") ?? 50), 1), 100);
     const result = await pool.query(GET_ADMIN_ORDERS, [orderStatus, paymentStatus, deliveryStatus, limit, (page - 1) * limit]);
-    return Response.json({ orders: result.rows, page, limit });
+    return Response.json({ orders: result.rows, page, limit, total: result.rows[0]?.total_count ?? 0 });
   } catch (error) {
     return adminApiError(error);
   }

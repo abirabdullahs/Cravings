@@ -106,7 +106,8 @@ WITH order_totals AS (
 SELECT u.id, u.name, u.email, u.phone, u.role, u.created_at,
        COALESCE(ot.order_count, 0) AS order_count,
        COALESCE(ct.coupon_count, 0) AS coupon_count,
-       COALESCE(rt.role_request_count, 0) AS role_request_count
+  COALESCE(rt.role_request_count, 0) AS role_request_count,
+  COUNT(*) OVER()::int AS total_count
 FROM users u
 LEFT JOIN order_totals ot ON ot.user_id = u.id
 LEFT JOIN coupon_totals ct ON ct.user_id = u.id
@@ -153,7 +154,8 @@ SELECT o.id, o.total_amount, o.delivery_fee, o.discount, o.order_status, o.creat
        u.name AS customer_name, u.email AS customer_email,
        r.name AS restaurant_name,
        p.status AS payment_status, p.payment_method,
-       d.status AS delivery_status, rider.name AS rider_name
+      d.status AS delivery_status, rider.name AS rider_name,
+      COUNT(*) OVER()::int AS total_count
 FROM orders o
 JOIN users u ON u.id = o.user_id
 JOIN restaurants r ON r.id = o.restaurant_id
