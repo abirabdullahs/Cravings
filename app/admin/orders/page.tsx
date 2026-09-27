@@ -123,7 +123,10 @@ export default function AdminOrdersPage() {
     void load();
   }, [orderStatus, paymentStatus, deliveryStatus, page]);
 
-  useEffect(() => setPage(1), [orderStatus, paymentStatus, deliveryStatus]);
+  function updateOrderFilter(value: string, setFilter: (value: string) => void) {
+    setPage(1);
+    setFilter(value);
+  }
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-12">
@@ -144,7 +147,7 @@ export default function AdminOrdersPage() {
       <div className="mb-4 flex flex-wrap gap-2">
         <select
           value={orderStatus}
-          onChange={(event) => setOrderStatus(event.target.value)}
+          onChange={(event) => updateOrderFilter(event.target.value, setOrderStatus)}
           className="h-10 border border-border bg-card px-3 text-sm"
         >
           <option value="">All order statuses</option>
@@ -158,7 +161,7 @@ export default function AdminOrdersPage() {
         </select>
         <select
           value={paymentStatus}
-          onChange={(event) => setPaymentStatus(event.target.value)}
+          onChange={(event) => updateOrderFilter(event.target.value, setPaymentStatus)}
           className="h-10 border border-border bg-card px-3 text-sm"
         >
           <option value="">All payments</option>
@@ -169,7 +172,7 @@ export default function AdminOrdersPage() {
         </select>
         <select
           value={deliveryStatus}
-          onChange={(event) => setDeliveryStatus(event.target.value)}
+          onChange={(event) => updateOrderFilter(event.target.value, setDeliveryStatus)}
           className="h-10 border border-border bg-card px-3 text-sm"
         >
           <option value="">All deliveries</option>

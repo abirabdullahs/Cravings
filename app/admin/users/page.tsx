@@ -40,7 +40,15 @@ export default function AdminUsersPage() {
     return () => window.clearTimeout(timer);
   }, [role, search, page]);
 
-  useEffect(() => setPage(1), [role, search]);
+  function updateSearch(value: string) {
+    setPage(1);
+    setSearch(value);
+  }
+
+  function updateRole(value: string) {
+    setPage(1);
+    setRole(value);
+  }
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-12">
@@ -63,8 +71,8 @@ export default function AdminUsersPage() {
         loading={loading}
         search={search}
         role={role}
-        onSearch={setSearch}
-        onRole={setRole}
+        onSearch={updateSearch}
+        onRole={updateRole}
         selected={selected}
         onSelect={setSelected}
       />
