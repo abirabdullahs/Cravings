@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { OrderDetailItem } from "@/types/order";
+import type { OrderDetail } from "@/types/order";
 
 interface CallTarget {
   label: string;
@@ -13,7 +13,7 @@ interface OrderSummaryCardProps {
   totalAmount: number;
   paymentMethod: string | null;
   callTargets: CallTarget[];
-  items?: OrderDetailItem[];
+  receipt?: OrderDetail;
   expandable?: boolean;
 }
 
@@ -22,7 +22,7 @@ export function OrderSummaryCard({
   totalAmount,
   paymentMethod,
   callTargets,
-  items,
+  receipt,
   expandable = false,
 }: OrderSummaryCardProps) {
   const [expanded, setExpanded] = useState(false);
@@ -55,9 +55,9 @@ export function OrderSummaryCard({
 
       {expandable && expanded && (
         <div className="border-x border-b border-border px-4 py-3">
-          {items?.map((item) => (
+          {receipt?.items.map((item) => (
             <div
-              key={`${item.name}-${item.quantity}`}
+              key={item.id}
               className="flex justify-between gap-4 py-1 text-xs"
             >
               <span className="text-muted-foreground">
@@ -68,6 +68,58 @@ export function OrderSummaryCard({
               </span>
             </div>
           ))}
+          {receipt && (
+            <dl className="mt-3 space-y-1 border-t border-border pt-3 text-xs">
+              <div className="flex justify-between">
+                <dt>Subtotal</dt>
+                <dd>৳{receipt.subtotal.toFixed(2)}</dd>
+              </div>
+              {receipt.discount > 0 && (
+                <div className="flex justify-between text-emerald-700">
+                  <dt>Discount</dt>
+                  <dd>-৳{receipt.discount.toFixed(2)}</dd>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <dt>Delivery fee</dt>
+                <dd>৳{receipt.deliveryFee.toFixed(2)}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt>Tax</dt>
+                <dd>৳{receipt.tax.toFixed(2)}</dd>
+              </div>
+              <div className="flex justify-between">
+                <dt>Platform fee</dt>
+                <dd>৳{receipt.platformFee.toFixed(2)}</dd>
+              </div>
+              <div className="flex justify-between border-t border-border pt-2 font-bold">
+                <dt>Total</dt>
+                <dd>৳{receipt.totalAmount.toFixed(2)}</dd>
+              </div>
+              {receipt.transactionId && (
+                <div className="flex justify-between gap-3 pt-2">
+                  <dt>Transaction</dt>
+                  <dd className="break-all text-right">
+                    {receipt.transactionId}
+                  </dd>
+                </div>
+              )}
+              {receipt.paidAt && (
+                <div className="flex justify-between gap-3">
+                  <dt>Paid</dt>
+                  <dd>{new Date(receipt.paidAt).toLocaleString()}</dd>
+                </div>
+              )}
+              {receipt.deliveryInstructions && (
+                <div className="pt-2">
+                  <dt className="font-semibold">Delivery instructions</dt>
+                  <dd className="mt-1 text-muted-foreground">
+                    {receipt.deliveryInstructions}
+                  </dd>
+                </div>
+              )}
+            </dl>
+          )}
         </div>
       )}
 

@@ -8,7 +8,7 @@ import type {
   DeliveryStep,
   DeliveryTracking
 } from "@/types/delivery-tracking";
-import { OrderDetailItem } from "@/types/order";
+import type { OrderDetail } from "@/types/order";
 
 // Updated logical sequence for customers
 const CUSTOMER_ORDER_STEPS = [
@@ -17,7 +17,7 @@ const CUSTOMER_ORDER_STEPS = [
   { key: "preparing", label: "Preparing food" },
   { key: "rider_assigned", label: "Rider assigned & heading to store" },
   { key: "out_for_delivery", label: "Picked up & on the way" },
-  { key: "arrived_at_destination", label: "Arrived at Destination" },
+  { key: "arrived_at_destination", label: "Rider has arrived" },
   { key: "delivered", label: "Delivered to you" },
 ];
 
@@ -34,6 +34,10 @@ function getCustomerStatus(
     return "delivered";
   }
 
+  if (deliveryStatus === "arrived_at_destination") {
+    return "arrived_at_destination";
+  }
+
   // 2. Food picked up and on the way
   if (deliveryStatus === "picked_up" || orderStatus === "out_for_delivery") {
     return "out_for_delivery";
@@ -48,10 +52,6 @@ function getCustomerStatus(
   if (orderStatus === "ready" || orderStatus === "preparing") {
     return "preparing";
   }
-  if (deliveryStatus === "arrived_at_destination") {
-    return "arrived_at_destination";
-  }
-
   // 5. Order confirmed by restaurant
   if (orderStatus === "confirmed") {
     return "confirmed";
@@ -66,7 +66,11 @@ const NEXT_STEP: Partial<
 > = {
   accepted: { label: "I Have Arrived", next: "arrived_at_store" },
   arrived_at_store: { label: "Picked Up Food", next: "picked_up" },
-  picked_up: { label: "Mark as Delivered", next: "delivered" },
+  picked_up: {
+    label: "Arrived at Customer",
+    next: "arrived_at_destination",
+  },
+  arrived_at_destination: { label: "Mark as Delivered", next: "delivered" },
 };
 
 function useElapsedMinutes(since: string | null) {
@@ -93,7 +97,9 @@ interface ActiveOrderViewProps {
   tracking: DeliveryTracking;
   onAdvance?: (next: DeliveryStep) => Promise<void>;
   isAdvancing?: boolean;
-  receiptItems?: OrderDetailItem[];
+  receipt?: OrderDetail;
+  onCancel?: () => Promise<void>;
+  isCancelling?: boolean;
 }
 
 export function ActiveOrderView({
@@ -101,7 +107,9 @@ export function ActiveOrderView({
   tracking,
   onAdvance,
   isAdvancing,
-  receiptItems,
+  receipt,
+  onCancel,
+  isCancelling,
 }: ActiveOrderViewProps) {
   const elapsedMinutes = useElapsedMinutes(tracking.assignedAt);
   const callTargets =
@@ -121,13 +129,17 @@ export function ActiveOrderView({
     tracking.orderStatus,
     tracking.deliveryStatus,
   );
-  const riderTimelineStatus = nextStep?.next ?? tracking.deliveryStatus;
   const waitingForFood =
     viewer === "rider" &&
     (tracking.deliveryStatus === "accepted" ||
       tracking.deliveryStatus === "arrived_at_store") &&
     tracking.orderStatus !== "ready";
   const canAdvance = !(waitingForFood && nextStep?.next === "picked_up");
+  const canCancel = ["unassigned", "accepted", "arrived_at_store"].includes(
+    tracking.deliveryStatus,
+  ) && ["pending", "confirmed", "preparing", "ready"].includes(
+    tracking.orderStatus,
+  );
 
   const [hasSkippedReview, setHasSkippedReview] = useState(false);
   const [hasSubmittedReview, setHasSubmittedReview] = useState(false);
@@ -140,6 +152,7 @@ export function ActiveOrderView({
   const showReviewModal =
     viewer === "customer" &&
     isDelivered &&
+    tracking.isReviewed === false &&
     !hasSkippedReview &&
     !hasSubmittedReview;
 
@@ -178,7 +191,7 @@ export function ActiveOrderView({
               />
             ))}
           {viewer === "rider" && tracking.deliveryStatus !== "unassigned" && (
-            <StatusTimeline currentStatus={riderTimelineStatus} />
+            <StatusTimeline currentStatus={tracking.deliveryStatus} />
           )}
         </div>
 
@@ -188,8 +201,8 @@ export function ActiveOrderView({
             totalAmount={tracking.totalAmount}
             paymentMethod={tracking.paymentMethod}
             callTargets={callTargets}
-            items={receiptItems}
-            expandable={viewer === "customer" && Boolean(receiptItems)}
+            receipt={receipt}
+            expandable={viewer === "customer" && Boolean(receipt)}
           />
         </div>
 
@@ -211,6 +224,32 @@ export function ActiveOrderView({
             className="mt-4 w-full bg-primary py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:opacity-50"
           >
             {nextStep.label}
+          </button>
+        )}
+
+        {onCancel && canCancel && (
+          <button
+            type="button"
+            onClick={async () => {
+              setAdvanceError(null);
+              try {
+                await onCancel();
+              } catch (error) {
+                setAdvanceError(
+                  error instanceof Error
+                    ? error.message
+                    : "Unable to cancel this order.",
+                );
+              }
+            }}
+            disabled={isCancelling || isAdvancing}
+            className="mt-2 w-full border border-destructive py-2.5 text-sm font-semibold text-destructive disabled:opacity-50"
+          >
+            {isCancelling
+              ? "Cancelling..."
+              : viewer === "rider"
+                ? "Cancel delivery"
+                : "Cancel order"}
           </button>
         )}
 

@@ -33,7 +33,8 @@ $$;
 CREATE OR REPLACE FUNCTION calculate_order_quote(
   p_user_id INT,
   p_cart_id INT,
-  p_address_id INT
+  p_address_id INT,
+  p_platform_fee NUMERIC
 )
 RETURNS TABLE (
   restaurant_id INT,
@@ -41,6 +42,7 @@ RETURNS TABLE (
   discount NUMERIC(10,2),
   delivery_fee NUMERIC(10,2),
   tax NUMERIC(10,2),
+  platform_fee NUMERIC(10,2),
   final_total NUMERIC(10,2),
   user_coupon_id INT
 )
@@ -124,7 +126,11 @@ BEGIN
   END IF;
 
   tax := ROUND(subtotal * 0.03, 2);
-  final_total := ROUND(subtotal - discount + delivery_fee + tax, 2);
+  platform_fee := ROUND(GREATEST(COALESCE(p_platform_fee, 0), 0), 2);
+  final_total := ROUND(
+    subtotal - discount + delivery_fee + tax + platform_fee,
+    2
+  );
 
   RETURN NEXT;
 END;
@@ -145,6 +151,16 @@ DROP PROCEDURE IF EXISTS creation_of_order(
   INT,
   VARCHAR,
   UUID,
+  TEXT,
+  INT
+);
+
+DROP PROCEDURE IF EXISTS creation_of_order(
+  INT,
+  INT,
+  INT,
+  VARCHAR,
+  UUID,
   INT
 );
 
@@ -155,6 +171,7 @@ CREATE OR REPLACE PROCEDURE creation_of_order(
   p_payment_method VARCHAR(255),
   p_idempotency_key UUID,
   p_delivery_instructions TEXT,
+  p_platform_fee NUMERIC,
   INOUT p_order_id INT DEFAULT NULL
 )
 LANGUAGE plpgsql
@@ -292,7 +309,12 @@ BEGIN
     v_delivery_fee,
     v_final_total,
     v_user_coupon_id
-  FROM calculate_order_quote(p_user_id, p_cart_id, p_address_id) Q;
+  FROM calculate_order_quote(
+    p_user_id,
+    p_cart_id,
+    p_address_id,
+    p_platform_fee
+  ) Q;
 
   IF v_subtotal < v_minimum_order THEN
     RAISE EXCEPTION 'Minimum order amount is %', v_minimum_order;

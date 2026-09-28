@@ -24,11 +24,11 @@ export type OrderStatus =
 
 
 export const DELIVERY_STEPS: { key: DeliveryStep; label: string }[] = [
-  { key: "accepted", label: "Order Accepted" },
-  { key: "arrived_at_store", label: "Heading to Restaurant" },
-  { key: "picked_up", label: "Picked Up Food" },
-  { key: "arrived_at_destination", label: "Arrived at Destination" },
-  { key: "delivered", label: "Delivered to Customer" },
+  { key: "accepted", label: "Heading to restaurant" },
+  { key: "arrived_at_store", label: "Arrived at restaurant" },
+  { key: "picked_up", label: "Picked up and on the way" },
+  { key: "arrived_at_destination", label: "Arrived at destination" },
+  { key: "delivered", label: "Delivered to customer" },
 ];
 
 export interface DeliveryTracking {
@@ -53,6 +53,7 @@ export interface DeliveryTracking {
   totalAmount: number;
   paymentMethod: string | null;
   itemCount: number;
+  isReviewed?: boolean; // customer tracking response only
   restaurantLatitude: number | null;
   restaurantLongitude: number | null;
   dropoffLatitude: number | null;

@@ -2,7 +2,7 @@
 import { useParams } from "next/navigation";
 import { ActiveOrderView } from "@/components/tracking/ActiveOrderView";
 import { useOrderTracking } from "@/hooks/useDeliveryTracking";
-import { useOrderDetail } from "@/hooks/useOrder";
+import { useCancelOrder, useOrderDetail } from "@/hooks/useOrder";
 
 export default function OrderTrackingPage() {
   const { orderId } = useParams<{ orderId: string }>();
@@ -12,6 +12,7 @@ export default function OrderTrackingPage() {
     isError,
   } = useOrderTracking(Number(orderId));
   const { data: receipt } = useOrderDetail(Number(orderId));
+  const { cancelOrder, isCancelling } = useCancelOrder(Number(orderId));
 
   if (isLoading) {
     return (
@@ -33,7 +34,12 @@ export default function OrderTrackingPage() {
       <ActiveOrderView
         viewer="customer"
         tracking={tracking}
-        receiptItems={receipt?.items ?? []}
+        receipt={receipt}
+        onCancel={async () => {
+          if (!window.confirm("Cancel this order? This cannot be undone.")) return;
+          await cancelOrder();
+        }}
+        isCancelling={isCancelling}
       />
     </div>
   );

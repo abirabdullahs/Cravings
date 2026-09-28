@@ -52,9 +52,6 @@ export function RestaurantDetailHero({
           <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3 border-t border-border pt-4 text-xs text-muted-foreground">
             <span className="inline-flex items-center gap-1.5 font-medium text-foreground">
               <Rating value={restaurant.rating} />
-              <span className="text-[10px] text-muted-foreground">
-                (500+ ratings)
-              </span>
             </span>
             <span className="inline-flex items-center gap-1.5">
               <Clock3Icon

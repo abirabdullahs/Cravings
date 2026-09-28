@@ -8,6 +8,7 @@ import {
   findRestaurantOrders,
   markOrderReady,
   findOrderQuote,
+  cancelOrder,
 } from "../repository/order.repository";
 
 const paymentMethods = new Set([
@@ -102,6 +103,13 @@ export const getUserOrders = (customerId: number) => findUserOrders(customerId);
 
 export const getOrderDetail = (orderId: number, customerId: number) =>
   findOrderDetail(orderId, customerId);
+
+export const cancelCustomerOrder = (orderId: number, customerId: number) => {
+  if (!Number.isInteger(orderId) || orderId < 1) {
+    throw new AppError(ErrorCode.INVALID_INPUT, "Invalid order ID");
+  }
+  return cancelOrder(String(orderId), customerId);
+};
 
 export const getActiveRestaurantOrders = (restaurantId: number) =>
   findRestaurantOrders(restaurantId);

@@ -1,4 +1,3 @@
-import Link from "next/link";
 import {
   Mail,
   UtensilsCrossed,
@@ -29,14 +28,14 @@ const teamMembers = [
   {
     name: "Sakhawat Hossain",
     role: "Co-Founder & Full-Stack Developer",
-    bio: "Passionate about building scalable web applications, real-time logistics systems, and intuitive user experiences.",
+    bio: "Passionate about building database-backed web applications and intuitive multi-role experiences.",
     github: "https://github.com/sakhawat166",
     linkedin: "https://linkedin.com/in/sakhawat-hossain",
     email: "sakhawath.2313@gmail.com.bd",
     contributions: [
       "Architecture & Database Schema",
       "Rider & Merchant Dashboard Systems",
-      "Cart & Real-Time Checkout Flow",
+      "Cart & Server-Calculated Checkout Flow",
     ],
   },
   {
@@ -62,8 +61,8 @@ const techStack = [
   { name: "TypeScript", desc: "Type-safe database models and frontend props" },
   { name: "Tailwind CSS", desc: "Custom luxury Dhakaiya design system" },
   {
-    name: "PostgreSQL & Drizzle ORM",
-    desc: "High-performance relational data store",
+    name: "PostgreSQL & Raw SQL",
+    desc: "Relational schema, queries, procedures, and triggers",
   },
   {
     name: "Auth.js (NextAuth)",
@@ -83,15 +82,14 @@ export default function AboutPage() {
         <div className="mx-auto max-w-5xl px-4 text-center sm:px-6">
           <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-semibold text-primary">
             <Sparkles className="size-3.5" />
-            <span>The Story Behind Cravings</span>
+            <span>Academic DBMS Project</span>
           </div>
           <h1 className="mt-4 font-serif text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
-            Redefining Fine-Dining Delivery in Dhaka
+            A Multi-Role Food Delivery Demo
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-sm leading-relaxed text-muted-foreground sm:text-base">
-            Cravings was engineered from the ground up to connect food
-            enthusiasts across Dhaka with premium culinary experiences—from
-            historic Dhakaiya heritage dishes to modern artisanal kitchens.
+            Cravings demonstrates a complete customer, restaurant owner, rider,
+            and administrator workflow backed by PostgreSQL and raw SQL.
           </p>
         </div>
       </section>
@@ -105,8 +103,8 @@ export default function AboutPage() {
               Culinary Excellence
             </h3>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              Curated partner restaurants ensuring peak quality control,
-              packaging standards, and authentic flavor profiles.
+              Restaurant, branch, menu, cart, coupon, and order management in a
+              single academic project.
             </p>
           </div>
 
@@ -114,8 +112,8 @@ export default function AboutPage() {
             <Bike className="size-6 text-primary mb-2" />
             <h3 className="font-serif text-lg font-bold">Smart Logistics</h3>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              Automated single-active dispatch algorithms for riders ensuring
-              faster drop-offs and transparent tracking.
+              Single-active-delivery validation with rider milestone updates
+              that refresh through polling.
             </p>
           </div>
 
@@ -244,8 +242,8 @@ export default function AboutPage() {
             Explore the Source Code
           </h3>
           <p className="text-xs text-muted-foreground max-w-md mx-auto">
-            Cravings is built open-source to showcase modern full-stack
-            engineering standards in Next.js.
+            Cravings is an academic DBMS project built with Next.js and
+            PostgreSQL to demonstrate relational application design.
           </p>
           <div className="flex justify-center gap-4">
             <a

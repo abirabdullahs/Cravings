@@ -26,10 +26,12 @@ export function ReviewModal({
   const [foodRating, setFoodRating] = useState(5);
   const [riderRating, setRiderRating] = useState(5);
   const [comment, setComment] = useState("");
+  const [error, setError] = useState("");
   const { submitReview, isSubmittingReview } = useOrder();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setError("");
     try {
       await submitReview({
         orderId,
@@ -40,13 +42,17 @@ export function ReviewModal({
         comment,
       });
       onSubmitSuccess();
-    } catch {
-      // Error is caught & populated in hook error state
+    } catch (submitError) {
+      setError(
+        submitError instanceof Error
+          ? submitError.message
+          : "Unable to submit review",
+      );
     }
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
       <div className="w-full max-w-md border border-border bg-card p-6 shadow-xl">
         <div className="mb-4 text-center">
           <h3 className="font-serif text-xl font-bold text-foreground">
@@ -88,7 +94,7 @@ export function ReviewModal({
             />
           </div>
 
-          
+          {error && <p className="text-sm text-destructive">{error}</p>}
 
           <div className="flex gap-3">
             <button

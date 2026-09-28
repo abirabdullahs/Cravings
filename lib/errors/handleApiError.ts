@@ -14,7 +14,6 @@ export function handleApiError(
   
   console.error("UNHANDLED BACKEND ERROR:", error);
 
-  const status = (error as { status?: number }).status || 200;
   const isDev = process.env.NODE_ENV === "development";
  
   return NextResponse.json(

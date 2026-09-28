@@ -77,3 +77,7 @@ export const fetchOrderDetail = async (
   orderId: number,
 ): Promise<OrderDetail> =>
   apiRequest<OrderDetail>(`/api/orders/${orderId}/detail`);
+
+export const cancelCustomerOrder = async (orderId: number): Promise<void> => {
+  await apiRequest(`/api/orders/${orderId}`, { method: "DELETE" });
+};

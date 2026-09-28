@@ -72,15 +72,22 @@ function MapViewport({ points }: { points: LocationPoint[] }) {
 export default function LeafletDeliveryMap({
   tracking,
 }: LeafletDeliveryMapProps) {
-  const restaurant = coordinatePair(
+  const rider = coordinatePair(tracking.riderLatitude, tracking.riderLongitude);
+  const savedRestaurant = coordinatePair(
     tracking.restaurantLatitude,
     tracking.restaurantLongitude,
   );
+  // An arrived/pickup GPS point is also a safe restaurant-position fallback
+  // for older restaurant rows that predate required map coordinates.
+  const restaurant =
+    savedRestaurant ||
+    (["arrived_at_store", "picked_up"].includes(tracking.deliveryStatus)
+      ? rider
+      : null);
   const destination = coordinatePair(
     tracking.dropoffLatitude,
     tracking.dropoffLongitude,
   );
-  const rider = coordinatePair(tracking.riderLatitude, tracking.riderLongitude);
 
   const points: LocationPoint[] = [
     restaurant
@@ -103,9 +110,15 @@ export default function LeafletDeliveryMap({
     points: [number, number][];
   } | null>(null);
 
-  // Start point is rider (if available) or restaurant
+  const headingToCustomer = [
+    "picked_up",
+    "arrived_at_destination",
+    "delivered",
+  ].includes(tracking.deliveryStatus);
+
+  // Before pickup the rider heads to the restaurant; afterward to the customer.
   const startPoint = rider || restaurant;
-  const endPoint = destination;
+  const endPoint = headingToCustomer ? destination : restaurant;
   const startLatitude = startPoint?.[0] ?? null;
   const startLongitude = startPoint?.[1] ?? null;
   const endLatitude = endPoint?.[0] ?? null;

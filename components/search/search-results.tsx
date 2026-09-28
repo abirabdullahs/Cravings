@@ -12,11 +12,17 @@ import {
 export function SearchResults({
   query,
   city = "Dhaka",
+  initialCuisine = "all",
 }: {
   query: string;
   city?: string;
+  initialCuisine?: string;
 }) {
-  const [cuisine, setCuisine] = useState("all");
+  const [cuisine, setCuisine] = useState(
+    CUISINES.some((option) => option.key === initialCuisine)
+      ? initialCuisine
+      : "all",
+  );
   const [area, setArea] = useState("all");
   const [sort, setSort] = useState<SortKey>("recommended");
 

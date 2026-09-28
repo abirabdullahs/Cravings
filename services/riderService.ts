@@ -19,10 +19,35 @@ export const fetchRiderEarnings = async (
 ): Promise<RiderEarningsSummary> =>
   apiRequest<RiderEarningsSummary>(`/api/rider/earnings?date=${date}`);
 
+async function getCurrentCoordinates() {
+  if (typeof navigator === "undefined" || !navigator.geolocation) {
+    throw new Error("This browser does not support GPS location.");
+  }
+
+  const position = await new Promise<GeolocationPosition>((resolve, reject) =>
+    navigator.geolocation.getCurrentPosition(resolve, reject, {
+      enableHighAccuracy: true,
+      timeout: 10000,
+      maximumAge: 0,
+    }),
+  ).catch((error: GeolocationPositionError) => {
+    if (error.code === error.PERMISSION_DENIED) {
+      throw new Error("Allow location access before accepting a delivery.");
+    }
+    throw new Error("Your current location is unavailable. Try again.");
+  });
+
+  return {
+    latitude: position.coords.latitude,
+    longitude: position.coords.longitude,
+  };
+}
+
 export const acceptDeliveryRequest = async (orderId: number): Promise<void> => {
+  const location = await getCurrentCoordinates();
   await apiRequest(`/api/rider/deliveries/${orderId}`, {
     method: "PATCH",
-    body: JSON.stringify({ status: "accepted" }),
+    body: JSON.stringify({ status: "accepted", ...location }),
   });
 };
 

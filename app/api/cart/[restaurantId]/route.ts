@@ -11,8 +11,8 @@ export async function POST(request: NextRequest, context: Context) {
     const { restaurantId } = await context.params;
     const user = await getAuthenticatedUser();
 
-    // require validation
-  
+
+
     const data = await addCartItem({
       userId: Number(user.id),
       restaurantId: Number(restaurantId),

@@ -36,6 +36,9 @@ export function RestaurantMenuSection({
                   alt={item.name}
                   fill
                   sizes="(min-width: 640px) 50vw, 100vw"
+                  onError={(event) => {
+                    event.currentTarget.src = "/placeholder.jpg";
+                  }}
                   className="object-cover"
                 />
               </div>

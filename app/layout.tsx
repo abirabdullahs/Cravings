@@ -22,9 +22,9 @@ const fraunces = Fraunces({
 });
 
 export const metadata: Metadata = {
-  title: "Cravings — Fine-dining delivery in Dhaka",
+  title: "Cravings — Academic food-delivery demo",
   description:
-    "Get it delivered while it\u2019s still hot. Order from Dhaka street favorites and premium local bistros with transparent pricing and real-time delivery estimates.",
+    "A DBMS academic project demonstrating customer, restaurant owner, rider, and admin workflows with raw SQL.",
   generator: "v0.app",
   icons: {
     icon: [

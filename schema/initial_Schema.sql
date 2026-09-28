@@ -30,7 +30,9 @@ CREATE TYPE order_status_enum AS ENUM (
 CREATE TYPE delivery_status_enum AS ENUM (
   'unassigned',       -- Waiting for driver acceptance
   'accepted',         -- Driver claimed the job
+  'arrived_at_store', -- Driver reached the restaurant
   'picked_up',        -- Driver collected food from store
+  'arrived_at_destination', -- Driver reached the customer
   'delivered',        -- Driver handed food to customer
   'cancelled'         -- Delivery task aborted
 );

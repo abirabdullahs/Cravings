@@ -21,3 +21,12 @@ WHERE rv.menu_item_id = $1
 ORDER BY rv.created_at DESC
 LIMIT $2 OFFSET $3
 `;
+
+export const GET_RESTAURANT_REVIEWS = `
+SELECT rv.id, rv.rating, rv.comment, rv.created_at, u.name AS customer_name
+FROM reviews rv
+JOIN users u ON u.id = rv.user_id
+WHERE rv.restaurant_id = $1
+ORDER BY rv.created_at DESC
+LIMIT 20;
+`;

@@ -1,9 +1,20 @@
 import { NextResponse } from "next/server";
-import { submitCustomerReview } from "@/server/service/review.service";
+import { getRestaurantReviews, submitCustomerReview } from "@/server/service/review.service";
 import { getAuthenticatedUser } from "@/lib/auth-helper";
 import { handleApiError } from "@/lib/errors/handleApiError";
 import { AppError } from "@/lib/errors/AppError";
 import { ErrorCode } from "@/lib/errors/errorCodes";
+
+export async function GET(req: Request) {
+  try {
+    const restaurantId = Number(
+      new URL(req.url).searchParams.get("restaurantId"),
+    );
+    return NextResponse.json(await getRestaurantReviews(restaurantId));
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
 
 export async function POST(req: Request) {
   try {

@@ -10,6 +10,7 @@ import {
   findActiveDeliveryForRider,
   findRiderDeliveries,
   markArrivedAtDestination,
+  cancelRiderAssignment,
 } from "../repository/rider.repository";
 import { AppError } from "@/lib/errors/AppError";
 import { ErrorCode } from "@/lib/errors/errorCodes";
@@ -18,6 +19,7 @@ export type DeliveryStatus =
   | "accepted"
   | "arrived_at_store"
   | "picked_up"
+  | "arrived_at_destination"
   | "delivered";
 
 export const updateDeliveryStatus = async (
@@ -27,9 +29,10 @@ export const updateDeliveryStatus = async (
   latitude?: number,
   longitude?: number,
 ) => {
-  const locationRequired = status !== "accepted";
+  if (status === "cancelled") {
+    return cancelRiderAssignment(orderId, riderId);
+  }
   if (
-    locationRequired &&
     (typeof latitude !== "number" ||
       typeof longitude !== "number" ||
       !Number.isFinite(latitude) ||
@@ -47,7 +50,12 @@ export const updateDeliveryStatus = async (
 
   switch (status) {
     case "accepted":
-      return await acceptRequest(orderId, riderId);
+      return await acceptRequest(
+        orderId,
+        riderId,
+        latitude!,
+        longitude!,
+      );
 
     case "arrived_at_store":
       return await markArrivedAtStore(orderId, riderId, latitude!, longitude!);
@@ -56,7 +64,12 @@ export const updateDeliveryStatus = async (
       return await markPickedUp(orderId, riderId, latitude!, longitude!);
 
     case "arrived_at_destination":
-      return await markArrivedAtDestination(orderId, riderId, latitude!, longitude!);
+      return await markArrivedAtDestination(
+        orderId,
+        riderId,
+        latitude!,
+        longitude!,
+      );
 
     case "delivered":
       return await markDelivered(orderId, riderId, latitude!, longitude!);
@@ -73,7 +86,7 @@ export const getAvailableRequests = async () => findAvailableRequests();
 
 export const updateRiderStatus = async (
   riderId: number,
-  status: "offline" | "idle" | "busy",
+  status: "offline" | "idle",
 ) => setRiderStatus(riderId, status);
 
 export const getRiderEarningsByDate = async (riderId: number, date: string) =>

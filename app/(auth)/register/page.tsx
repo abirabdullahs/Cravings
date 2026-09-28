@@ -14,7 +14,7 @@ export default function RegisterPage() {
     const normalizedRole = role.toLowerCase();
     switch (normalizedRole) {
       case "owner":
-        return "/restaurant";
+        return "/owner";
       case "rider":
         return "/rider";
       case "admin":
@@ -64,7 +64,11 @@ export default function RegisterPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error || "Failed to register.");
+        setError(
+          (typeof data.error === "string"
+            ? data.error
+            : data.error?.message) || "Failed to register.",
+        );
         return;
       }
       const signInRes = await signIn("credentials", {

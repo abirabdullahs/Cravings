@@ -9,11 +9,11 @@ const faqs = [
     questions: [
       {
         q: "What are Cravings' standard operating hours?",
-        a: "Our delivery network operates daily from 10:00 AM to 11:30 PM across all Dhaka service zones.",
+        a: "Each restaurant sets its own opening and closing time. Closed restaurants remain visible but cannot accept checkout.",
       },
       {
         q: "How are delivery fees calculated?",
-        a: "Delivery fees start at ৳60 for the first 3km, with a small incremental distance fee added for longer routes to ensure fair compensation for riders.",
+        a: "The server calculates the fee by distance: ৳40 up to 2 km, ৳60 up to 5 km, ৳80 up to 8 km, then ৳10 for each additional kilometre.",
       },
       {
         q: "Can I schedule an order in advance?",
@@ -22,15 +22,15 @@ const faqs = [
     ],
   },
   {
-    category: "Payment & Refunds",
+    category: "Payments & Demo Limits",
     questions: [
       {
         q: "Which payment methods do you support?",
-        a: "We accept Cash on Delivery (COD), bKash, Nagad, and all major VISA/Mastercard debit and credit cards.",
+        a: "Cash on Delivery is the real demo flow. bKash, Nagad, and card choices are clearly marked simulations and do not contact a payment gateway.",
       },
       {
         q: "How do I request a refund for a missing or damaged item?",
-        a: "If your order has missing or damaged items, contact support within 30 minutes of delivery via your active order page for immediate verification and wallet credit.",
+        a: "Automated refunds and wallet credit are outside this academic demo. An administrator can update the recorded payment status for demonstration purposes.",
       },
     ],
   },

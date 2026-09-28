@@ -24,6 +24,7 @@ export default auth(async (req) => {
     "/help",
     "/privacy",
     "/terms",
+    "/about",
     "/delivery-areas",
     "/unauthorized",
   ];
@@ -126,6 +127,6 @@ export default auth(async (req) => {
 });
 
 export const config = {
-  // Exclude static assets, images, favicon, and API routes
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+  // Exclude APIs, Next internals, and all public files with extensions.
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|.*\\..*).*)"],
 };

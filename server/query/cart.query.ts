@@ -2,15 +2,31 @@ export const FIND_CART = `SELECT * FROM carts WHERE user_id = $1 AND restaurant_
 
 export const INSERT_CART = `
   INSERT INTO carts (user_id, restaurant_id)
-  VALUES ($1, $2)
+  SELECT $1, R.id
+  FROM restaurants R
+  WHERE R.id = $2
+    AND R.archived_at IS NULL
+  ON CONFLICT (user_id, restaurant_id)
+  DO UPDATE SET restaurant_id = EXCLUDED.restaurant_id
   RETURNING *;
 `;
 
-export const UPSERT_CART_ITEM = `INSERT INTO cart_items (menu_item_id, quantity, cart_id) 
-  VALUES ($1, $2, $3)
+export const UPSERT_CART_ITEM = `
+  INSERT INTO cart_items (menu_item_id, quantity, cart_id)
+  SELECT MI.id, $2, C.id
+  FROM menu_items MI
+  JOIN carts C
+    ON C.id = $3
+   AND C.restaurant_id = MI.restaurant_id
+  JOIN restaurants R ON R.id = MI.restaurant_id
+  WHERE MI.id = $1
+    AND MI.is_available = TRUE
+    AND MI.archived_at IS NULL
+    AND R.archived_at IS NULL
   ON CONFLICT (cart_id, menu_item_id) 
-  DO UPDATE SET quantity =  EXCLUDED.quantity
-  RETURNING *;`;
+  DO UPDATE SET quantity = EXCLUDED.quantity
+  RETURNING *;
+`;
 
 export const DELETE_CART_ITEM = `
   DELETE FROM cart_items

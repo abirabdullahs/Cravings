@@ -4,6 +4,7 @@ import { ActiveOrderView } from "@/components/tracking/ActiveOrderView";
 import {
   useActiveDelivery,
   useAdvanceDelivery,
+  useCancelDelivery,
 } from "@/hooks/useDeliveryTracking";
 import type { DeliveryStep } from "@/types/delivery-tracking";
 
@@ -11,6 +12,9 @@ export default function RiderActiveOrderPage() {
   const router = useRouter();
   const { data: tracking, isLoading } = useActiveDelivery();
   const { advance, isAdvancing } = useAdvanceDelivery(tracking?.orderId ?? 0);
+  const { cancelDelivery, isCancelling } = useCancelDelivery(
+    tracking?.orderId ?? 0,
+  );
 
   async function handleAdvance(nextStatus: DeliveryStep) {
     await advance(nextStatus);
@@ -39,6 +43,12 @@ export default function RiderActiveOrderPage() {
         tracking={tracking}
         onAdvance={handleAdvance}
         isAdvancing={isAdvancing}
+        onCancel={async () => {
+          if (!window.confirm("Cancel this delivery assignment?")) return;
+          await cancelDelivery();
+          router.replace("/rider");
+        }}
+        isCancelling={isCancelling}
       />
     </div>
   );

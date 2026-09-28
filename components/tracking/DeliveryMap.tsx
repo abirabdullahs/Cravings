@@ -22,6 +22,10 @@ const LeafletDeliveryMap = dynamic(
 );
 
 export function DeliveryMap({ tracking }: DeliveryMapProps) {
+  const distance = Number(tracking.distanceKm);
+  const hasDistance =
+    tracking.distanceKm !== null && Number.isFinite(distance);
+
   return (
     <div className="border border-border bg-card p-4">
       <div className="mb-3 flex items-center justify-between">
@@ -30,9 +34,9 @@ export function DeliveryMap({ tracking }: DeliveryMapProps) {
             Delivery map
           </p>
           <p className="text-sm text-foreground">
-            {tracking.distanceKm !== null
-              ? `${Number(tracking.distanceKm).toFixed(1)} km restaurant to destination`
-              : "Distance unavailable until both addresses have coordinates"}
+            {hasDistance
+              ? `${distance.toFixed(1)} km delivery distance`
+              : "Route distance unavailable"}
           </p>
         </div>
         {tracking.riderLocationRecordedAt && (

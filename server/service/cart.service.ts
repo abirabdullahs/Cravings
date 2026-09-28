@@ -1,8 +1,7 @@
 import {
   findCart,
   findCartItems,
-  insertCart,
-  upsertCartItem,
+  upsertUserCartItem,
   deleteCartItem,
 } from "../repository/cart.repository";
 import { AppError } from "@/lib/errors/AppError";
@@ -33,18 +32,19 @@ export const addCartItem = async ({
     );
   }
 
-  let cart = await findCart({ userId, restaurantId });
   if (quantity === 0) {
+    const cart = await findCart({ userId, restaurantId });
     if (!cart) return { deleted: true };
     await deleteCartItem({ menuItemId, cartId: cart.id });
     return { deleted: true };
   }
 
-  if (!cart) {
-    cart = await insertCart({ userId, restaurantId });
-  }
-  const data = await upsertCartItem({ menuItemId, quantity, cartId: cart.id });
-  return data;
+  return upsertUserCartItem({
+    userId,
+    restaurantId,
+    menuItemId,
+    quantity,
+  });
 };
 
 export const getCartItems = async ({

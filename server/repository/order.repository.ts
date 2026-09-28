@@ -6,7 +6,9 @@ import { ErrorCode } from "@/lib/errors/errorCodes";
 import {
   CALL_CREATE_ORDER_PROCEDURE,
   CANCEL_DELIVERY_ON_ORDER_CANCEL,
+  CANCEL_PAYMENT_ON_ORDER_CANCEL,
   CANCEL_ORDER,
+  RELEASE_RIDER_AFTER_ORDER_CANCEL,
   GET_USER_ORDERS,
   GET_RESTAURANT_ORDERS,
   FIND_ORDER_DETAIL,
@@ -15,6 +17,11 @@ import {
   GET_ORDER_QUOTE,
 } from "../query/order.query";
 import { INSERT_ORDER_NOTIFICATION } from "../query/notification.query";
+
+const getPlatformFee = () => {
+  const value = Number(process.env.PLATFORM_FEE ?? 0);
+  return Number.isFinite(value) && value >= 0 ? value : 0;
+};
 
 export const createOrder = async ({
   userId,
@@ -39,6 +46,7 @@ export const createOrder = async ({
       paymentMethod,
       idempotencyKey,
       deliveryInstructions,
+      getPlatformFee(),
     ]);
 
     const orderId = result.rows[0]?.p_order_id;
@@ -71,8 +79,14 @@ export const findOrderQuote = async (
   cartId: number,
   addressId: number,
 ) => {
-  const row = (await pool.query(GET_ORDER_QUOTE, [userId, cartId, addressId]))
-    .rows[0];
+  const row = (
+    await pool.query(GET_ORDER_QUOTE, [
+      userId,
+      cartId,
+      addressId,
+      getPlatformFee(),
+    ])
+  ).rows[0];
 
   if (!row) return null;
 
@@ -81,19 +95,36 @@ export const findOrderQuote = async (
     discount: Number(row.discount),
     deliveryFee: Number(row.delivery_fee),
     tax: Number(row.tax),
+    platformFee: Number(row.platform_fee),
     finalTotal: Number(row.final_total),
   };
 };
 
-export const cancelOrder = async (orderId: string) =>
+export const cancelOrder = async (
+  orderId: string,
+  customerId: number | null,
+) =>
   withTransaction(async (client) => {
-    const orderResult = await client.query(CANCEL_ORDER, [orderId]);
+    const orderResult = await client.query(CANCEL_ORDER, [orderId, customerId]);
 
     if (orderResult.rowCount !== 1) {
-      throw new Error("Order not found or cannot be cancelled");
+      throw new AppError(
+        ErrorCode.STATUS_CONFLICT,
+        "Only orders that have not been picked up can be cancelled",
+      );
     }
 
     await client.query(CANCEL_DELIVERY_ON_ORDER_CANCEL, [orderId]);
+    await client.query(CANCEL_PAYMENT_ON_ORDER_CANCEL, [orderId]);
+    const previousRiderId = orderResult.rows[0].previous_rider_id;
+    if (previousRiderId !== null) {
+      await client.query(RELEASE_RIDER_AFTER_ORDER_CANCEL, [previousRiderId]);
+    }
+    await client.query(INSERT_ORDER_NOTIFICATION, [
+      orderId,
+      "Order cancelled",
+      "This order has been cancelled.",
+    ]);
 
     return toCamelCase(orderResult.rows[0]);
   });
@@ -155,6 +186,7 @@ export const findOrderDetail = async (orderId: number, customerId: number) => {
     discount: Number(first.discount),
     deliveryFee: Number(first.delivery_fee),
     tax: Number(first.tax),
+    platformFee: Number(first.platform_fee),
     totalAmount: Number(first.total_amount),
     paidAt: first.paid_at,
     transactionId: first.transaction_id,

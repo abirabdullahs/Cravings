@@ -36,9 +36,9 @@ export default function PrivacyPage() {
             3. Payment Security
           </h2>
           <p className="text-muted-foreground">
-            All electronic payment details are securely processed via encrypted
-            PCI-DSS compliant payment gateways (bKash, Nagad, SSLCommerz).
-            Cravings does not store raw credit card credentials on its servers.
+            Cash on Delivery is the implemented payment flow. Electronic
+            payment choices are simulations for this academic demo; no card,
+            bKash, or Nagad credentials are collected or sent to a gateway.
           </p>
         </section>
 

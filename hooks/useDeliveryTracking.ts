@@ -2,6 +2,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   advanceDeliveryStatus,
+  cancelDeliveryAssignment,
   fetchActiveDelivery,
   fetchOrderTracking,
 } from "@/services/trackingService";
@@ -65,5 +66,23 @@ export function useAdvanceDelivery(orderId: number) {
   return {
     advance: (nextStatus: DeliveryStep) => mutation.mutateAsync(nextStatus),
     isAdvancing: mutation.isPending,
+  };
+}
+
+export function useCancelDelivery(orderId: number) {
+  const queryClient = useQueryClient();
+  const mutation = useMutation({
+    mutationFn: () => cancelDeliveryAssignment(orderId),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["rider", "activeDelivery"] }),
+        queryClient.invalidateQueries({ queryKey: ["rider", "requests"] }),
+        queryClient.invalidateQueries({ queryKey: ["rider", "profile"] }),
+      ]);
+    },
+  });
+  return {
+    cancelDelivery: mutation.mutateAsync,
+    isCancelling: mutation.isPending,
   };
 }

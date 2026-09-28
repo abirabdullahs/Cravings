@@ -1,5 +1,7 @@
 import { getAuthenticatedUser } from "@/lib/auth-helper";
 import { handleApiError } from "@/lib/errors/handleApiError";
+import { AppError } from "@/lib/errors/AppError";
+import { ErrorCode } from "@/lib/errors/errorCodes";
 import {
   getUserAddresses,
   createAddress,
@@ -34,9 +36,9 @@ export async function POST(request: NextRequest) {
     } = body;
 
     if (!address || !city) {
-      return NextResponse.json(
-        { error: "Address and city are required" },
-        { status: 400 },
+      throw new AppError(
+        ErrorCode.MISSING_FIELD,
+        "Address and city are required",
       );
     }
 
@@ -76,16 +78,13 @@ export async function PUT(request: NextRequest) {
     } = body;
 
     if (!id) {
-      return NextResponse.json(
-        { error: "Address ID is required" },
-        { status: 400 },
-      );
+      throw new AppError(ErrorCode.MISSING_FIELD, "Address ID is required");
     }
 
     if (!address || !city) {
-      return NextResponse.json(
-        { error: "Address and city are required" },
-        { status: 400 },
+      throw new AppError(
+        ErrorCode.MISSING_FIELD,
+        "Address and city are required",
       );
     }
 
@@ -103,9 +102,9 @@ export async function PUT(request: NextRequest) {
     });
 
     if (!updatedAddress) {
-      return NextResponse.json(
-        { error: "Address not found or unauthorized" },
-        { status: 404 },
+      throw new AppError(
+        ErrorCode.NOT_FOUND,
+        "Address not found or unauthorized",
       );
     }
 
@@ -122,18 +121,15 @@ export async function DELETE(request: NextRequest) {
     const id = searchParams.get("id");
 
     if (!id) {
-      return NextResponse.json(
-        { error: "Address ID is required" },
-        { status: 400 },
-      );
+      throw new AppError(ErrorCode.MISSING_FIELD, "Address ID is required");
     }
 
     const deletedId = await removeAddress(id, user.id);
 
     if (!deletedId) {
-      return NextResponse.json(
-        { error: "Address not found or unauthorized" },
-        { status: 404 },
+      throw new AppError(
+        ErrorCode.NOT_FOUND,
+        "Address not found or unauthorized",
       );
     }
 

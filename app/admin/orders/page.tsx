@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { AdminOrder } from "@/types/admin-types";
+import { apiRequest, toErrorMessage } from "@/lib/http";
 
 const money = (value: string | number) =>
   `৳${Number(value || 0).toLocaleString()}`;
@@ -12,6 +13,8 @@ export default function AdminOrdersPage() {
   const [paymentStatus, setPaymentStatus] = useState("");
   const [deliveryStatus, setDeliveryStatus] = useState("");
   const [loading, setLoading] = useState(false);
+  const [pendingAction, setPendingAction] = useState<string | null>(null);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     async function load() {
@@ -27,6 +30,55 @@ export default function AdminOrdersPage() {
     }
     void load();
   }, [orderStatus, paymentStatus, deliveryStatus]);
+
+  async function requeueOrder(orderId: number) {
+    setError("");
+    setPendingAction(`requeue-${orderId}`);
+    try {
+      await apiRequest(`/api/admin/orders/${orderId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ action: "requeue" }),
+      });
+      setOrders((current) =>
+        current.map((order) =>
+          order.id === orderId
+            ? { ...order, delivery_status: "unassigned" }
+            : order,
+        ),
+      );
+    } catch (requeueError) {
+      setError(toErrorMessage(requeueError, "Could not requeue order"));
+    } finally {
+      setPendingAction(null);
+    }
+  }
+
+  async function cancelOrder(orderId: number) {
+    if (!window.confirm("Cancel this order? This cannot be undone.")) return;
+    setError("");
+    setPendingAction(`cancel-${orderId}`);
+    try {
+      await apiRequest(`/api/admin/orders/${orderId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ action: "cancel" }),
+      });
+      setOrders((current) =>
+        current.map((order) =>
+          order.id === orderId
+            ? {
+                ...order,
+                order_status: "cancelled",
+                delivery_status: "cancelled",
+              }
+            : order,
+        ),
+      );
+    } catch (cancelError) {
+      setError(toErrorMessage(cancelError, "Could not cancel order"));
+    } finally {
+      setPendingAction(null);
+    }
+  }
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-12">
@@ -73,11 +125,18 @@ export default function AdminOrdersPage() {
           <option value="">All deliveries</option>
           <option value="unassigned">Unassigned</option>
           <option value="accepted">Accepted</option>
+          <option value="arrived_at_store">At restaurant</option>
           <option value="picked_up">Picked up</option>
+          <option value="arrived_at_destination">At destination</option>
           <option value="delivered">Delivered</option>
           <option value="cancelled">Cancelled</option>
         </select>
       </div>
+      {error && (
+        <p className="mb-4 border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+          {error}
+        </p>
+      )}
       <div className="overflow-x-auto border border-border bg-card">
         <table className="w-full min-w-240 text-left text-sm">
           <thead className="border-b border-border bg-secondary/50">
@@ -89,6 +148,7 @@ export default function AdminOrdersPage() {
               <th className="px-4 py-3">Order</th>
               <th className="px-4 py-3">Payment</th>
               <th className="px-4 py-3">Delivery</th>
+              <th className="px-4 py-3">Action</th>
             </tr>
           </thead>
           <tbody>
@@ -115,12 +175,50 @@ export default function AdminOrdersPage() {
                 <td className="px-4 py-4">
                   {order.delivery_status || "Not recorded"}
                 </td>
+                <td className="px-4 py-4">
+                  <div className="flex flex-col items-start gap-1">
+                  {["accepted", "arrived_at_store"].includes(
+                    order.delivery_status ?? "",
+                  ) &&
+                  ["pending", "confirmed", "preparing", "ready"].includes(
+                    order.order_status,
+                  ) ? (
+                    <button
+                      type="button"
+                      disabled={pendingAction !== null}
+                      onClick={() => void requeueOrder(order.id)}
+                      className="text-xs font-semibold text-primary hover:underline disabled:opacity-50"
+                    >
+                      {pendingAction === `requeue-${order.id}`
+                        ? "Requeueing..."
+                        : "Requeue rider"}
+                    </button>
+                  ) : null}
+                  {["unassigned", "accepted", "arrived_at_store"].includes(
+                    order.delivery_status ?? "",
+                  ) &&
+                    ["pending", "confirmed", "preparing", "ready"].includes(
+                      order.order_status,
+                    ) && (
+                      <button
+                        type="button"
+                        disabled={pendingAction !== null}
+                        onClick={() => void cancelOrder(order.id)}
+                        className="text-xs font-semibold text-destructive hover:underline disabled:opacity-50"
+                      >
+                        {pendingAction === `cancel-${order.id}`
+                          ? "Cancelling..."
+                          : "Cancel order"}
+                      </button>
+                    )}
+                  </div>
+                </td>
               </tr>
             ))}
             {!loading && !orders.length && (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={8}
                   className="p-6 text-center text-sm text-muted-foreground"
                 >
                   No orders found.

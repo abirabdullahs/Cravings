@@ -37,30 +37,20 @@ SELECT EXISTS (
 ) AS has_active;
 `;
 
-export const REQUEUE_STALE_DELIVERIES = `
-WITH stale AS (
-  UPDATE deliveries
-  SET status = 'unassigned', rider_id = NULL, assigned_at = NULL
-  WHERE status IN ('accepted', 'arrived_at_store')
-    AND updated_at < NOW() - INTERVAL '15 minutes'
-  RETURNING rider_id
-)
-UPDATE riders r
-SET status = 'idle'
-WHERE r.user_id IN (SELECT rider_id FROM stale WHERE rider_id IS NOT NULL)
-  AND NOT EXISTS (
-    SELECT 1
-    FROM deliveries d
-    WHERE d.rider_id = r.user_id
-      AND d.status IN ('accepted', 'arrived_at_store', 'picked_up', 'arrived_at_destination')
-  );
-`;
-
 export const MARK_ARRIVED_AT_STORE = `
 UPDATE deliveries
 SET status = 'arrived_at_store'
 WHERE order_id = $1 AND rider_id = $2 AND status = 'accepted'
 RETURNING id, status;`;
+
+export const CANCEL_RIDER_ASSIGNMENT = `
+UPDATE deliveries
+SET status = 'unassigned', rider_id = NULL, assigned_at = NULL
+WHERE order_id = $1
+  AND rider_id = $2
+  AND status IN ('accepted', 'arrived_at_store')
+RETURNING id, order_id, status;
+`;
 
 export const INSERT_DELIVERY_LOCATION = `
 INSERT INTO delivery_location_history (delivery_id, latitude, longitude, event)
@@ -93,7 +83,7 @@ UPDATE deliveries
 SET status = 'delivered', delivered_at = NOW()
 WHERE order_id = $1
   AND rider_id = $2
-  AND status IN ('picked_up', 'arrived_at_destination')
+  AND status = 'arrived_at_destination'
 RETURNING id, status, delivered_at;
 `;
 
@@ -116,6 +106,21 @@ RETURNING order_id, status, paid_at;
 export const SET_RIDER_STATUS = `
 UPDATE riders SET status = $2
 WHERE user_id = $1
+RETURNING user_id, status;
+`;
+
+export const SET_RIDER_DUTY_STATUS = `
+UPDATE riders r
+SET status = $2::rider_status_enum
+WHERE r.user_id = $1
+  AND $2::rider_status_enum IN ('offline', 'idle')
+  AND r.status IN ('offline', 'idle')
+  AND NOT EXISTS (
+    SELECT 1
+    FROM deliveries d
+    WHERE d.rider_id = r.user_id
+      AND d.status IN ('accepted', 'arrived_at_store', 'picked_up', 'arrived_at_destination')
+  )
 RETURNING user_id, status;
 `;
 
@@ -182,11 +187,31 @@ SELECT
   dlh.longitude AS rider_longitude,
   dlh.recorded_at AS rider_location_recorded_at,
 
+  CASE
+    WHEN r.latitude IS NOT NULL AND r.longitude IS NOT NULL
+      AND ua.latitude IS NOT NULL AND ua.longitude IS NOT NULL
+    THEN calculate_distance_km(
+      r.latitude,
+      r.longitude,
+      ua.latitude,
+      ua.longitude
+    )
+    WHEN dlh.latitude IS NOT NULL AND dlh.longitude IS NOT NULL
+      AND ua.latitude IS NOT NULL AND ua.longitude IS NOT NULL
+    THEN calculate_distance_km(
+      dlh.latitude,
+      dlh.longitude,
+      ua.latitude,
+      ua.longitude
+    )
+    ELSE NULL
+  END AS distance_km,
+
   o.total_amount, 
   p.payment_method, 
 
   (
-    SELECT COUNT(*)::int
+    SELECT COALESCE(SUM(oi.quantity), 0)::int
     FROM order_items oi
     WHERE oi.order_id = o.id
   ) AS item_count

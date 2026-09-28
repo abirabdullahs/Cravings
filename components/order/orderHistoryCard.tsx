@@ -67,17 +67,80 @@ export function OrderHistoryCard({ order }: { order: OrderHistoryItem }) {
             <p className="text-muted-foreground">Loading receipt...</p>
           ) : receipt.isError ? (
             <p className="text-destructive">Unable to load this receipt.</p>
-          ) : receipt.data?.items.length ? (
-            receipt.data.items.map((item) => (
-              <div key={item.id} className="flex justify-between gap-4 py-1">
-                <span className="text-muted-foreground">
-                  {item.quantity} x {item.name}
-                </span>
-                <span className="font-medium text-foreground">
-                  ৳{item.subtotal}
-                </span>
-              </div>
-            ))
+          ) : receipt.data ? (
+            <>
+              {receipt.data.items.length ? (
+                receipt.data.items.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex justify-between gap-4 py-1"
+                  >
+                    <span className="text-muted-foreground">
+                      {item.quantity} × {item.name} @ ৳
+                      {item.unitPrice.toFixed(2)}
+                    </span>
+                    <span className="font-medium text-foreground">
+                      ৳{item.subtotal.toFixed(2)}
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <p className="text-muted-foreground">
+                  No receipt items found.
+                </p>
+              )}
+
+              <dl className="mt-3 space-y-1 border-t border-border pt-3">
+                <div className="flex justify-between">
+                  <dt>Subtotal</dt>
+                  <dd>৳{receipt.data.subtotal.toFixed(2)}</dd>
+                </div>
+                {receipt.data.discount > 0 && (
+                  <div className="flex justify-between text-emerald-700">
+                    <dt>Discount</dt>
+                    <dd>-৳{receipt.data.discount.toFixed(2)}</dd>
+                  </div>
+                )}
+                <div className="flex justify-between">
+                  <dt>Delivery fee</dt>
+                  <dd>৳{receipt.data.deliveryFee.toFixed(2)}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt>Tax</dt>
+                  <dd>৳{receipt.data.tax.toFixed(2)}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt>Platform fee</dt>
+                  <dd>৳{receipt.data.platformFee.toFixed(2)}</dd>
+                </div>
+                <div className="flex justify-between border-t border-border pt-2 font-bold">
+                  <dt>Total</dt>
+                  <dd>৳{receipt.data.totalAmount.toFixed(2)}</dd>
+                </div>
+                {receipt.data.transactionId && (
+                  <div className="flex justify-between gap-3 pt-2">
+                    <dt>Transaction</dt>
+                    <dd className="break-all text-right">
+                      {receipt.data.transactionId}
+                    </dd>
+                  </div>
+                )}
+                {receipt.data.paidAt && (
+                  <div className="flex justify-between gap-3">
+                    <dt>Paid</dt>
+                    <dd>{new Date(receipt.data.paidAt).toLocaleString()}</dd>
+                  </div>
+                )}
+                {receipt.data.deliveryInstructions && (
+                  <div className="pt-2">
+                    <dt className="font-semibold">Delivery instructions</dt>
+                    <dd className="mt-1 text-muted-foreground">
+                      {receipt.data.deliveryInstructions}
+                    </dd>
+                  </div>
+                )}
+              </dl>
+            </>
           ) : (
             <p className="text-muted-foreground">No receipt items found.</p>
           )}

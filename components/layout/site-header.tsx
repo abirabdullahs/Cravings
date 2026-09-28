@@ -8,6 +8,7 @@ import { SearchBar } from "@/components/common/search-bar";
 import { getCurrentUser } from "@/lib/auth-helper";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { NavLinks } from "./NavLinks";
+import { getCartItems } from "@/server/service/cart.service";
 
 type SiteHeaderProps = {
   searchValue?: string;
@@ -21,8 +22,8 @@ const riderLinks = [
 ];
 
 const ownerLinks = [
-  { label: "Restaurants", href: "/restaurant" },
-  { label: "Current orders", href: "/restaurant/orders" },
+  { label: "Restaurants", href: "/owner" },
+  { label: "Current orders", href: "/owner/orders" },
 ];
 
 export async function SiteHeader({
@@ -36,7 +37,25 @@ export async function SiteHeader({
   const isCustomer = role === "customer";
   const isOwner = role === "owner";
   const isRider = role === "rider";
+  const isAdmin = role === "admin";
   const canBrowse = isGuest || isCustomer;
+  let resolvedCartCount = cartCount;
+  if (isCustomer) {
+    try {
+      const carts = await getCartItems({
+        userId: Number(user!.id),
+        restaurantId: null,
+      });
+      resolvedCartCount = carts.reduce(
+        (total, cart) =>
+          total +
+          cart.cartItems.reduce((sum, item) => sum + item.quantity, 0),
+        0,
+      );
+    } catch {
+      resolvedCartCount = 0;
+    }
+  }
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/90 backdrop-blur">
@@ -76,9 +95,9 @@ export async function SiteHeader({
               >
                 <ShoppingBagIcon className="size-4" aria-hidden="true" />
                 <span className="hidden sm:inline">Cart</span>
-                {cartCount > 0 && (
+                {resolvedCartCount > 0 && (
                   <span className="flex size-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
-                    {cartCount}
+                    {resolvedCartCount}
                   </span>
                 )}
               </Link>
@@ -94,14 +113,14 @@ export async function SiteHeader({
           {/* Role Navigations */}
           {isOwner && <NavLinks links={ownerLinks} />}
           {isRider && <NavLinks links={riderLinks} />}
-          {/* {isAdmin && (
+          {isAdmin && (
             <Link
               href="/admin"
               className="text-sm font-medium text-foreground transition-colors hover:text-primary"
             >
               Admin Panel
             </Link>
-          )} */}
+          )}
 
           {/* User Profile Avatar */}
           {user && (
@@ -128,13 +147,15 @@ export async function SiteHeader({
           )}
 
           {/* Notifications */}
-          <Link
-            href="/notifications"
-            aria-label="Notifications"
-            className="flex size-9 items-center justify-center rounded-full border border-border bg-card text-foreground transition hover:bg-muted"
-          >
-            <Bell className="size-4" />
-          </Link>
+          {user && (
+            <Link
+              href="/notifications"
+              aria-label="Notifications"
+              className="flex size-9 items-center justify-center rounded-full border border-border bg-card text-foreground transition hover:bg-muted"
+            >
+              <Bell className="size-4" />
+            </Link>
+          )}
 
           {/* Auth Actions */}
           {isGuest ? (
@@ -149,6 +170,12 @@ export async function SiteHeader({
           )}
         </nav>
       </div>
+
+      {(isOwner || isRider) && (
+        <div className="border-t border-border px-4 py-2 md:hidden">
+          <NavLinks links={isOwner ? ownerLinks : riderLinks} mobile />
+        </div>
+      )}
 
       {/* Mobile Search Input */}
       {canBrowse && (

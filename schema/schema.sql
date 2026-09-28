@@ -352,7 +352,7 @@ CREATE TABLE delivery_location_history (
   CONSTRAINT fk_delivery_location_history_delivery FOREIGN KEY (delivery_id) REFERENCES deliveries (id) ON DELETE CASCADE,
   CONSTRAINT ck_delivery_location_history_lat CHECK (latitude BETWEEN -90 AND 90),
   CONSTRAINT ck_delivery_location_history_lng CHECK (longitude BETWEEN -180 AND 180),
-  CONSTRAINT ck_delivery_location_history_event CHECK (event IN ('accepted', 'arrived_at_store', 'picked_up', 'out_for_delivery', 'delivered'))
+  CONSTRAINT ck_delivery_location_history_event CHECK (event IN ('accepted', 'arrived_at_store', 'picked_up', 'out_for_delivery', 'arrived_at_destination', 'delivered'))
 );
 
 CREATE INDEX ix_delivery_location_history_delivery_time ON delivery_location_history (delivery_id, recorded_at DESC);

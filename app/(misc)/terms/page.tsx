@@ -14,9 +14,9 @@ export default function TermsPage() {
             1. Acceptance of Terms
           </h2>
           <p className="text-muted-foreground">
-            By accessing or using Cravings Delivery services in Dhaka,
-            Bangladesh, you agree to be bound by these Terms of Service. If you
-            do not agree to these terms, please do not use our platform.
+            Cravings is an academic demonstration, not a commercial delivery
+            service. Demo data and simulated payment options must not be treated
+            as real purchases or financial transactions.
           </p>
         </section>
 
@@ -26,8 +26,8 @@ export default function TermsPage() {
           </h2>
           <p className="text-muted-foreground">
             All orders placed are subject to availability and restaurant
-            acceptance. Once confirmed, orders cannot be modified. Cancellation
-            is only permitted prior to restaurant acceptance.
+            opening hours. Customer cancellation is not implemented in the
+            bounded demo workflow.
           </p>
         </section>
 
@@ -36,9 +36,9 @@ export default function TermsPage() {
             3. Pricing & Payment
           </h2>
           <p className="text-muted-foreground">
-            Prices displayed include applicable local taxes unless stated
-            otherwise. Delivery fees are non-refundable once a rider has been
-            dispatched to pick up your items.
+            Prices, tax, discounts, and delivery fees are calculated by the
+            server. Digital payments and automatic refunds are simulated or out
+            of scope.
           </p>
         </section>
 
@@ -48,8 +48,7 @@ export default function TermsPage() {
           </h2>
           <p className="text-muted-foreground">
             Customers must provide accurate contact numbers and delivery
-            addresses. Failure to meet the rider at the drop-off location within
-            10 minutes of arrival may result in order forfeiture without refund.
+            addresses so the academic delivery workflow can be demonstrated.
           </p>
         </section>
       </div>

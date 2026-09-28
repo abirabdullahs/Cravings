@@ -7,6 +7,7 @@ import { MenuItem } from "@/types/restaurant";
 import { useOrder, useCartItems, useRestaurantDetails } from "@/hooks/useOrder";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { RestaurantReviews } from "@/components/restaurant/restaurant-reviews";
 
 export default function RestaurantPage({
   params,
@@ -54,6 +55,7 @@ export default function RestaurantPage({
         onAddItem={handleAddCartItem}
         isLoading={isLoading}
       />
+      {data && <RestaurantReviews restaurantId={data.restaurant.id} />}
     </main>
   );
 }

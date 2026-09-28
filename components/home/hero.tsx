@@ -11,7 +11,8 @@ export function Hero() {
           </h1>
           <p className="mt-5 max-w-md text-base leading-relaxed text-muted-foreground text-pretty">
             Order from your Dhaka street favorites and premium local bistros
-            with transparent pricing and real-time delivery estimates.
+            in this academic demo with server-calculated pricing and delivery
+            status updates.
           </p>
           <div className="mt-7 max-w-lg">
             <SearchBar

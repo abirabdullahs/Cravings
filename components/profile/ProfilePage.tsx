@@ -9,6 +9,7 @@ import {
   useMarkNotificationRead,
 } from "@/hooks/useNotifications";
 import type { Restaurant } from "@/types/restaurant";
+import { apiRequest, toErrorMessage } from "@/lib/http";
 
 type Role = "admin" | "owner" | "rider" | "customer";
 
@@ -22,6 +23,7 @@ type UserProfile = {
   created_at: string;
   account_status?: string;
   address?: string;
+  role_details?: Record<string, string>;
   requested_role?: string;
   application?: {
     id: number;
@@ -32,7 +34,6 @@ type UserProfile = {
     rejection_reason?: string;
     created_at?: string;
   } | null;
-  history: Array<{ title: string; detail: string; timestamp?: string }>;
 };
 
 type Coupon = {
@@ -61,11 +62,9 @@ export default function ProfilePage() {
   useEffect(() => {
     async function load() {
       try {
-        const response = await fetch("/api/profile");
-        if (!response.ok) {
-          throw new Error("Unable to load profile");
-        }
-        const payload = await response.json();
+        const payload = await apiRequest<{ profile: UserProfile }>(
+          "/api/profile",
+        );
         setProfile(payload.profile);
         setForm({
           name: payload.profile.name ?? "",
@@ -88,18 +87,16 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (profile?.role !== "customer") return;
-    void fetch("/api/coupons")
-      .then((response) => (response.ok ? response.json() :[] ))
-      .then((payload) => setCoupons(payload ?? []));
+    void apiRequest<Coupon[]>("/api/coupons")
+      .then((payload) => setCoupons(payload ?? []))
+      .catch((loadError) =>
+        setError(toErrorMessage(loadError, "Unable to load coupons")),
+      );
   }, [profile?.role]);
 
   useEffect(() => {
     if (profile?.role !== "owner") return;
-    void fetch("/api/owner/restaurants")
-      .then(async (response) => {
-        if (!response.ok) throw new Error("Unable to load restaurant details");
-        return response.json();
-      })
+    void apiRequest<Restaurant[]>("/api/owner/restaurants")
       .then((payload) => setOwnerRestaurants(payload ?? []))
       .catch((loadError) =>
         setError(
@@ -115,16 +112,13 @@ export default function ProfilePage() {
     setSaving(true);
     setError("");
     try {
-      const response = await fetch("/api/profile", {
+      const payload = await apiRequest<{ profile: UserProfile }>("/api/profile", {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
-      if (!response.ok) {
-        throw new Error("Unable to update profile");
-      }
-      const payload = await response.json();
-      setProfile(payload.profile);
+      setProfile((current) =>
+        current ? { ...current, ...payload.profile } : payload.profile,
+      );
     } catch (saveError) {
       setError(
         saveError instanceof Error
@@ -142,9 +136,10 @@ export default function ProfilePage() {
     setResubmitting(true);
     setError("");
     try {
-      const response = await fetch("/api/role-requests", {
+      const payload = await apiRequest<{
+        request: NonNullable<UserProfile["application"]>;
+      }>("/api/role-requests", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           requestedRole: profile.application.requested_role,
           details: "Role request resubmitted for review.",
@@ -152,14 +147,6 @@ export default function ProfilePage() {
         }),
       });
 
-      if (!response.ok) {
-        const payload = await response
-          .json()
-          .catch(() => ({ error: "Unable to resubmit request" }));
-        throw new Error(payload.error || "Unable to resubmit request");
-      }
-
-      const payload = await response.json();
       setProfile((current) =>
         current
           ? {
@@ -218,6 +205,7 @@ export default function ProfilePage() {
           ? "Admin"
           : "Customer";
   const applicationStatus = profile.application?.status?.toUpperCase();
+  const roleDetails = Object.entries(profile.role_details ?? {});
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
@@ -314,6 +302,17 @@ export default function ProfilePage() {
               <dt className="text-muted-foreground">Phone</dt>
               <dd className="font-semibold">{profile.phone || "Not set"}</dd>
             </div>
+            {roleDetails.map(([key, value]) => (
+              <div
+                key={key}
+                className="flex justify-between gap-4 border-b border-border pb-2"
+              >
+                <dt className="capitalize text-muted-foreground">
+                  {key.replaceAll("_", " ")}
+                </dt>
+                <dd className="break-all text-right font-semibold">{value}</dd>
+              </div>
+            ))}
             <div className="flex justify-between gap-4 border-b border-border pb-2">
               <dt className="text-muted-foreground">Address</dt>
               <dd className="text-right font-semibold">
@@ -581,41 +580,6 @@ export default function ProfilePage() {
             </form>
           </section>
 
-          <section className="rounded border border-border bg-card p-6">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="font-serif text-2xl font-bold">
-                Latest history / recent activity
-              </h2>
-              <span className="text-xs uppercase tracking-wide text-muted-foreground">
-                {profile.role}
-              </span>
-            </div>
-            <div className="space-y-3">
-              {profile.history.length === 0 && (
-                <p className="text-sm text-muted-foreground">
-                  No recent activity found.
-                </p>
-              )}
-              {profile.history.map((item, index) => (
-                <div
-                  key={index}
-                  className="flex items-start justify-between border-b border-border py-3 last:border-0"
-                >
-                  <div>
-                    <div className="font-semibold">{item.title}</div>
-                    <div className="text-sm text-muted-foreground">
-                      {item.detail}
-                    </div>
-                  </div>
-                  {item.timestamp && (
-                    <span className="text-xs text-muted-foreground">
-                      {new Date(item.timestamp).toLocaleDateString()}
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
-          </section>
         </main>
       </section>
     </div>

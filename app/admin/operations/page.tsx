@@ -3,12 +3,14 @@
 import { useEffect, useState } from "react";
 import { RoleRequestsTable } from "@/components/admin/RoleRequestsTable";
 import type { Restaurant, Rider, ReviewRequest } from "@/types/admin-types";
+import { apiRequest, toErrorMessage } from "@/lib/http";
 
 export default function AdminOperationsPage() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [riders, setRiders] = useState<Rider[]>([]);
   const [requests, setRequests] = useState<ReviewRequest[]>([]);
   const [error, setError] = useState("");
+  const [pendingAction, setPendingAction] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -35,16 +37,19 @@ export default function AdminOperationsPage() {
   }, []);
 
   async function updateRestaurant(restaurant: Restaurant) {
-    const response = await fetch("/api/admin/restaurants", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        restaurantId: restaurant.id,
-        activeStatus: !restaurant.active_status,
-      }),
-    });
-    if (response.ok) {
-      const payload = await response.json();
+    setError("");
+    setPendingAction(`restaurant-${restaurant.id}`);
+    try {
+      const payload = await apiRequest<{ restaurant: Restaurant }>(
+        "/api/admin/restaurants",
+        {
+          method: "PATCH",
+          body: JSON.stringify({
+            restaurantId: restaurant.id,
+            activeStatus: !restaurant.active_status,
+          }),
+        },
+      );
       setRestaurants((current) =>
         current.map((item) =>
           item.id === restaurant.id
@@ -52,17 +57,24 @@ export default function AdminOperationsPage() {
             : item,
         ),
       );
+    } catch (updateError) {
+      setError(toErrorMessage(updateError, "Could not update restaurant"));
+    } finally {
+      setPendingAction(null);
     }
   }
 
   async function updateRider(riderId: number, status: Rider["status"]) {
-    const response = await fetch("/api/admin/riders", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ riderId, status }),
-    });
-    if (response.ok) {
-      const payload = await response.json();
+    setError("");
+    setPendingAction(`rider-${riderId}`);
+    try {
+      const payload = await apiRequest<{ rider: Rider }>(
+        "/api/admin/riders",
+        {
+          method: "PATCH",
+          body: JSON.stringify({ riderId, status }),
+        },
+      );
       setRiders((current) =>
         current.map((item) =>
           item.id === riderId
@@ -70,6 +82,10 @@ export default function AdminOperationsPage() {
             : item,
         ),
       );
+    } catch (updateError) {
+      setError(toErrorMessage(updateError, "Could not update rider"));
+    } finally {
+      setPendingAction(null);
     }
   }
 
@@ -78,37 +94,32 @@ export default function AdminOperationsPage() {
     status: "APPROVED" | "REJECTED",
   ) {
     setError("");
+    setPendingAction(`request-${requestId}`);
     try {
-      const response = await fetch("/api/admin/requests", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          requestId,
-          status,
-          reviewNote: "Reviewed by admin",
-          rejectionReason:
-            status === "REJECTED"
-              ? "Verification details did not pass review"
-              : "",
-        }),
-      });
-      const payload = await response.json();
-      if (!response.ok) {
-        throw new Error(
-          payload.error?.message ?? payload.error ?? "Could not review request",
-        );
-      }
+      const payload = await apiRequest<{ request: ReviewRequest }>(
+        "/api/admin/requests",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            requestId,
+            status,
+            reviewNote: "Reviewed by admin",
+            rejectionReason:
+              status === "REJECTED"
+                ? "Verification details did not pass review"
+                : "",
+          }),
+        },
+      );
       setRequests((current) =>
         current.map((request) =>
           request.id === requestId ? payload.request : request,
         ),
       );
     } catch (reviewError) {
-      setError(
-        reviewError instanceof Error
-          ? reviewError.message
-          : "Could not review request",
-      );
+      setError(toErrorMessage(reviewError, "Could not review request"));
+    } finally {
+      setPendingAction(null);
     }
   }
 
@@ -160,7 +171,8 @@ export default function AdminOperationsPage() {
                     <td className="px-4 py-4">
                       <button
                         onClick={() => void updateRestaurant(restaurant)}
-                        className="text-xs font-bold text-primary"
+                        disabled={pendingAction !== null}
+                        className="text-xs font-bold text-primary disabled:opacity-50"
                       >
                         {restaurant.active_status ? "Deactivate" : "Activate"}
                       </button>
@@ -183,6 +195,7 @@ export default function AdminOperationsPage() {
                   <strong>{rider.name}</strong>
                   <select
                     value={rider.status}
+                    disabled={pendingAction !== null}
                     onChange={(event) =>
                       void updateRider(
                         rider.id,
@@ -208,6 +221,7 @@ export default function AdminOperationsPage() {
       <RoleRequestsTable
         requests={requests}
         onReview={(id, status) => void reviewRequest(id, status)}
+        disabled={pendingAction !== null}
       />
     </div>
   );

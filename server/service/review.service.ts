@@ -1,5 +1,5 @@
 import { ErrorCode } from "@/lib/errors/errorCodes";
-import { insertReview } from "../repository/review.repository";
+import { findRestaurantReviews, insertReview } from "../repository/review.repository";
 import { AppError } from "@/lib/errors/AppError";
 
 export const submitCustomerReview = async (
@@ -37,3 +37,10 @@ export const submitCustomerReview = async (
     comment
   });
 }
+
+export const getRestaurantReviews = async (restaurantId: number) => {
+  if (!Number.isInteger(restaurantId) || restaurantId < 1) {
+    throw new AppError(ErrorCode.INVALID_INPUT, "Invalid restaurant ID");
+  }
+  return findRestaurantReviews(restaurantId);
+};

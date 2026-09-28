@@ -90,20 +90,20 @@ VALUES
 
 -- 2. Insert Categories
 INSERT INTO categories (restaurant_id, name, category_img) VALUES
-  (1, 'Biryani Mains', '/categories/biryani.png'),
-  (1, 'Sides & Beverages', '/categories/drinks.png'),
-  (2, 'Burgers', '/categories/burgers.png'),
-  (2, 'Appetizers & Fries', '/categories/fries.png');
+  (1, 'Biryani Mains', '/placeholder.jpg'),
+  (1, 'Sides & Beverages', '/placeholder.jpg'),
+  (2, 'Burgers', '/placeholder.jpg'),
+  (2, 'Appetizers & Fries', '/placeholder.jpg');
 
 -- 3. Insert Menu Items
 INSERT INTO menu_items (restaurant_id, category_id, item_name, description, price, item_img, is_available) VALUES
   -- Sultan's Dine items (restaurant_id = 1)
-  (1, 1, 'Mutton Kacchi Half', 'Standard single portion mutton kacchi with 1 pc mutton & 1 aloo', 380.00, '/items/mutton-kacchi-half.png', TRUE),
-  (1, 1, 'Mutton Kacchi Full', 'Large portion mutton kacchi with 2 pcs mutton & 1 aloo', 580.00, '/items/mutton-kacchi-full.png', TRUE),
-  (1, 2, 'Shahi Borhani 500ml', 'Traditional sour yogurt drink with mustard and spices', 90.00, '/items/borhani.png', TRUE),
+  (1, 1, 'Mutton Kacchi Half', 'Standard single portion mutton kacchi with 1 pc mutton & 1 aloo', 380.00, '/placeholder.jpg', TRUE),
+  (1, 1, 'Mutton Kacchi Full', 'Large portion mutton kacchi with 2 pcs mutton & 1 aloo', 580.00, '/placeholder.jpg', TRUE),
+  (1, 2, 'Shahi Borhani 500ml', 'Traditional sour yogurt drink with mustard and spices', 90.00, '/placeholder.jpg', TRUE),
 
   -- Chillox items (restaurant_id = 2)
-  (2, 3, 'Beef Juicy Lucy', 'Single beef patty stuffed with melted cheddar cheese', 290.00, '/items/juicy-lucy.png', TRUE),
-  (2, 3, 'Chicken Cheese Blast', 'Crispy chicken patty topped with double cheese slice', 260.00, '/items/chicken-cheese.png', TRUE),
-  (2, 4, 'Naga Drumsticks 4pcs', 'Extremely spicy deep-fried chicken drumsticks', 220.00, '/items/naga-wings.png', TRUE);
+  (2, 3, 'Beef Juicy Lucy', 'Single beef patty stuffed with melted cheddar cheese', 290.00, '/placeholder.jpg', TRUE),
+  (2, 3, 'Chicken Cheese Blast', 'Crispy chicken patty topped with double cheese slice', 260.00, '/placeholder.jpg', TRUE),
+  (2, 4, 'Naga Drumsticks 4pcs', 'Extremely spicy deep-fried chicken drumsticks', 220.00, '/placeholder.jpg', TRUE);
 

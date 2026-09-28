@@ -69,6 +69,10 @@ export const ERROR_CONFIG: Record<
     status: 400,
     message: "Invalid status provided",
   },
+  [ErrorCode.STATUS_CONFLICT]: {
+    status: 409,
+    message: "The status changed and this action is no longer available",
+  },
 
   // Conflicts (409)
   [ErrorCode.USER_EXISTS]: {

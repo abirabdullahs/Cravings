@@ -4,10 +4,11 @@ import { SearchResults } from "@/components/search/search-results";
 export default async function SearchPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string }>;
+  searchParams: Promise<{ q?: string; cuisine?: string }>;
 }) {
-  const { q } = await searchParams;
+  const { q, cuisine } = await searchParams;
   const query = (q ?? "").trim();
+  const selectedCuisine = (cuisine ?? "all").trim();
   const city = "Dhaka";
 
   return (
@@ -29,7 +30,11 @@ export default async function SearchPage({
         </div>
       </section>
 
-      <SearchResults query={query} city={city} />
+      <SearchResults
+        query={query}
+        city={city}
+        initialCuisine={selectedCuisine}
+      />
     </div>
   );
 }

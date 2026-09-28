@@ -7,6 +7,9 @@ import {
   FIND_CART_ITEMS,
 } from "../query/cart.query";
 import type { CartItem } from "@/types/order";
+import { withTransaction } from "@/lib/dblib";
+import { AppError } from "@/lib/errors/AppError";
+import { ErrorCode } from "@/lib/errors/errorCodes";
 
 interface CartItemsRow {
   id: number;
@@ -46,33 +49,44 @@ export const findCart = async ({
   return data.rows[0];
 };
 
-export const insertCart = async ({
+export const upsertUserCartItem = async ({
   userId,
   restaurantId,
+  menuItemId,
+  quantity,
 }: {
   userId: number;
   restaurantId: number;
-}) => {
-  const data = await pool.query(INSERT_CART, [userId, restaurantId]);
-  return data.rows[0];
-};
-
-export const upsertCartItem = async ({
-  menuItemId,
-  quantity,
-  cartId,
-}: {
   menuItemId: number;
   quantity: number;
-  cartId: number;
-}) => {
-  const data = await pool.query(UPSERT_CART_ITEM, [
-    menuItemId,
-    quantity,
-    cartId,
-  ]);
-  return data.rows[0];
-};
+}) =>
+  withTransaction(async (client) => {
+    const cartResult = await client.query(INSERT_CART, [userId, restaurantId]);
+    const cart = cartResult.rows[0];
+
+    if (!cart) {
+      throw new AppError(
+        ErrorCode.INVALID_INPUT,
+        "This restaurant is not available",
+      );
+    }
+
+    const itemResult = await client.query(UPSERT_CART_ITEM, [
+      menuItemId,
+      quantity,
+      cart.id,
+    ]);
+    const item = itemResult.rows[0];
+
+    if (!item) {
+      throw new AppError(
+        ErrorCode.INVALID_INPUT,
+        "This menu item is unavailable or belongs to another restaurant",
+      );
+    }
+
+    return item;
+  });
 
 export const deleteCartItem = async ({
   menuItemId,

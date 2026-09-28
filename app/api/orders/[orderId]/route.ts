@@ -3,7 +3,7 @@ import { getAuthenticatedUser } from "@/lib/auth-helper";
 import { handleApiError } from "@/lib/errors/handleApiError";
 import { AppError } from "@/lib/errors/AppError";
 import { ErrorCode } from "@/lib/errors/errorCodes";
-import { getOrderTrackingForCustomer } from "@/server/service/order.service";
+import { cancelCustomerOrder, getOrderTrackingForCustomer } from "@/server/service/order.service";
 
 export async function GET(
   request: Request,
@@ -26,6 +26,20 @@ export async function GET(
     }
 
     return NextResponse.json(tracking, { status: 200 });
+  } catch (err: unknown) {
+    return handleApiError(err);
+  }
+}
+
+export async function DELETE(
+  _: Request,
+  { params }: { params: Promise<{ orderId: string }> },
+) {
+  try {
+    const { orderId } = await params;
+    const user = await getAuthenticatedUser();
+    const result = await cancelCustomerOrder(Number(orderId), Number(user.id));
+    return NextResponse.json(result);
   } catch (err: unknown) {
     return handleApiError(err);
   }

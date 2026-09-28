@@ -205,6 +205,45 @@ WHERE order_id = $1
 RETURNING order_id, rider_id, status
 `;
 
+export const REQUEUE_ADMIN_ORDER = `
+WITH eligible AS (
+  SELECT d.id, d.rider_id
+  FROM deliveries d
+  JOIN orders o ON o.id = d.order_id
+  WHERE d.order_id = $1
+    AND d.rider_id IS NOT NULL
+    AND d.status IN ('accepted', 'arrived_at_store')
+    AND o.order_status IN ('pending', 'confirmed', 'preparing', 'ready')
+  FOR UPDATE OF d
+)
+UPDATE deliveries d
+SET rider_id = NULL,
+    status = 'unassigned',
+    assigned_at = NULL,
+    updated_at = NOW()
+FROM eligible
+WHERE d.id = eligible.id
+RETURNING d.order_id, eligible.rider_id AS previous_rider_id, d.status
+`;
+
+export const RELEASE_REQUEUED_RIDER = `
+UPDATE riders r
+SET status = 'idle', updated_at = NOW()
+WHERE r.user_id = $1
+  AND NOT EXISTS (
+    SELECT 1
+    FROM deliveries d
+    WHERE d.rider_id = r.user_id
+      AND d.status IN (
+        'accepted',
+        'arrived_at_store',
+        'picked_up',
+        'arrived_at_destination'
+      )
+  )
+RETURNING r.user_id, r.status
+`;
+
 export const UPDATE_ADMIN_PAYMENT_STATUS = `
 UPDATE payments
 SET status = $2,
@@ -220,7 +259,11 @@ export const GET_WEEKLY_PLATFORM_PROFIT = `
 SELECT DATE_TRUNC('week', created_at) AS week,
        COUNT(*) AS order_count,
        COALESCE(SUM(GREATEST(total_amount - delivery_fee - discount, 0)), 0) AS product_sales,
-       COALESCE(SUM(CASE WHEN order_status <> 'cancelled' THEN $1::numeric ELSE 0 END), 0) AS platform_profit
+       COALESCE(SUM(CASE WHEN order_status <> 'cancelled'
+         AND EXISTS (
+           SELECT 1 FROM payments p
+           WHERE p.order_id = orders.id AND p.status = 'completed'
+         ) THEN $1::numeric ELSE 0 END), 0) AS platform_profit
 FROM orders
 WHERE created_at >= NOW() - ($2::int * INTERVAL '1 day')
 GROUP BY week
@@ -231,7 +274,11 @@ export const GET_RESTAURANT_WISE_PROFIT = `
 SELECT r.id, r.name,
        COUNT(o.id) AS order_count,
        COALESCE(SUM(GREATEST(o.total_amount - o.delivery_fee - o.discount, 0)), 0) AS total_sales,
-       COALESCE(SUM(CASE WHEN o.order_status <> 'cancelled' THEN $1::numeric ELSE 0 END), 0) AS admin_profit
+       COALESCE(SUM(CASE WHEN o.order_status <> 'cancelled'
+         AND EXISTS (
+           SELECT 1 FROM payments p
+           WHERE p.order_id = o.id AND p.status = 'completed'
+         ) THEN $1::numeric ELSE 0 END), 0) AS admin_profit
 FROM restaurants r
 LEFT JOIN orders o ON o.restaurant_id = r.id
   AND o.created_at >= NOW() - ($2::int * INTERVAL '1 day')
@@ -243,7 +290,11 @@ export const GET_PLATFORM_TOTALS = `
 SELECT COUNT(*) FILTER (WHERE order_status <> 'cancelled') AS order_count,
        COALESCE(SUM(GREATEST(total_amount - delivery_fee - discount, 0))
          FILTER (WHERE order_status <> 'cancelled'), 0) AS product_sales,
-       COALESCE(SUM(CASE WHEN order_status <> 'cancelled' THEN $1::numeric ELSE 0 END), 0) AS platform_profit
+       COALESCE(SUM(CASE WHEN order_status <> 'cancelled'
+         AND EXISTS (
+           SELECT 1 FROM payments p
+           WHERE p.order_id = orders.id AND p.status = 'completed'
+         ) THEN $1::numeric ELSE 0 END), 0) AS platform_profit
 FROM orders
 WHERE created_at >= NOW() - ($2::int * INTERVAL '1 day')
 `;

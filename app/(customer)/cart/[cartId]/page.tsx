@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ClockIcon, MinusIcon, PlusIcon, TagIcon } from "lucide-react";
-import { use, useRef, useState } from "react";
+import { use, useEffect, useRef, useState } from "react";
 
 import { AddressButton } from "@/components/address/AddressSelection";
 import { useAddresses } from "@/hooks/useAddressManager";
@@ -35,7 +35,6 @@ export function CheckoutPage({
   const { data: coupons = [], isLoading: isCouponsLoading } = useUserCoupons();
   const {
     createCartItem,
-    isCreating,
     placeOrder,
     isPlacingOrder,
     addCoupon,
@@ -76,12 +75,18 @@ export function CheckoutPage({
   } = useOrderQuote(selectedCart?.id ?? null, activeAddressId);
 
   const [quantityOverrides, setQuantityOverrides] = useState<
-    Record<number, number>
+    Record<
+      number,
+      { menuItemId: number; restaurantId: number; quantity: number }
+    >
   >({});
-  const items = (selectedCart?.cartItems ?? []).map((item) => ({
-    ...item,
-    quantity: quantityOverrides[item.id] ?? item.quantity,
-  }));
+  const [isSavingQuantity, setIsSavingQuantity] = useState(false);
+  const items = (selectedCart?.cartItems ?? [])
+    .map((item) => ({
+      ...item,
+      quantity: quantityOverrides[item.id]?.quantity ?? item.quantity,
+    }))
+    .filter((item) => item.quantity > 0);
   const restaurantName = selectedCart?.restaurantName ?? "Restaurant";
 
   const activeCoupon = coupons.find((c) => c.id === effectiveCouponId);
@@ -89,35 +94,74 @@ export function CheckoutPage({
   const couponDiscount = quote?.discount ?? 0;
   const vatTaxes = quote?.tax ?? 0;
   const deliveryFee = quote?.deliveryFee ?? 0;
+  const platformFee = quote?.platformFee ?? 0;
   const total = quote?.finalTotal ?? 0;
 
-  // Update item quantity on cart
-  const updateQuantity = async (item: CartItem, quantity: number) => {
-    if (quantity < 0) return;
+  useEffect(() => {
+    const updates = Object.entries(quantityOverrides);
+    if (isSavingQuantity || updates.length === 0) return;
+
+    const timer = setTimeout(() => {
+      setIsSavingQuantity(true);
+      setError(null);
+
+      void Promise.all(updates.map(([, update]) => createCartItem(update)))
+        .then(() => {
+          setQuantityOverrides((current) => {
+            const next = { ...current };
+            for (const [itemId, sent] of updates) {
+              if (next[Number(itemId)]?.quantity === sent.quantity) {
+                delete next[Number(itemId)];
+              }
+            }
+            return next;
+          });
+        })
+        .catch((requestError: unknown) => {
+          setQuantityOverrides({});
+          setError(
+            requestError instanceof Error
+              ? requestError.message
+              : "Unable to update cart",
+          );
+        })
+        .finally(() => setIsSavingQuantity(false));
+    }, 200);
+
+    return () => clearTimeout(timer);
+  }, [createCartItem, isSavingQuantity, quantityOverrides]);
+
+  // Update immediately in the UI; the effect persists the latest rapid click.
+  const queueQuantity = (item: CartItem, quantity: number) => {
+    if (!selectedCart || quantity < 0) return;
     setQuantityOverrides((current) => ({
       ...current,
-      [item.id]: quantity,
-    }));
-    setError(null);
-    try {
-      await createCartItem({
+      [item.id]: {
         menuItemId: item.menuItemId,
-        restaurantId: selectedCart!.restaurantId,
+        restaurantId: selectedCart.restaurantId,
         quantity,
-      });
-    } catch (requestError) {
-      setQuantityOverrides((current) => {
-        const next = { ...current };
-        delete next[item.id];
-        return next;
-      });
-      setError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Unable to update cart",
-      );
-    }
+      },
+    }));
   };
+
+  const changeQuantity = (item: CartItem, change: number) => {
+    if (!selectedCart) return;
+    setQuantityOverrides((current) => {
+      const quantity = (current[item.id]?.quantity ?? item.quantity) + change;
+      if (quantity < 0) return current;
+      return {
+        ...current,
+        [item.id]: {
+          menuItemId: item.menuItemId,
+          restaurantId: selectedCart.restaurantId,
+          quantity,
+        },
+      };
+    });
+  };
+
+  const hasPendingQuantityChanges =
+    isSavingQuantity || Object.keys(quantityOverrides).length > 0;
 
   // Attach Coupon directly to Cart
   const handleApplyCoupon = async (couponId: number | null) => {
@@ -232,6 +276,9 @@ export function CheckoutPage({
                           src={item.image}
                           alt={item.menuItemName}
                           fill
+                          onError={(event) => {
+                            event.currentTarget.src = "/placeholder.jpg";
+                          }}
                           className="object-cover"
                           sizes="64px"
                         />
@@ -256,9 +303,8 @@ export function CheckoutPage({
                     <div className="flex items-center border border-border bg-background px-2 py-1">
                       <button
                         type="button"
-                        disabled={isCreating}
-                        onClick={() => updateQuantity(item, item.quantity - 1)}
-                        className="p-1 text-muted-foreground hover:text-foreground disabled:opacity-50"
+                        onClick={() => changeQuantity(item, -1)}
+                        className="p-1 text-muted-foreground hover:text-foreground"
                         aria-label={`Decrease ${item.menuItemName}`}
                       >
                         <MinusIcon className="size-3" />
@@ -268,9 +314,8 @@ export function CheckoutPage({
                       </span>
                       <button
                         type="button"
-                        disabled={isCreating}
-                        onClick={() => updateQuantity(item, item.quantity + 1)}
-                        className="p-1 text-muted-foreground hover:text-foreground disabled:opacity-50"
+                        onClick={() => changeQuantity(item, 1)}
+                        className="p-1 text-muted-foreground hover:text-foreground"
                         aria-label={`Increase ${item.menuItemName}`}
                       >
                         <PlusIcon className="size-3" />
@@ -284,7 +329,7 @@ export function CheckoutPage({
                       </p>
                       <button
                         type="button"
-                        onClick={() => updateQuantity(item, 0)}
+                        onClick={() => queueQuantity(item, 0)}
                         className="mt-0.5 text-xs text-muted-foreground hover:text-destructive hover:underline"
                       >
                         Remove
@@ -327,6 +372,12 @@ export function CheckoutPage({
                   <dt>Delivery Partner Fee</dt>
                   <dd className="font-semibold text-foreground">
                     {formatPrice(deliveryFee)}
+                  </dd>
+                </div>
+                <div className="flex justify-between text-muted-foreground">
+                  <dt>Platform Fee</dt>
+                  <dd className="font-semibold text-foreground">
+                    {formatPrice(platformFee)}
                   </dd>
                 </div>
 
@@ -510,11 +561,10 @@ export function CheckoutPage({
               <div className="flex items-start gap-3 border border-emerald-200 bg-emerald-50/70 p-3 text-emerald-900">
                 <ClockIcon className="mt-0.5 size-4 shrink-0 text-emerald-700" />
                 <div>
-                  <p className="text-xs font-bold">
-                    Estimated Delivery: 45 - 55 Minutes
-                  </p>
+                  <p className="text-xs font-bold">Delivery demo status</p>
                   <p className="mt-0.5 text-[10px] text-emerald-700">
-                    Your curator will bring your order hot in thermal bags.
+                    Order and rider milestones refresh periodically after
+                    checkout.
                   </p>
                 </div>
               </div>
@@ -536,6 +586,7 @@ export function CheckoutPage({
                   !addresses.length ||
                   !quote ||
                   isQuoteFetching ||
+                  hasPendingQuantityChanges ||
                   isPlacingOrder
                 }
                 onClick={handlePlaceOrder}
@@ -543,6 +594,8 @@ export function CheckoutPage({
               >
                 {isPlacingOrder
                   ? "Placing order..."
+                  : hasPendingQuantityChanges
+                    ? "Updating cart..."
                   : isQuoteFetching
                     ? "Calculating total..."
                     : `Place Order (Payable ${formatPrice(total)})`}

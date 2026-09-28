@@ -8,6 +8,7 @@ import {
   fetchUserCoupons,
   placeOrder,
   submitReview,
+  cancelCustomerOrder,
 } from "@/services/orderService";
 import type { Cart, CartItemInput, CreateOrderInput, OrderQuote, SubmitReviewInput } from "@/types/order";
 import { Restaurant, RestaurantMenu } from "@/types/restaurant";
@@ -54,6 +55,20 @@ export function useOrderDetail(orderId: number) {
     queryFn: () => fetchOrderDetail(orderId),
     enabled: Number.isInteger(orderId),
   });
+}
+
+export function useCancelOrder(orderId: number) {
+  const queryClient = useQueryClient();
+  const mutation = useMutation({
+    mutationFn: () => cancelCustomerOrder(orderId),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["orders", orderId] }),
+        queryClient.invalidateQueries({ queryKey: ["orders", "history"] }),
+      ]);
+    },
+  });
+  return { cancelOrder: mutation.mutateAsync, isCancelling: mutation.isPending };
 }
 
 export function useOrderQuote(
@@ -103,8 +118,18 @@ export function useOrder() {
   const submitReviewMutation = useMutation({
     mutationFn: (input: SubmitReviewInput) =>
       submitReview(input),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["reviews"] });
+    onSuccess: async (_, input) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["reviews"] }),
+        queryClient.invalidateQueries({
+          queryKey: ["restaurant", input.restaurantId],
+        }),
+        queryClient.invalidateQueries({ queryKey: ["restaurants"] }),
+        queryClient.invalidateQueries({ queryKey: ["orders", "history"] }),
+        queryClient.invalidateQueries({
+          queryKey: ["orders", input.orderId, "tracking"],
+        }),
+      ]);
     }
   });
 
@@ -124,8 +149,7 @@ export function useOrder() {
   });
 
   return {
-    createCartItem: ( input: CartItemInput ) =>
-      createCartItemMutation.mutateAsync(input),
+    createCartItem: createCartItemMutation.mutateAsync,
     isCreating: createCartItemMutation.isPending,
     placeOrder: (input: CreateOrderInput) =>
       placeOrderMutation.mutateAsync(input),

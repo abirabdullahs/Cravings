@@ -82,6 +82,14 @@ export interface MenuItemInput {
   categoryId: number | null;
 }
 
+export interface RestaurantReview {
+  id: number;
+  rating: number;
+  comment: string | null;
+  customerName: string;
+  createdAt: string;
+}
+
 export const emptyRestaurantInput: RestaurantInput = {
   name: "",
   description: "",

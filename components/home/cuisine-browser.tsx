@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { CUISINES } from "@/lib/restaurants";
 import { SectionHeading } from "@/components/common/section-heading";
 import { Chip } from "@/components/common/chip";
 
 export function CuisineBrowser() {
-  const [active, setActive] = useState("all");
+  const router = useRouter();
 
   return (
     <section className="px-2 pt-12 sm:px-14">
@@ -15,8 +15,13 @@ export function CuisineBrowser() {
         {CUISINES.map((cuisine) => (
           <Chip
             key={cuisine.key}
-            selected={active === cuisine.key}
-            onClick={() => setActive(cuisine.key)}
+            onClick={() =>
+              router.push(
+                cuisine.key === "all"
+                  ? "/search"
+                  : `/search?cuisine=${encodeURIComponent(cuisine.key)}`,
+              )
+            }
           >
             {cuisine.label}
           </Chip>

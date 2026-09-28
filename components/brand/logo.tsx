@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import logoImg from "@/public/logo.png" // or "../public/logo.png" depending on your alias
+
 type LogoProps = {
   /** "default" for light backgrounds, "inverted" for dark footers */
   variant?: "default" | "inverted";
@@ -22,26 +22,18 @@ export function Logo({
         className,
       )}
     >
-      {/* Icon Graphic */}
-      <div className="relative h-9 w-9 shrink-0">
-        <Image
-          src={logoImg} 
-          alt="Logo"
-          fill
-          sizes="(max-width: 768px) 100vw, 33vw" 
-          className="object-contain"
-        />
-      </div>
-
-      {/* Brand Name Text */}
-      <span
+      <Image
+        src="/logo.svg"
+        alt="Cravings"
+        width={137}
+        height={40}
+        priority
+        unoptimized
         className={cn(
-          "font-serif text-2xl font-bold tracking-tight",
-          variant === "inverted" ? "text-white" : "text-amber-950",
+          "h-10 w-auto",
+          variant === "inverted" && "brightness-0 invert",
         )}
-      >
-        Cravings<span className="text-primary">.</span>
-      </span>
+      />
     </Link>
   );
 }

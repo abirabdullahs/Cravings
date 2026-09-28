@@ -23,3 +23,12 @@ export const advanceDeliveryStatus = async (
     body: JSON.stringify({ status, ...location }),
   });
 };
+
+export const cancelDeliveryAssignment = async (
+  orderId: number,
+): Promise<void> => {
+  await apiRequest(`/api/rider/deliveries/${orderId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ status: "cancelled" }),
+  });
+};

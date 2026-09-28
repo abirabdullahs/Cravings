@@ -17,15 +17,26 @@ export async function apiRequest<T>(
   const body = await response.json().catch(() => null);
 
   if (!response.ok) {
-    const rawCode = body?.error?.code;
-    const message = body?.error?.message ?? "An unexpected error occurred";
+    const errorBody = body?.error;
+    const rawCode =
+      errorBody && typeof errorBody === "object" ? errorBody.code : undefined;
+    const message =
+      (errorBody && typeof errorBody === "object" && errorBody.message) ||
+      (typeof errorBody === "string" && errorBody) ||
+      (typeof body?.message === "string" && body.message) ||
+      "An unexpected error occurred";
 
     const code: ErrorCode =
-      rawCode && rawCode in ErrorCode
+      typeof rawCode === "string" &&
+      Object.values(ErrorCode).includes(rawCode as ErrorCode)
         ? (rawCode as ErrorCode)
         : ErrorCode.INTERNAL_ERROR;
 
-    throw new AppError(code, message, body?.error?.details);
+    const details =
+      errorBody && typeof errorBody === "object"
+        ? errorBody.details
+        : undefined;
+    throw new AppError(code, String(message), details);
   }
 
   return body as T;

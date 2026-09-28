@@ -1,5 +1,6 @@
 import { pool } from "@/lib/db";
-import { INSERT_REVIEW } from "../query/review.query";
+import { GET_RESTAURANT_REVIEWS, INSERT_REVIEW } from "../query/review.query";
+import { toCamelCase } from "@/lib/case";
 
 export interface CreateReviewParams {
   userId: number;
@@ -24,4 +25,10 @@ export async function insertReview(params: CreateReviewParams) {
   ];
   const { rows } = await pool.query(INSERT_REVIEW, values);
   return rows[0];
+}
+
+export async function findRestaurantReviews(restaurantId: number) {
+  return toCamelCase(
+    (await pool.query(GET_RESTAURANT_REVIEWS, [restaurantId])).rows,
+  );
 }

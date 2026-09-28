@@ -127,6 +127,12 @@ function validateRestaurant(input: RestaurantInput) {
       "Name and address are required",
     );
   }
+  if (input.latitude == null || input.longitude == null) {
+    throw new AppError(
+      ErrorCode.MISSING_FIELD,
+      "Select the restaurant location on the map",
+    );
+  }
   if (
     !Number.isFinite(input.deliveryFee) ||
     input.deliveryFee < 0 ||

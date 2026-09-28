@@ -58,6 +58,7 @@ export interface OrderQuote {
   discount: number;
   deliveryFee: number;
   tax: number;
+  platformFee: number;
   finalTotal: number;
 }
 
@@ -98,6 +99,7 @@ export interface OrderDetail {
   discount: number;
   deliveryFee: number;
   tax: number;
+  platformFee: number;
   totalAmount: number;
   paidAt: string | null;
   transactionId: string | null;

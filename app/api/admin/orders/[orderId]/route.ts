@@ -1,6 +1,8 @@
 import { pool } from "@/lib/db";
-import { ASSIGN_ADMIN_ORDER_RIDER, GET_ADMIN_ORDER_DETAILS, GET_ADMIN_ORDER_ITEMS, UPDATE_ADMIN_ORDER_STATUS, UPDATE_ADMIN_PAYMENT_STATUS } from "@/server/query/admin.query";
+import { ASSIGN_ADMIN_ORDER_RIDER, GET_ADMIN_ORDER_DETAILS, GET_ADMIN_ORDER_ITEMS, RELEASE_REQUEUED_RIDER, REQUEUE_ADMIN_ORDER, UPDATE_ADMIN_ORDER_STATUS, UPDATE_ADMIN_PAYMENT_STATUS } from "@/server/query/admin.query";
 import { adminApiError, requireAdmin } from "../../_lib";
+import { cancelOrder } from "@/server/repository/order.repository";
+import { AppError } from "@/lib/errors/AppError";
 
 export async function GET(_: Request, { params }: { params: Promise<{ orderId: string }> }) {
   const access = await requireAdmin();
@@ -25,6 +27,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ or
 
   const { orderId } = await params;
   const payload = await request.json();
+  const action = payload.action;
   const orderStatus = payload.orderStatus;
   const paymentStatus = payload.paymentStatus;
   const hasRiderUpdate = Object.prototype.hasOwnProperty.call(payload, "riderId");
@@ -35,9 +38,34 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ or
   if (paymentStatus !== undefined && !allowedPaymentStatuses.includes(paymentStatus)) return Response.json({ error: "Invalid payment status" }, { status: 400 });
   if (hasRiderUpdate && riderId !== null && !Number.isInteger(riderId)) return Response.json({ error: "Invalid rider" }, { status: 400 });
 
+  if (action === "cancel") {
+    try {
+      return Response.json({ order: await cancelOrder(orderId, null) });
+    } catch (error) {
+      if (error instanceof AppError) {
+        return Response.json(error.toJSON(), { status: error.status });
+      }
+      return adminApiError(error);
+    }
+  }
+
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
+    if (action === "requeue") {
+      const result = await client.query(REQUEUE_ADMIN_ORDER, [orderId]);
+      const delivery = result.rows[0];
+      if (!delivery) {
+        await client.query("ROLLBACK");
+        return Response.json(
+          { error: "Only accepted deliveries that have not been picked up can be requeued" },
+          { status: 409 },
+        );
+      }
+      await client.query(RELEASE_REQUEUED_RIDER, [delivery.previous_rider_id]);
+      await client.query("COMMIT");
+      return Response.json({ delivery });
+    }
     let order = null;
     let delivery = null;
     let payment = null;

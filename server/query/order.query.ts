@@ -1,9 +1,9 @@
 export const CALL_CREATE_ORDER_PROCEDURE = `
-CALL creation_of_order($1, $2, $3, $4, $5::UUID, $6, NULL);
+CALL creation_of_order($1, $2, $3, $4, $5::UUID, $6, $7, NULL);
 `;
 export const GET_ORDER_QUOTE = `
-SELECT subtotal, discount, delivery_fee, tax, final_total
-FROM calculate_order_quote($1, $2, $3);
+SELECT subtotal, discount, delivery_fee, tax, platform_fee, final_total
+FROM calculate_order_quote($1, $2, $3, $4);
 `;
 export const GET_USER_ORDERS = `
 SELECT 
@@ -76,10 +76,15 @@ SELECT
   COALESCE(SUM(oi.subtotal) OVER (), 0)::NUMERIC(10,2) AS subtotal,
   o.discount,
   o.delivery_fee,
-  ROUND(
-    o.total_amount - COALESCE(SUM(oi.subtotal) OVER (), 0) + o.discount - o.delivery_fee,
-    2
-  ) AS tax,
+  ROUND(COALESCE(SUM(oi.subtotal) OVER (), 0) * 0.03, 2) AS tax,
+  ROUND(GREATEST(
+    o.total_amount
+      - COALESCE(SUM(oi.subtotal) OVER (), 0)
+      + o.discount
+      - o.delivery_fee
+      - ROUND(COALESCE(SUM(oi.subtotal) OVER (), 0) * 0.03, 2),
+    0
+  ), 2) AS platform_fee,
   o.total_amount,
   p.paid_at,
   p.transaction_id,
@@ -117,11 +122,30 @@ SELECT
     WHEN r.latitude IS NOT NULL AND r.longitude IS NOT NULL
       AND ua.latitude IS NOT NULL AND ua.longitude IS NOT NULL
     THEN calculate_distance_km(r.latitude, r.longitude, ua.latitude, ua.longitude)
+    WHEN latest_location.latitude IS NOT NULL
+      AND latest_location.longitude IS NOT NULL
+      AND ua.latitude IS NOT NULL AND ua.longitude IS NOT NULL
+      AND d.status IN ('accepted', 'arrived_at_store', 'picked_up')
+    THEN calculate_distance_km(
+      latest_location.latitude,
+      latest_location.longitude,
+      ua.latitude,
+      ua.longitude
+    )
     ELSE NULL
   END AS distance_km,
   o.total_amount,
   p.payment_method,
-  (SELECT COUNT(*)::int FROM order_items oi WHERE oi.order_id = o.id) AS item_count
+  EXISTS (
+    SELECT 1
+    FROM reviews review
+    WHERE review.order_id = o.id
+  ) AS is_reviewed,
+  (
+    SELECT COALESCE(SUM(oi.quantity), 0)::int
+    FROM order_items oi
+    WHERE oi.order_id = o.id
+  ) AS item_count
 FROM orders o
 JOIN restaurants r ON r.id = o.restaurant_id
 JOIN user_addresses ua ON ua.id = o.address_id
@@ -138,12 +162,48 @@ LEFT JOIN payments p ON p.order_id = o.id
 WHERE o.id = $1 AND o.user_id = $2
 `;
 
-//cancel order by user
-export const CANCEL_ORDER = `UPDATE orders SET order_status = 'cancelled' WHERE id = $1 AND user_id = $2 RETURNING *;`;
+export const CANCEL_ORDER = `
+WITH eligible AS (
+  SELECT o.id, d.rider_id
+  FROM orders o
+  JOIN deliveries d ON d.order_id = o.id
+  WHERE o.id = $1
+    AND ($2::int IS NULL OR o.user_id = $2)
+    AND o.order_status IN ('pending', 'confirmed', 'preparing', 'ready')
+    AND d.status IN ('unassigned', 'accepted', 'arrived_at_store')
+  FOR UPDATE OF o, d
+)
+UPDATE orders o
+SET order_status = 'cancelled', updated_at = NOW()
+FROM eligible
+WHERE o.id = eligible.id
+RETURNING o.*, eligible.rider_id AS previous_rider_id;
+`;
 export const CANCEL_DELIVERY_ON_ORDER_CANCEL = `
 UPDATE deliveries
 SET status = 'cancelled'
-WHERE order_id = $1 AND status = 'unassigned';
+WHERE order_id = $1
+  AND status IN ('unassigned', 'accepted', 'arrived_at_store');
+`;
+export const CANCEL_PAYMENT_ON_ORDER_CANCEL = `
+UPDATE payments
+SET status = CASE
+      WHEN status = 'completed' THEN 'refunded'::payment_status_enum
+      ELSE 'failed'::payment_status_enum
+    END
+WHERE order_id = $1
+  AND status IN ('pending', 'completed');
+`;
+export const RELEASE_RIDER_AFTER_ORDER_CANCEL = `
+UPDATE riders r
+SET status = 'idle', updated_at = NOW()
+WHERE r.user_id = $1
+  AND NOT EXISTS (
+    SELECT 1
+    FROM deliveries d
+    WHERE d.rider_id = r.user_id
+      AND d.status IN ('accepted', 'arrived_at_store', 'picked_up', 'arrived_at_destination')
+  );
 `;
 // const Increase_Stock = `
 // WITH cart_data AS (

@@ -16,9 +16,11 @@ export type RoleRequest = {
 export function RoleRequestsTable({
   requests,
   onReview,
+  disabled = false,
 }: {
   requests: RoleRequest[];
   onReview: (id: number, status: "APPROVED" | "REJECTED") => void;
+  disabled?: boolean;
 }) {
   if (!requests.length) return null;
 
@@ -80,13 +82,15 @@ export function RoleRequestsTable({
                     <>
                       <button
                         onClick={() => onReview(request.id, "APPROVED")}
-                        className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 transition"
+                        disabled={disabled}
+                        className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-emerald-700 disabled:opacity-50"
                       >
                         Approve
                       </button>
                       <button
                         onClick={() => onReview(request.id, "REJECTED")}
-                        className="rounded-lg bg-destructive px-3 py-1.5 text-xs font-bold text-white hover:bg-destructive/90 transition"
+                        disabled={disabled}
+                        className="rounded-lg bg-destructive px-3 py-1.5 text-xs font-bold text-white transition hover:bg-destructive/90 disabled:opacity-50"
                       >
                         Reject
                       </button>

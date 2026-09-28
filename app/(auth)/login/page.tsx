@@ -13,7 +13,7 @@ export default function LoginPage() {
       case "admin":
         return "/admin";
       case "owner":
-        return "/restaurant";
+        return "/owner";
       case "rider":
         return "/rider";
       default:

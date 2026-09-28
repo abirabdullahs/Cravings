@@ -36,8 +36,8 @@ export function SiteFooter() {
           <div className="max-w-xs">
             <Logo variant="inverted" />
             <p className="mt-4 text-sm leading-relaxed text-footer-muted">
-              Fine-dining delivery, celebrating the historic and modern culinary
-              heritage of Dhaka.
+              An academic DBMS project demonstrating a multi-role food delivery
+              workflow in Dhaka.
             </p>
           </div>
 
