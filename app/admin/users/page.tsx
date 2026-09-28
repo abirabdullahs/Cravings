@@ -9,21 +9,46 @@ export default function AdminUsersPage() {
   const [role, setRole] = useState("");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const [selected, setSelected] = useState<AdminUser | null>(null);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const limit = 50;
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
       async function load() {
         setLoading(true);
-        const query = new URLSearchParams({ role, search });
-        const response = await fetch(`/api/admin/users?${query}`);
-        if (response.ok) setUsers((await response.json()).users ?? []);
-        setLoading(false);
+        setError("");
+        try {
+          const query = new URLSearchParams({ role, search, page: String(page), limit: String(limit) });
+          const response = await fetch(`/api/admin/users?${query}`);
+          const payload = await response.json();
+          if (response.ok) {
+            setUsers(payload.users ?? []);
+            setTotal(Number(payload.total ?? 0));
+          }
+          else setError(payload.error || "Could not load users.");
+        } catch {
+          setError("Could not load users.");
+        } finally {
+          setLoading(false);
+        }
       }
       void load();
     }, 250);
     return () => window.clearTimeout(timer);
-  }, [role, search]);
+  }, [role, search, page]);
+
+  function updateSearch(value: string) {
+    setPage(1);
+    setSearch(value);
+  }
+
+  function updateRole(value: string) {
+    setPage(1);
+    setRole(value);
+  }
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-12">
@@ -36,16 +61,28 @@ export default function AdminUsersPage() {
           Search accounts and inspect roles, orders, and requests.
         </p>
       </header>
+      {error && (
+        <p className="mb-4 border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+          {error}
+        </p>
+      )}
       <UserManagementTable
         users={users}
         loading={loading}
         search={search}
         role={role}
-        onSearch={setSearch}
-        onRole={setRole}
+        onSearch={updateSearch}
+        onRole={updateRole}
         selected={selected}
         onSelect={setSelected}
       />
+      <div className="mt-4 flex items-center justify-between text-sm">
+        <span className="text-muted-foreground">Page {page} of {Math.max(Math.ceil(total / limit), 1)}</span>
+        <div className="flex gap-2">
+          <button type="button" disabled={page === 1 || loading} onClick={() => setPage((current) => current - 1)} className="border border-border px-3 py-2 disabled:opacity-50">Previous</button>
+          <button type="button" disabled={page >= Math.ceil(total / limit) || loading} onClick={() => setPage((current) => current + 1)} className="border border-border px-3 py-2 disabled:opacity-50">Next</button>
+        </div>
+      </div>
     </div>
   );
 }

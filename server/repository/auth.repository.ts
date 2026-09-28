@@ -162,7 +162,10 @@ export const approveRoleRequestWithProfile = async ({
     const request = requestResult.rows[0];
     if (!request || request.status !== "PENDING") return null;
 
-    const nid = String(request.verification_data?.nid_number ?? "")
+    const verificationData = (request.verification_data ?? {}) as Record<string, unknown>;
+    const nid = String(
+      verificationData.nid_number ?? verificationData.nid ?? "",
+    )
       .replace(/\s+/g, "")
       .toLowerCase();
     if (nid) {
@@ -183,24 +186,34 @@ export const approveRoleRequestWithProfile = async ({
       }
     }
 
-    await client.query(APPROVE_ROLE_REQUEST, [
-      String(request.user_id),
-      request.requested_role,
-    ]);
-
-    if (request.requested_role === "rider") {
+    const requestedRole = String(request.requested_role ?? "").toLowerCase();
+    if (requestedRole === "rider") {
       await client.query(INSERT_RIDER_PROFILE, [
         String(request.user_id),
-        request.verification_data?.vehicle_type ?? "BIKE",
-        request.verification_data?.vehicle_plate ??
-          request.verification_data?.license_number ??
-          `RIDER-${request.user_id}`,
+        String(verificationData.vehicle_type ?? "BIKE"),
+        String(
+          verificationData.vehicle_plate ??
+            verificationData.vehicle_number ??
+            verificationData.license_number ??
+            `RIDER-${request.user_id}`,
+        ),
+        String(verificationData.license_number ?? verificationData.licence_number ?? ""),
+        String(verificationData.nid_number ?? ""),
       ]);
-    } else if (request.requested_role === "owner") {
+    } else if (requestedRole === "owner") {
       await client.query(INSERT_RESTAURANT_OWNER_PROFILE, [
         String(request.user_id),
+        String(verificationData.nid_number ?? ""),
+        String(verificationData.business_name ?? ""),
+        String(verificationData.trade_licence ?? verificationData.trade_license ?? ""),
+        String(verificationData.address ?? ""),
       ]);
     }
+
+    await client.query(APPROVE_ROLE_REQUEST, [
+      String(request.user_id),
+      requestedRole,
+    ]);
 
     const reviewed = await client.query(UPDATE_ROLE_REQUEST_STATUS, [
       "APPROVED",

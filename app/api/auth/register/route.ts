@@ -1,5 +1,9 @@
 import { AppError } from "@/lib/errors/AppError";
-import { createAccount } from "@/server/service/auth.service";
+import {
+  createAccount,
+  toSafeUserDTO,
+  validateRegistrationInput,
+} from "@/server/service/auth.service";
 import { NextResponse } from "next/server";
 
 export const POST = async (request: Request) => {
@@ -19,13 +23,26 @@ export const POST = async (request: Request) => {
         { status: 400 },
       );
     }
-    email = data.email.trim().toLowerCase();
+
+    const validation = validateRegistrationInput(data);
+    if (!validation.valid) {
+      return NextResponse.json(
+        { error: Object.values(validation.errors)[0] },
+        { status: 400 },
+      );
+    }
+
+    email = validation.normalized.email;
     data.email = email;
+    data.name = validation.normalized.name;
+    data.phone = validation.normalized.phone;
+    data.role = validation.normalized.role;
     const user = await createAccount({
       ...data,
+      role: "customer",
       verificationData: data.verificationData ?? data.verification_data ?? {},
     });
-    return NextResponse.json(user, { status: 201 });
+    return NextResponse.json(toSafeUserDTO(user), { status: 201 });
   } catch (error: unknown) {
     if (error instanceof AppError) {
       return NextResponse.json(
@@ -33,9 +50,9 @@ export const POST = async (request: Request) => {
         { status: error.status },
       );
     }
-    
+
     return NextResponse.json(
-      { error: "Unable to create account" , message: (error as Error).message },
+      { error: "Unable to create account", message: (error as Error).message },
       { status: 500 },
     );
   }

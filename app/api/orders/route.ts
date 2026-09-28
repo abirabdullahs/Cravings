@@ -1,18 +1,29 @@
 import { getAuthenticatedUser } from "@/lib/auth-helper";
 import { handleApiError } from "@/lib/errors/handleApiError";
+import { stripBodyUserOverride } from "@/server/service/auth.service";
 import { getUserOrders, placeOrder } from "@/server/service/order.service";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
   try {
     const user = await getAuthenticatedUser();
-    const input = await request.json();
+    const input = stripBodyUserOverride(
+      (await request.json()) as {
+        userId?: string;
+        cartId: unknown;
+        addressId: unknown;
+        paymentMethod: unknown;
+        idempotencyKey: unknown;
+        deliveryInstructions: unknown;
+      },
+      user.id,
+    );
     const order = await placeOrder({
       userId: user.id,
-      cartId: input.cartId,
-      addressId: input.addressId,
-      paymentMethod: input.paymentMethod,
-      idempotencyKey: input.idempotencyKey,
+      cartId: Number(input.cartId),
+      addressId: Number(input.addressId),
+      paymentMethod: String(input.paymentMethod ?? ""),
+      idempotencyKey: String(input.idempotencyKey ?? ""),
       deliveryInstructions: input.deliveryInstructions,
     });
     return NextResponse.json(order, { status: 201 });

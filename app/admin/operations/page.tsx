@@ -5,12 +5,35 @@ import { RoleRequestsTable } from "@/components/admin/RoleRequestsTable";
 import type { Restaurant, Rider, ReviewRequest } from "@/types/admin-types";
 import { apiRequest, toErrorMessage } from "@/lib/http";
 
+const PAGE_SIZE = 10;
+
+function ListPager({ page, total, onPage }: { page: number; total: number; onPage: (page: number) => void }) {
+  const pages = Math.max(Math.ceil(total / PAGE_SIZE), 1);
+  if (total <= PAGE_SIZE) return null;
+  return (
+    <div className="flex items-center justify-between border-t border-border px-4 py-3 text-xs">
+      <span className="text-muted-foreground">Page {page} of {pages}</span>
+      <div className="flex gap-2">
+        <button type="button" disabled={page === 1} onClick={() => onPage(page - 1)} className="border border-border px-2 py-1 disabled:opacity-50">Previous</button>
+        <button type="button" disabled={page === pages} onClick={() => onPage(page + 1)} className="border border-border px-2 py-1 disabled:opacity-50">Next</button>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminOperationsPage() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [riders, setRiders] = useState<Rider[]>([]);
   const [requests, setRequests] = useState<ReviewRequest[]>([]);
   const [error, setError] = useState("");
   const [pendingAction, setPendingAction] = useState<string | null>(null);
+  const [restaurantPage, setRestaurantPage] = useState(1);
+  const [riderPage, setRiderPage] = useState(1);
+  const [requestPage, setRequestPage] = useState(1);
+
+  const visibleRestaurants = restaurants.slice((restaurantPage - 1) * PAGE_SIZE, restaurantPage * PAGE_SIZE);
+  const visibleRiders = riders.slice((riderPage - 1) * PAGE_SIZE, riderPage * PAGE_SIZE);
+  const visibleRequests = requests.slice((requestPage - 1) * PAGE_SIZE, requestPage * PAGE_SIZE);
 
   useEffect(() => {
     async function load() {
@@ -25,6 +48,9 @@ export default function AdminOperationsPage() {
         setRestaurants((await responses[0].json()).restaurants ?? []);
         setRiders((await responses[1].json()).riders ?? []);
         setRequests((await responses[2].json()).requests ?? []);
+        setRestaurantPage(1);
+        setRiderPage(1);
+        setRequestPage(1);
       } catch (loadError) {
         setError(
           loadError instanceof Error
@@ -156,7 +182,7 @@ export default function AdminOperationsPage() {
                 </tr>
               </thead>
               <tbody>
-                {restaurants.map((restaurant) => (
+                {visibleRestaurants.map((restaurant) => (
                   <tr key={restaurant.id} className="border-b border-border">
                     <td className="px-4 py-4">
                       <strong>{restaurant.name}</strong>
@@ -181,12 +207,13 @@ export default function AdminOperationsPage() {
                 ))}
               </tbody>
             </table>
+            <ListPager page={restaurantPage} total={restaurants.length} onPage={setRestaurantPage} />
           </div>
         </section>
         <section>
           <h2 className="mb-4 font-serif text-2xl font-bold">Riders</h2>
           <div className="border border-border bg-card">
-            {riders.map((rider) => (
+            {visibleRiders.map((rider) => (
               <div
                 key={rider.id}
                 className="border-b border-border p-4 text-sm"
@@ -215,14 +242,16 @@ export default function AdminOperationsPage() {
                 </p>
               </div>
             ))}
+            <ListPager page={riderPage} total={riders.length} onPage={setRiderPage} />
           </div>
         </section>
       </div>
       <RoleRequestsTable
-        requests={requests}
+        requests={visibleRequests}
         onReview={(id, status) => void reviewRequest(id, status)}
         disabled={pendingAction !== null}
       />
+      <ListPager page={requestPage} total={requests.length} onPage={setRequestPage} />
     </div>
   );
 }

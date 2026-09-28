@@ -24,6 +24,7 @@ export default function AdminMarketingPage() {
     userIds: [] as number[],
   });
   const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -46,53 +47,67 @@ export default function AdminMarketingPage() {
 
   async function sendNotification(event: React.FormEvent) {
     event.preventDefault();
-    const response = await fetch("/api/admin/notifications", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(notification),
-    });
-    const payload = await response.json();
-    setMessage(
-      response.ok
-        ? `Notification sent to ${payload.sentCount} customers.`
-        : payload.error || "Could not send notification",
-    );
-    if (response.ok)
-      setNotification({ title: "", message: "", audience: "all", userIds: [] });
+    setLoading(true);
+    try {
+      const response = await fetch("/api/admin/notifications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(notification),
+      });
+      const payload = await response.json();
+      setMessage(
+        response.ok
+          ? `Notification sent to ${payload.sentCount} customers.`
+          : payload.error || "Could not send notification",
+      );
+      if (response.ok)
+        setNotification({ title: "", message: "", audience: "all", userIds: [] });
+    } catch {
+      setMessage("Could not send notification. Check your connection and try again.");
+    } finally {
+      setLoading(false);
+    }
   }
   async function createCoupon(event: React.FormEvent) {
     event.preventDefault();
-    const response = await fetch("/api/admin/coupons", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(coupon),
-    });
-    const payload = await response.json();
-    setMessage(
-      response.ok
-        ? "Coupon created."
-        : payload.error || "Could not create coupon",
-    );
-    if (response.ok) {
-      setCoupons((current) => [
-        {
-          ...payload.coupon,
-          assigned_count:
-            coupon.assignMode === "all"
-              ? customers.length
-              : coupon.userIds.length,
-        },
-        ...current,
-      ]);
-      setCoupon({
-        code: "",
-        discountType: "percentage",
-        discountValue: "",
-        minimumOrder: "0",
-        expiryDate: "",
-        assignMode: "all",
-        userIds: [],
+    setLoading(true);
+    try {
+      const response = await fetch("/api/admin/coupons", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(coupon),
       });
+      const payload = await response.json();
+      setMessage(
+        response.ok
+          ? "Coupon created."
+          : payload.error || "Could not create coupon",
+      );
+      if (response.ok) {
+        setCoupons((current) => [
+          {
+            ...payload.coupon,
+            assigned_count:
+              coupon.assignMode === "all"
+                ? customers.length
+                : coupon.userIds.length,
+          },
+          ...current,
+        ]);
+        setCoupon({
+          code: "",
+          discountType: "percentage",
+          discountValue: "",
+          minimumOrder: "0",
+          expiryDate: "",
+          assignMode: "all",
+          userIds: [],
+        });
+      }
+    } catch {
+      setMessage("Could not create coupon. Check your connection and try again.");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -177,7 +192,7 @@ export default function AdminMarketingPage() {
               </select>
             )}
             <button className="bg-primary px-4 py-2 text-sm font-bold text-primary-foreground">
-              Send notification
+              {loading ? "Sending..." : "Send notification"}
             </button>
           </form>
         </section>
@@ -229,7 +244,7 @@ export default function AdminMarketingPage() {
               className="w-full border border-border bg-background px-3 py-2 text-sm"
             />
             <button className="bg-primary px-4 py-2 text-sm font-bold text-primary-foreground">
-              Create coupon
+              {loading ? "Saving..." : "Create coupon"}
             </button>
           </form>
         </section>

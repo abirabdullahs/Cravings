@@ -137,8 +137,8 @@ ORDER BY mi.archived_at DESC, mi.item_name
 `;
 
 export const FIND_BRANCH_EARNINGS = `
-SELECT restaurant_id, SUM(restaurant_earning) AS total_earning, COUNT(*) AS total_orders
-FROM sell_inquiry
+SELECT restaurant_id, SUM(total_amount) AS total_earning, COUNT(*) AS total_orders
+FROM orders
 WHERE restaurant_id = $1 AND created_at BETWEEN $2 AND $3
 GROUP BY restaurant_id
 `;

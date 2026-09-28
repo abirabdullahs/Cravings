@@ -200,14 +200,32 @@ CREATE TABLE riders (
   vehicle_type VARCHAR NOT NULL,
   vehicle_plate VARCHAR NOT NULL,
   license_number VARCHAR NOT NULL,
+  nid_number VARCHAR,
   status rider_status_enum NOT NULL DEFAULT 'idle',
   updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
   CONSTRAINT fk_riders_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE DEFERRABLE INITIALLY IMMEDIATE,
-  CONSTRAINT uq_riders_vehicle_number UNIQUE (vehicle_number)
+  CONSTRAINT uq_riders_vehicle_plate UNIQUE (vehicle_plate),
+  CONSTRAINT uq_riders_license_number UNIQUE (license_number)
 );
 
 CREATE TRIGGER trg_riders_updated_at
   BEFORE UPDATE ON riders
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+CREATE TABLE restaurant_owners (
+  id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  user_id INT NOT NULL UNIQUE,
+  nid_number VARCHAR,
+  business_name VARCHAR,
+  trade_licence VARCHAR,
+  address TEXT,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  CONSTRAINT fk_restaurant_owners_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE DEFERRABLE INITIALLY IMMEDIATE
+);
+
+CREATE TRIGGER trg_restaurant_owners_updated_at
+  BEFORE UPDATE ON restaurant_owners
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 CREATE TABLE coupons (

@@ -21,7 +21,7 @@ RETURNING id, active_status
 `;
 
 export const GET_RESTAURANT_PRODUCT_SALES = `
-SELECT p.id, p.name, p.price,
+SELECT p.id, p.item_name AS name, p.price,
        COUNT(oi.id) AS total_sold,
        COALESCE(SUM(oi.subtotal), 0) AS total_revenue
 FROM menu_items p
@@ -30,8 +30,8 @@ LEFT JOIN orders o ON o.id = oi.order_id
 WHERE p.restaurant_id = $1
   AND (o.created_at IS NULL OR (o.created_at >= NOW() - ($2::int * INTERVAL '1 day')
        AND o.order_status <> 'cancelled'))
-GROUP BY p.id, p.name, p.price
-ORDER BY total_revenue DESC, p.name
+GROUP BY p.id, p.item_name, p.price
+ORDER BY total_revenue DESC, name
 `;
 
 export const GET_RESTAURANT_REVIEWS = `
@@ -66,11 +66,13 @@ SELECT
   COALESCE(AVG(total_amount) FILTER (WHERE order_status <> 'cancelled'), 0) AS average_order_value,
   COALESCE(SUM(discount) FILTER (WHERE order_status <> 'cancelled'), 0) AS total_discounts
 FROM orders
-WHERE created_at >= NOW() - ($1::int * INTERVAL '1 day')
+WHERE created_at >= (
+  (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Dhaka')::date - ($1::int - 1)
+)::timestamp
 `;
 
 export const GET_ALL_RIDERS = `
-SELECT u.id, u.name, u.phone, r.vehicle_type, r.vehicle_number, r.status
+SELECT u.id, u.name, u.phone, r.vehicle_type, r.vehicle_plate AS vehicle_number, r.status
 FROM users u
 JOIN riders r ON r.user_id = u.id
 WHERE u.role = 'rider'
@@ -85,39 +87,66 @@ RETURNING user_id AS id, status
 `;
 
 export const GET_ADMIN_USERS = `
+WITH order_totals AS (
+  SELECT user_id, COUNT(*)::int AS order_count
+  FROM orders
+  GROUP BY user_id
+), coupon_totals AS (
+  SELECT uc.user_id, COUNT(DISTINCT c.id)::int AS coupon_count
+  FROM user_coupons uc
+  JOIN coupons c ON c.id = uc.coupon_id
+  WHERE uc.used = FALSE
+    AND (c.expiry_date IS NULL OR c.expiry_date >= CURRENT_DATE)
+  GROUP BY uc.user_id
+), request_totals AS (
+  SELECT user_id, COUNT(*)::int AS role_request_count
+  FROM role_requests
+  GROUP BY user_id
+)
 SELECT u.id, u.name, u.email, u.phone, u.role, u.created_at,
-       COUNT(DISTINCT o.id)::int AS order_count,
-       COUNT(DISTINCT available_coupon.id)::int AS coupon_count,
-       COUNT(DISTINCT rr.id)::int AS role_request_count
+       COALESCE(ot.order_count, 0) AS order_count,
+       COALESCE(ct.coupon_count, 0) AS coupon_count,
+  COALESCE(rt.role_request_count, 0) AS role_request_count,
+  COUNT(*) OVER()::int AS total_count
 FROM users u
-LEFT JOIN orders o ON o.user_id = u.id
-LEFT JOIN user_coupons uc ON uc.user_id = u.id AND uc.used = FALSE
-LEFT JOIN coupons available_coupon
-  ON available_coupon.id = uc.coupon_id
- AND (available_coupon.expiry_date IS NULL OR available_coupon.expiry_date >= CURRENT_DATE)
-LEFT JOIN role_requests rr ON rr.user_id = u.id
+LEFT JOIN order_totals ot ON ot.user_id = u.id
+LEFT JOIN coupon_totals ct ON ct.user_id = u.id
+LEFT JOIN request_totals rt ON rt.user_id = u.id
 WHERE ($1::text = '' OR u.role::text = $1)
   AND ($2::text = '' OR u.name ILIKE '%' || $2 || '%' OR u.email ILIKE '%' || $2 || '%' OR COALESCE(u.phone, '') ILIKE '%' || $2 || '%')
-GROUP BY u.id
 ORDER BY u.created_at DESC
 LIMIT $3 OFFSET $4
 `;
 
 export const GET_ADMIN_USER_DETAILS = `
+WITH order_totals AS (
+  SELECT user_id,
+         COUNT(*)::int AS order_count,
+         COALESCE(SUM(total_amount) FILTER (WHERE order_status <> 'cancelled'), 0) AS total_spend
+  FROM orders
+  GROUP BY user_id
+), coupon_totals AS (
+  SELECT uc.user_id, COUNT(DISTINCT c.id)::int AS coupon_count
+  FROM user_coupons uc
+  JOIN coupons c ON c.id = uc.coupon_id
+  WHERE uc.used = FALSE
+    AND (c.expiry_date IS NULL OR c.expiry_date >= CURRENT_DATE)
+  GROUP BY uc.user_id
+), request_totals AS (
+  SELECT user_id, COUNT(*)::int AS role_request_count
+  FROM role_requests
+  GROUP BY user_id
+)
 SELECT u.id, u.name, u.email, u.phone, u.role, u.created_at,
-       COUNT(DISTINCT o.id)::int AS order_count,
-       COALESCE(SUM(CASE WHEN o.order_status <> 'cancelled' THEN o.total_amount ELSE 0 END), 0) AS total_spend,
-       COUNT(DISTINCT available_coupon.id)::int AS coupon_count,
-       COUNT(DISTINCT rr.id)::int AS role_request_count
+       COALESCE(ot.order_count, 0) AS order_count,
+       COALESCE(ot.total_spend, 0) AS total_spend,
+       COALESCE(ct.coupon_count, 0) AS coupon_count,
+       COALESCE(rt.role_request_count, 0) AS role_request_count
 FROM users u
-LEFT JOIN orders o ON o.user_id = u.id
-LEFT JOIN user_coupons uc ON uc.user_id = u.id AND uc.used = FALSE
-LEFT JOIN coupons available_coupon
-  ON available_coupon.id = uc.coupon_id
- AND (available_coupon.expiry_date IS NULL OR available_coupon.expiry_date >= CURRENT_DATE)
-LEFT JOIN role_requests rr ON rr.user_id = u.id
+LEFT JOIN order_totals ot ON ot.user_id = u.id
+LEFT JOIN coupon_totals ct ON ct.user_id = u.id
+LEFT JOIN request_totals rt ON rt.user_id = u.id
 WHERE u.id = $1
-GROUP BY u.id
 `;
 
 export const GET_ADMIN_ORDERS = `
@@ -125,7 +154,8 @@ SELECT o.id, o.total_amount, o.delivery_fee, o.discount, o.order_status, o.creat
        u.name AS customer_name, u.email AS customer_email,
        r.name AS restaurant_name,
        p.status AS payment_status, p.payment_method,
-       d.status AS delivery_status, rider.name AS rider_name
+      d.status AS delivery_status, rider.name AS rider_name,
+      COUNT(*) OVER()::int AS total_count
 FROM orders o
 JOIN users u ON u.id = o.user_id
 JOIN restaurants r ON r.id = o.restaurant_id
