@@ -1,5 +1,6 @@
 import { toCamelCase } from "@/lib/case";
 import { pool } from "@/lib/db";
+import { executeDml } from "@/lib/dblib";
 import {
   FIND_AVAILABLE_USER_COUPONS,
   SET_CART_USER_COUPON,
@@ -19,7 +20,7 @@ export async function setCartUserCoupon({
   userId: number;
   userCouponId: number | null;
 }) {
-  const result = await pool.query(SET_CART_USER_COUPON, [
+  const result = await executeDml(SET_CART_USER_COUPON, [
     cartId,
     userId,
     userCouponId,

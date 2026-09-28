@@ -16,6 +16,9 @@ export interface DeliveryOpportunity {
   restaurantId: number;
   restaurantName: string;
   totalAmount: number;
+  deliveryFee: number;
+  pickupDistanceKm: number;
+  deliveryDistanceKm: number;
   createdAt: string;
 }
 export interface DeliveryItem {
@@ -35,6 +38,16 @@ export interface RiderEarningsSummary {
   deliveryDate: string;
   totalDeliveries: number;
   totalIncome: number;
+}
+
+export interface RiderReview {
+  id: number;
+  orderId: number;
+  rating: number;
+  comment: string | null;
+  customerName: string;
+  restaurantName: string;
+  createdAt: string;
 }
 
 export type RiderDutyStatus = "offline" | "idle" | "busy";

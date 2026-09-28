@@ -1,0 +1,5 @@
+DROP INDEX IF EXISTS ix_user_addresses_user, ix_restaurants_owner, ix_restaurants_owner_archived,
+ ix_categories_restaurant, ix_menu_items_restaurant, ix_menu_items_category, ix_menu_items_restaurant_archived,
+ ix_orders_user, ix_orders_restaurant, ix_order_items_order, ix_payments_order, ix_deliveries_rider,
+ ix_delivery_location_history_delivery_time, ix_reviews_restaurant, ix_reviews_rider, ix_notifications_user;
+ANALYZE;

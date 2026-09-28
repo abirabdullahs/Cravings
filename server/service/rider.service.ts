@@ -12,6 +12,7 @@ import {
   markArrivedAtDestination,
   cancelRiderAssignment,
 } from "../repository/rider.repository";
+import { findRiderReviews } from "../repository/review.repository";
 import { AppError } from "@/lib/errors/AppError";
 import { ErrorCode } from "@/lib/errors/errorCodes";
 
@@ -82,7 +83,11 @@ export const updateDeliveryStatus = async (
   }
 };
 
-export const getAvailableRequests = async () => findAvailableRequests();
+export const getAvailableRequests = async (
+  riderId: number,
+  latitude: number,
+  longitude: number,
+) => findAvailableRequests(riderId, latitude, longitude);
 
 export const updateRiderStatus = async (
   riderId: number,
@@ -97,6 +102,9 @@ export const getRiderDeliveries = async (riderId: number, date: string | null) =
 
 export const getRiderProfile = async (riderId: number) =>
   findRiderProfile(riderId);
+
+export const getRiderReviews = async (riderId: number) =>
+  findRiderReviews(riderId);
 
 export const getActiveDeliveryForRider = async (riderId: number) =>
   await findActiveDeliveryForRider(riderId);

@@ -39,15 +39,17 @@ export const createOrder = async ({
   deliveryInstructions: string;
 }) => {
   try {
-    const result = await pool.query(CALL_CREATE_ORDER_PROCEDURE, [
-      userId,
-      cartId,
-      addressId,
-      paymentMethod,
-      idempotencyKey,
-      deliveryInstructions,
-      getPlatformFee(),
-    ]);
+    const result = await withTransaction((client) =>
+      client.query(CALL_CREATE_ORDER_PROCEDURE, [
+        userId,
+        cartId,
+        addressId,
+        paymentMethod,
+        idempotencyKey,
+        deliveryInstructions,
+        getPlatformFee(),
+      ]),
+    );
 
     const orderId = result.rows[0]?.p_order_id;
     if (!orderId) {

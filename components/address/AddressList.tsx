@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useAddressManager } from "@/hooks/useAddressManager";
 import type { UserAddress } from "@/types/order";
 import { AddressFormDialog } from "./AddressFormDialog";
+import { MapPin, Pencil, Plus, Trash2 } from "lucide-react";
 
 interface AddressListProps {
   onSelectAddress?: (address: UserAddress) => void;
@@ -57,97 +58,124 @@ export function AddressList({
   };
 
   if (loading && addresses.length === 0) {
-    return <div className="py-8 text-center">Loading addresses...</div>;
+    return (
+      <div className="grid gap-4 md:grid-cols-2">
+        {[1, 2].map((item) => (
+          <div
+            key={item}
+            className="h-44 animate-pulse border border-border bg-muted"
+          />
+        ))}
+      </div>
+    );
   }
 
   return (
     <div className="space-y-4">
       {error && (
-        <div className="rounded-md border border-red-200 bg-red-50 p-4 text-red-700">
+        <div className="border border-destructive/40 bg-destructive/10 p-4 text-sm text-destructive">
           {error}
         </div>
       )}
 
       {addresses.length === 0 ? (
-        <div className="rounded-md border-2 border-dashed border-gray-300 py-8 text-center">
-          <p className="mb-4 text-gray-600">No addresses saved yet</p>
+        <div className="border border-dashed border-border bg-card px-6 py-12 text-center">
+          <MapPin className="mx-auto size-8 text-primary" aria-hidden="true" />
+          <h2 className="mt-4 font-serif text-xl font-bold text-foreground">
+            No saved addresses
+          </h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Add a delivery location to make checkout faster.
+          </p>
           {showActions && (
             <button
+              type="button"
               onClick={() => handleOpenDialog()}
-              className="rounded-md bg-orange-500 px-4 py-2 font-medium text-white hover:bg-orange-600"
+              className="mt-5 inline-flex items-center gap-2 bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
             >
+              <Plus className="size-4" aria-hidden="true" />
               Add Your First Address
             </button>
           )}
         </div>
       ) : (
         <>
-          <div className="space-y-3">
+          <div className="grid gap-8 md:grid-cols-2">
             {addresses.map((address) => (
-              <div
+              <article
                 key={address.id}
-                className="rounded-lg border secondary border-gray-200 p-4 transition-shadow hover:shadow-md"
+                className="flex min-h-44 flex-col border border-border bg-card p-5 transition-colors hover:border-primary/50"
               >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    {address.label && (
-                      <p className="font-semibold text-gray-900">
-                        {address.label}
+                <div className="flex items-start gap-3">
+                  <span className="flex size-9 shrink-0 items-center justify-center border border-primary/30 bg-primary/10 text-primary">
+                    <MapPin className="size-4" aria-hidden="true" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <h2 className="font-serif text-lg font-bold text-foreground">
+                      {address.label || "Delivery address"}
+                    </h2>
+                    <p className="mt-1 text-sm leading-6 text-foreground">
+                      {address.address}
+                    </p>
+                    {(address.street || address.apartmentName) && (
+                      <p className="text-xs leading-5 text-muted-foreground">
+                        {[address.street, address.apartmentName]
+                          .filter(Boolean)
+                          .join(", ")}
                       </p>
                     )}
-                    <p className="text-gray-700">{address.address}</p>
-                    {address.street && (
-                      <p className="text-sm text-gray-600">{address.street}</p>
-                    )}
-                    {address.apartmentName && (
-                      <p className="text-sm text-gray-600">
-                        {address.apartmentName}
-                      </p>
-                    )}
-                    <p className="text-sm text-gray-600">
-                      {address.city}
-                      {address.postalCode && `, ${address.postalCode}`}
+                    <p className="text-xs leading-5 text-muted-foreground">
+                      {[address.city, address.postalCode]
+                        .filter(Boolean)
+                        .join(", ")}
                     </p>
                   </div>
-
-                  {showActions && (
-                    <div className="ml-4 flex gap-2">
-                      <button
-                        onClick={() => handleOpenDialog(address)}
-                        disabled={isUpdating}
-                        className="rounded bg-blue-50 px-3 py-1 text-sm font-medium text-blue-600 hover:bg-blue-100 disabled:opacity-50"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleDelete(address.id)}
-                        disabled={isDeleting}
-                        className="rounded bg-red-50 px-3 py-1 text-sm font-medium text-red-600 hover:bg-red-100 disabled:opacity-50"
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  )}
                 </div>
+
+                {showActions && (
+                  <div className="mt-auto flex gap-2 border-t border-border pt-4">
+                    <button
+                      type="button"
+                      onClick={() => handleOpenDialog(address)}
+                      disabled={isUpdating || isDeleting}
+                      className="inline-flex flex-1 items-center justify-center gap-2 border border-border px-3 py-2 text-xs font-semibold text-foreground hover:border-primary hover:text-primary disabled:opacity-50"
+                    >
+                      <Pencil className="size-3.5" aria-hidden="true" />
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(address.id)}
+                      disabled={isDeleting || isUpdating}
+                      className="inline-flex flex-1 items-center justify-center gap-2 border border-destructive/40 px-3 py-2 text-xs font-semibold text-destructive hover:bg-destructive/10 disabled:opacity-50"
+                    >
+                      <Trash2 className="size-3.5" aria-hidden="true" />
+                      Delete
+                    </button>
+                  </div>
+                )}
 
                 {onSelectAddress && !showActions && (
                   <button
+                    type="button"
                     onClick={() => onSelectAddress(address)}
-                    className="mt-3 w-full rounded-md bg-orange-500 px-4 py-2 font-medium text-white hover:bg-orange-600"
+                    className="mt-4 w-full bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
                   >
                     Use This Address
                   </button>
                 )}
-              </div>
+              </article>
             ))}
           </div>
 
           {showActions && (
             <button
+              type="button"
               onClick={() => handleOpenDialog()}
-              className="w-full rounded-lg border-2 border-dashed border-orange-300 px-4 py-3 font-medium text-orange-600 hover:bg-orange-50"
+              className="flex w-full items-center justify-center gap-2 border border-dashed border-primary/50 bg-primary/5 px-4 py-3 text-sm font-semibold text-primary hover:bg-primary/10"
             >
-              + Add Another Address
+              <Plus className="size-4" aria-hidden="true" />
+              Add another address
             </button>
           )}
         </>

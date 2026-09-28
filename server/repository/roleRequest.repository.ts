@@ -1,4 +1,5 @@
 import { pool } from "@/lib/db";
+import { executeDml } from "@/lib/dblib";
 
 export const listRoleRequestsSql = async () => {
   const result = await pool.query(`
@@ -21,7 +22,7 @@ export const createRoleRequestSql = async ({
   requestedRole: string;
   details?: string;
 }) => {
-  const result = await pool.query(`
+  const result = await executeDml(`
     INSERT INTO role_requests (user_id, source_role, requested_role, status, details, created_at)
     VALUES ($1, $2, $3, 'PENDING', $4, NOW())
     RETURNING *
@@ -42,15 +43,15 @@ export const reviewRoleRequestSql = async ({
   reviewNote?: string;
   rejectionReason?: string;
 }) => {
-  const result = await pool.query(`
+  const result = await executeDml(`
     UPDATE role_requests
-    SET status = $2,
-        reviewed_by = $3,
-        review_note = $4,
-        rejection_reason = $5,
+    SET status = $1,
+        reviewed_by = $2,
+        review_note = $3,
+        rejection_reason = $4,
         reviewed_at = NOW(),
         updated_at = NOW()
-    WHERE id = $6
+    WHERE id = $5
     RETURNING *
   `, [status, reviewedBy, reviewNote ?? "", rejectionReason ?? "", requestId]);
   return result.rows[0];

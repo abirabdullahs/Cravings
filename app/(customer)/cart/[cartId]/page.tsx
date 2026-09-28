@@ -557,17 +557,7 @@ export function CheckoutPage({
                 />
               </section>
 
-              {/* Estimated Delivery Banner */}
-              <div className="flex items-start gap-3 border border-emerald-200 bg-emerald-50/70 p-3 text-emerald-900">
-                <ClockIcon className="mt-0.5 size-4 shrink-0 text-emerald-700" />
-                <div>
-                  <p className="text-xs font-bold">Delivery demo status</p>
-                  <p className="mt-0.5 text-[10px] text-emerald-700">
-                    Order and rider milestones refresh periodically after
-                    checkout.
-                  </p>
-                </div>
-              </div>
+             
 
               {error && <p className="text-xs text-destructive">{error}</p>}
               {quoteError && (

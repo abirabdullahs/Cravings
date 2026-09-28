@@ -1,4 +1,5 @@
 import { pool } from "@/lib/db";
+import { executeDml } from "@/lib/dblib";
 import {
   DELETE_CATEGORY,
   ARCHIVE_MENU_ITEM,
@@ -183,22 +184,22 @@ export const findRestaurantByOwner = async (
 export const insertRestaurant = async (
   values: SqlValue[],
 ): Promise<Restaurant | undefined> => {
-  const result = await pool.query<RestaurantRow>(INSERT_RESTAURANT, values);
+  const result = await executeDml<RestaurantRow>(INSERT_RESTAURANT, values);
   return result.rows[0] ? toRestaurant(result.rows[0]) : undefined;
 };
 
 export const updateRestaurant = async (
   values: SqlValue[],
 ): Promise<Restaurant | undefined> => {
-  const result = await pool.query<RestaurantRow>(UPDATE_RESTAURANT, values);
+  const result = await executeDml<RestaurantRow>(UPDATE_RESTAURANT, values);
   return result.rows[0] ? toRestaurant(result.rows[0]) : undefined;
 };
 
 export const archiveRestaurant = async (restaurantId: string, ownerId: string) =>
-  (await pool.query(ARCHIVE_RESTAURANT, [restaurantId, ownerId])).rowCount;
+  (await executeDml(ARCHIVE_RESTAURANT, [restaurantId, ownerId])).rowCount;
 
 export const restoreRestaurant = async (restaurantId: string, ownerId: string) =>
-  (await pool.query(RESTORE_RESTAURANT, [restaurantId, ownerId])).rowCount;
+  (await executeDml(RESTORE_RESTAURANT, [restaurantId, ownerId])).rowCount;
 
 export const findCategories = async (restaurantId: string) =>
   (await pool.query<CategoryRow>(FIND_CATEGORIES, [restaurantId])).rows.map(
@@ -217,13 +218,13 @@ export const findCategoryForRestaurant = async (
 };
 
 export const insertCategory = async (restaurantId: string, name: string) =>
-  (await pool.query<CategoryRow>(INSERT_CATEGORY, [restaurantId, name]))
+  (await executeDml<CategoryRow>(INSERT_CATEGORY, [restaurantId, name]))
     .rows[0];
 
 export const deleteCategory = async (
   categoryId: string,
   restaurantId: string,
-) => (await pool.query(DELETE_CATEGORY, [categoryId, restaurantId])).rowCount;
+) => (await executeDml(DELETE_CATEGORY, [categoryId, restaurantId])).rowCount;
 
 export const findMenu = async (restaurantId: string) =>
   (await pool.query<MenuItemRow>(FIND_MENU, [restaurantId])).rows.map(
@@ -238,14 +239,14 @@ export const findArchivedMenu = async (restaurantId: string) =>
 export const insertMenuItem = async (
   values: SqlValue[],
 ): Promise<MenuItem | undefined> => {
-  const result = await pool.query<MenuItemRow>(INSERT_MENU_ITEM, values);
+  const result = await executeDml<MenuItemRow>(INSERT_MENU_ITEM, values);
   return result.rows[0] ? toMenuItem(result.rows[0]) : undefined;
 };
 
 export const updateMenuItem = async (
   values: SqlValue[],
 ): Promise<MenuItem | undefined> => {
-  const result = await pool.query<MenuItemRow>(UPDATE_MENU_ITEM, values);
+  const result = await executeDml<MenuItemRow>(UPDATE_MENU_ITEM, values);
   return result.rows[0] ? toMenuItem(result.rows[0]) : undefined;
 };
 
@@ -255,7 +256,7 @@ export const setAvailability = async (
   available: boolean,
 ) =>
   (
-    await pool.query(UPDATE_MENU_ITEM_AVAILABILITY, [
+    await executeDml(UPDATE_MENU_ITEM_AVAILABILITY, [
       itemId,
       restaurantId,
       available,
@@ -263,7 +264,7 @@ export const setAvailability = async (
   ).rows[0];
 
 export const archiveMenuItem = async (itemId: string, restaurantId: string) =>
-  (await pool.query(ARCHIVE_MENU_ITEM, [itemId, restaurantId])).rowCount;
+  (await executeDml(ARCHIVE_MENU_ITEM, [itemId, restaurantId])).rowCount;
 
 export const restoreMenuItem = async (itemId: string, restaurantId: string) =>
-  (await pool.query(RESTORE_MENU_ITEM, [itemId, restaurantId])).rowCount;
+  (await executeDml(RESTORE_MENU_ITEM, [itemId, restaurantId])).rowCount;

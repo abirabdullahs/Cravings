@@ -1,7 +1,10 @@
 // middleware.ts
 import { auth } from "@/auth";
 import { NextResponse } from "next/server";
-import { findRoleRequestByUser } from "@/server/repository/auth.repository";
+import {
+  findApprovedRoleRequestForCurrentRole,
+  findPendingRoleRequestByUserAndRole,
+} from "@/server/repository/auth.repository";
 
 export default auth(async (req) => {
   const { pathname } = req.nextUrl;
@@ -92,11 +95,11 @@ export default auth(async (req) => {
 
   if (expectedRole) {
     try {
-      const requestRow = await findRoleRequestByUser(userId);
-      if (
-        requestRow?.status === "PENDING" &&
-        requestRow?.requested_role === expectedRole
-      ) {
+      const requestRow = await findPendingRoleRequestByUserAndRole(
+        userId,
+        expectedRole,
+      );
+      if (requestRow) {
         return NextResponse.redirect(new URL("/pending-approval", req.url));
       }
     } catch {
@@ -110,10 +113,8 @@ export default auth(async (req) => {
 
     // Role request approval status check from DB repository
     try {
-      const requestRow = await findRoleRequestByUser(userId);
-      const isApproved =
-        requestRow?.status === "APPROVED" &&
-        requestRow?.requested_role === expectedRole;
+      const requestRow = await findApprovedRoleRequestForCurrentRole(userId);
+      const isApproved = requestRow?.requested_role === expectedRole;
 
       if (!isApproved) {
         return NextResponse.redirect(new URL("/unauthorized", req.url));

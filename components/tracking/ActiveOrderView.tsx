@@ -10,54 +10,74 @@ import type {
 } from "@/types/delivery-tracking";
 import type { OrderDetail } from "@/types/order";
 
-// Updated logical sequence for customers
-const CUSTOMER_ORDER_STEPS = [
-  { key: "pending", label: "Order placed" },
-  { key: "confirmed", label: "Order confirmed" },
-  { key: "preparing", label: "Preparing food" },
-  { key: "rider_assigned", label: "Rider assigned & heading to store" },
-  { key: "out_for_delivery", label: "Picked up & on the way" },
+const CUSTOMER_KITCHEN_STEPS = [
+  { key: "placed", label: "Order placed" },
+  { key: "food_ready", label: "Food prepared" },
+];
+
+const CUSTOMER_DELIVERY_STEPS = [
+  { key: "rider_assigned", label: "Rider assigned" },
+  { key: "arrived_at_store", label: "Rider arrived at restaurant" },
+  { key: "picked_up", label: "Picked up and on the way" },
   { key: "arrived_at_destination", label: "Rider has arrived" },
   { key: "delivered", label: "Delivered to you" },
 ];
 
-function getCustomerStatus(
+function getCustomerTimelineState(
   orderStatus: DeliveryTracking["orderStatus"],
   deliveryStatus: DeliveryTracking["deliveryStatus"],
 ) {
   if (orderStatus === "cancelled" || deliveryStatus === "cancelled") {
-    return "cancelled";
+    return { cancelled: true, completed: [], active: [] };
   }
 
-  // 1. Order or delivery is complete
   if (orderStatus === "delivered" || deliveryStatus === "delivered") {
-    return "delivered";
+    return {
+      cancelled: false,
+      completed: [
+        ...CUSTOMER_KITCHEN_STEPS,
+        ...CUSTOMER_DELIVERY_STEPS,
+      ].map((step) => step.key),
+      active: [],
+    };
   }
 
-  if (deliveryStatus === "arrived_at_destination") {
-    return "arrived_at_destination";
+  const completed = ["placed"];
+  const active: string[] = [];
+  const foodIsReady = ["ready", "out_for_delivery"].includes(orderStatus);
+
+  if (foodIsReady) {
+    completed.push("food_ready");
+  } else {
+    active.push("food_ready");
   }
 
-  // 2. Food picked up and on the way
-  if (deliveryStatus === "picked_up" || orderStatus === "out_for_delivery") {
-    return "out_for_delivery";
+  const deliveryIndex = [
+    "unassigned",
+    "accepted",
+    "arrived_at_store",
+    "picked_up",
+    "arrived_at_destination",
+  ].indexOf(deliveryStatus);
+
+  if (deliveryIndex >= 1) completed.push("rider_assigned");
+  if (deliveryIndex >= 2) completed.push("arrived_at_store");
+  if (deliveryIndex >= 3) completed.push("picked_up");
+  if (deliveryIndex >= 4) completed.push("arrived_at_destination");
+
+  if (deliveryStatus === "unassigned") {
+    active.push("rider_assigned");
+  } else if (deliveryStatus === "accepted") {
+    active.push("arrived_at_store");
+  } else if (deliveryStatus === "arrived_at_store") {
+    active.push("picked_up");
+  } else if (deliveryStatus === "picked_up") {
+    active.push("arrived_at_destination");
+  } else if (deliveryStatus === "arrived_at_destination") {
+    active.push("delivered");
   }
 
-  // 3. Rider assigned or arrived at restaurant, but hasn't picked up food yet
-  if (deliveryStatus === "accepted" || deliveryStatus === "arrived_at_store") {
-    return "rider_assigned";
-  }
-
-  // 4. Kitchen is working on the order
-  if (orderStatus === "ready" || orderStatus === "preparing") {
-    return "preparing";
-  }
-  // 5. Order confirmed by restaurant
-  if (orderStatus === "confirmed") {
-    return "confirmed";
-  }
-
-  return "pending";
+  return { cancelled: false, completed, active };
 }
 
 // Rider action map
@@ -125,7 +145,7 @@ export function ActiveOrderView({
 
   const nextStep = NEXT_STEP[tracking.deliveryStatus];
   const [advanceError, setAdvanceError] = useState<string | null>(null);
-  const customerStatus = getCustomerStatus(
+  const customerTimeline = getCustomerTimelineState(
     tracking.orderStatus,
     tracking.deliveryStatus,
   );
@@ -180,15 +200,35 @@ export function ActiveOrderView({
 
         <div className="mt-5 border-t border-border pt-5">
           {viewer === "customer" &&
-            (customerStatus === "cancelled" ? (
+            (customerTimeline.cancelled ? (
               <p className="text-sm font-semibold text-destructive">
                 This order was cancelled.
               </p>
             ) : (
-              <StatusTimeline
-                currentStatus={customerStatus}
-                steps={CUSTOMER_ORDER_STEPS}
-              />
+              <div className="grid gap-6 sm:grid-cols-2">
+                <div>
+                  <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                    Kitchen progress
+                  </p>
+                  <StatusTimeline
+                    currentStatus=""
+                    steps={CUSTOMER_KITCHEN_STEPS}
+                    completedStatuses={customerTimeline.completed}
+                    activeStatuses={customerTimeline.active}
+                  />
+                </div>
+                <div>
+                  <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                    Delivery progress
+                  </p>
+                  <StatusTimeline
+                    currentStatus=""
+                    steps={CUSTOMER_DELIVERY_STEPS}
+                    completedStatuses={customerTimeline.completed}
+                    activeStatuses={customerTimeline.active}
+                  />
+                </div>
+              </div>
             ))}
           {viewer === "rider" && tracking.deliveryStatus !== "unassigned" && (
             <StatusTimeline currentStatus={tracking.deliveryStatus} />

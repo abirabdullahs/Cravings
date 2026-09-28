@@ -34,12 +34,23 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid approval payload" }, { status: 400 });
   }
 
+  const rejectionReason =
+    typeof payload.rejectionReason === "string"
+      ? payload.rejectionReason.trim()
+      : "";
+  if (inputStatus === "REJECTED" && !rejectionReason) {
+    return NextResponse.json(
+      { error: "A rejection reason is required" },
+      { status: 400 },
+    );
+  }
+
   const row = await reviewRoleRequest({
     requestId: String(payload.requestId),
     status: inputStatus,
     reviewedBy: String(session.user.id ?? ""),
     reviewNote: payload.reviewNote ?? "",
-    rejectionReason: payload.rejectionReason ?? "",
+    rejectionReason,
   });
 
   return NextResponse.json({ request: row });

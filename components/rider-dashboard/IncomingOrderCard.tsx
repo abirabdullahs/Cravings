@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Clock, Store } from "lucide-react";
+import { Bike, Clock, MapPin, Store } from "lucide-react";
 import type { DeliveryOpportunity } from "@/types/rider";
 
 interface IncomingOrderCardProps {
@@ -34,10 +34,6 @@ function minutesSince(iso: string) {
     Math.floor((Date.now() - new Date(iso).getTime()) / 60000),
   );
 }
-// NOTE: the original design had pickup/dropoff addresses, distance, ETA,
-// and an expiry countdown. GET_AVAILABLE_REQUESTS only returns orderId,
-// restaurantId, restaurantName, totalAmount, createdAt — so this shows
-// only what's real. "requested Xm ago" replaces the fabricated countdown.
 export function IncomingOrderCard({
   opportunity,
   busy,
@@ -59,21 +55,38 @@ export function IncomingOrderCard({
         </span>
       </div>
 
-      <div className="mt-4 flex items-center justify-between">
+      <div className="mt-4 flex items-start justify-between gap-4">
         <div className="flex items-center gap-2">
           <Store className="size-4 text-primary" />
           <h3 className="font-serif text-2xl font-bold text-foreground">
             {opportunity.restaurantName}
           </h3>
         </div>
-        <span className="font-serif text-2xl font-bold text-primary">
-          ৳{opportunity.totalAmount}
-        </span>
+        <div className="shrink-0 text-right">
+          <p className="text-xs text-muted-foreground">Order total</p>
+          <p className="font-serif text-2xl font-bold text-primary">
+            ৳{opportunity.totalAmount}
+          </p>
+          <p className="mt-1 text-xs font-semibold text-foreground">
+            Delivery fee: ৳{opportunity.deliveryFee}
+          </p>
+        </div>
       </div>
 
       <p className="mt-2 text-xs text-muted-foreground">
         Order #{opportunity.orderId}
       </p>
+
+      <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+        <div className="flex items-center gap-2 border border-border p-3">
+          <Bike className="size-4 shrink-0 text-primary" />
+          <span>{opportunity.pickupDistanceKm.toFixed(1)} km to pickup</span>
+        </div>
+        <div className="flex items-center gap-2 border border-border p-3">
+          <MapPin className="size-4 shrink-0 text-primary" />
+          <span>{opportunity.deliveryDistanceKm.toFixed(1)} km delivery</span>
+        </div>
+      </div>
 
       <div className="mt-5 flex gap-3">
         <button

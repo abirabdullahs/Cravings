@@ -6,6 +6,7 @@ import {
   fetchDeliveries,
   fetchRiderEarnings,
   fetchRiderProfile,
+  fetchRiderReviews,
   setDutyStatus,
 } from "@/services/riderService";
 
@@ -16,10 +17,12 @@ export function useRiderProfile() {
   });
 }
 
-export function useAvailableRequests() {
+export function useAvailableRequests(enabled: boolean) {
   return useQuery({
     queryKey: ["rider", "requests"],
     queryFn: fetchAvailableRequests,
+    enabled,
+    retry: false,
     refetchInterval: 3000, // polling placeholder until realtime replaces it
   });
 }
@@ -28,6 +31,13 @@ export function useRiderEarnings(date: string) {
   return useQuery({
     queryKey: ["rider", "earnings", date],
     queryFn: () => fetchRiderEarnings(date),
+  });
+}
+
+export function useRiderReviews() {
+  return useQuery({
+    queryKey: ["rider", "reviews"],
+    queryFn: fetchRiderReviews,
   });
 }
 

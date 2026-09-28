@@ -1,13 +1,13 @@
 import {
-  createUser,
+  createUserWithRoleRequest,
   findUserByEmail,
   findUserById,
-  completeUser,
+  completeUserWithRoleRequest,
   createRoleRequest,
   listRoleRequests,
   updateRoleRequestStatus,
   updateUserProfile,
-  findRoleRequestByUser,
+  findRoleRequestForProfile,
   getRoleRequestById,
   approveRoleRequestWithProfile,
 } from "../repository/auth.repository";
@@ -123,23 +123,24 @@ export const createAccount = async (user: {
       ? "customer"
       : publicRole;
 
-  const data = await createUser({
-    email: normalized.email,
-    name: normalized.name,
-    password: await hashPassword(user.password),
-    phone: normalized.phone,
-    role: persistedRole,
-  });
-
-  if (requestedRole === "owner" || requestedRole === "rider") {
-    await createRoleRequest({
-      userId: String(data.id),
-      currentRole: "customer",
-      requestedRole,
-      details: `Role request submitted for ${requestedRole}. Pending admin approval.`,
-      verificationData: user.verificationData ?? {},
-    });
-  }
+  const isPartnerRequest = requestedRole === "owner" || requestedRole === "rider";
+  const data = await createUserWithRoleRequest(
+    {
+      email: normalized.email,
+      name: normalized.name,
+      password: await hashPassword(user.password),
+      phone: normalized.phone,
+      role: persistedRole,
+    },
+    isPartnerRequest
+      ? {
+          currentRole: "customer",
+          requestedRole,
+          details: `Role request submitted for ${requestedRole}. Pending admin approval.`,
+          verificationData: user.verificationData ?? {},
+        }
+      : undefined,
+  );
 
   return toSafeUserDTO({
     ...data,
@@ -167,23 +168,24 @@ export const completeProfile = async ({
   if (!validatePhone(trimmedPhone)) {
     throw new AppError(ErrorCode.INVALID_PHONE, "Please provide a valid phone number.");
   }
-  const data = await completeUser({
-    role:
-      normalizedRole === "owner" || normalizedRole === "rider"
-        ? "customer"
-        : normalizedRole,
+  const isPartnerRequest = normalizedRole === "owner" || normalizedRole === "rider";
+  const persistedRole = isPartnerRequest ? "customer" : normalizedRole;
+  const data = await completeUserWithRoleRequest({
+    role: persistedRole,
     phone: trimmedPhone,
     id,
+    roleRequest: isPartnerRequest
+      ? {
+          currentRole: "customer",
+          requestedRole: normalizedRole,
+          details: `Role request submitted for ${normalizedRole}. Pending admin approval.`,
+          verificationData,
+        }
+      : undefined,
   });
 
-  if (normalizedRole === "owner" || normalizedRole === "rider") {
-    await createRoleRequest({
-      userId: String(id),
-      currentRole: "customer",
-      requestedRole: normalizedRole,
-      details: `Role request submitted for ${normalizedRole}. Pending admin approval.`,
-      verificationData,
-    });
+  if (!data) {
+    throw new AppError(ErrorCode.NOT_FOUND, "User not found");
   }
 
   return toSafeUserDTO(data);
@@ -213,13 +215,27 @@ export const submitRoleRequest = async ({
     throw new AppError(ErrorCode.INVALID_ROLE);
   }
 
-  return await createRoleRequest({
-    userId,
-    currentRole: normalizedCurrentRole,
-    requestedRole: normalizedRequestedRole,
-    details,
-    verificationData,
-  });
+  try {
+    return await createRoleRequest({
+      userId,
+      currentRole: normalizedCurrentRole,
+      requestedRole: normalizedRequestedRole,
+      details,
+      verificationData,
+    });
+  } catch (error) {
+    const databaseError = error as { code?: string; constraint?: string };
+    if (
+      databaseError.code === "23505" &&
+      databaseError.constraint === "uq_role_requests_pending_user_role"
+    ) {
+      throw new AppError(
+        ErrorCode.STATUS_CONFLICT,
+        "You already have a pending application for this role.",
+      );
+    }
+    throw error;
+  }
 };
 
 type RoleRequestRow = {
@@ -266,7 +282,7 @@ export const listRequests = async (filters?: {
 };
 
 export const getRoleRequestForUser = async (userId: string) => {
-  return await findRoleRequestByUser(userId);
+  return await findRoleRequestForProfile(userId);
 };
 
 export const getRequestById = async (id: string) => {
@@ -286,6 +302,13 @@ export const reviewRoleRequest = async ({
   reviewNote?: string;
   rejectionReason?: string;
 }) => {
+  if (status === "REJECTED" && !rejectionReason?.trim()) {
+    throw new AppError(
+      ErrorCode.INVALID_INPUT,
+      "A rejection reason is required.",
+    );
+  }
+
   const request = await getRoleRequestById(requestId);
   if (!request) {
     throw new AppError(ErrorCode.NOT_FOUND);
@@ -329,7 +352,7 @@ export const reviewRoleRequest = async ({
     status,
     reviewedBy,
     reviewNote,
-    rejectionReason,
+    rejectionReason: rejectionReason?.trim(),
   });
 };
 

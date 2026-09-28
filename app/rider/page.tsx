@@ -6,6 +6,7 @@ import { RiderGreeting } from "@/components/rider-dashboard/RiderGreeting";
 import { StatsGrid } from "@/components/rider-dashboard/StatsGrid";
 import { IncomingOrderCard } from "@/components/rider-dashboard/IncomingOrderCard";
 import { TodaysSummaryCard } from "@/components/rider-dashboard/TodaysSummaryCard";
+import { RiderReviewsCard } from "@/components/rider-dashboard/RiderReviewsCard";
 import {
   useAvailableRequests,
   useRider,
@@ -20,8 +21,12 @@ function todayDateString() {
 export default function RiderDashboard() {
   const router = useRouter();
   const { data: profile, isLoading: isProfileLoading } = useRiderProfile();
-  const { data: requests, isLoading: isRequestsLoading } =
-    useAvailableRequests();
+  const riderCanReceiveOrders = profile?.status === "idle";
+  const {
+    data: requests,
+    isLoading: isRequestsLoading,
+    error: requestsError,
+  } = useAvailableRequests(riderCanReceiveOrders);
   const { data: earnings, isLoading: isEarningsLoading } =
     useRiderEarnings(todayDateString());
   const { acceptRequest, isAccepting, setDutyStatus, isUpdatingDuty } =
@@ -55,7 +60,7 @@ export default function RiderDashboard() {
         <RiderGreeting
           firstName={profile.name.split(" ")[0]}
           dutyStatus={currentStatus}
-          busy={isUpdatingDuty}
+          busy={isUpdatingDuty || profile.status === "busy"}
           onToggle={handleDutyToggle}
         />
 
@@ -64,9 +69,21 @@ export default function RiderDashboard() {
         </div>
 
         <div className="mt-8 grid gap-6 xl:grid-cols-[1fr_1.2fr]">
-          {isRequestsLoading ? (
+          {!riderCanReceiveOrders ? (
+            <div className="flex items-center justify-center border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
+              {profile.status === "busy"
+                ? "Complete your active delivery before accepting another order."
+                : "You're offline. Go online to start receiving delivery opportunities."}
+            </div>
+          ) : isRequestsLoading ? (
             <div className="flex items-center justify-center border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
               Checking for incoming orders…
+            </div>
+          ) : requestsError ? (
+            <div className="flex items-center justify-center border border-destructive/50 p-10 text-center text-sm text-destructive">
+              {requestsError instanceof Error
+                ? requestsError.message
+                : "Your GPS location is required to find nearby orders."}
             </div>
           ) : visibleOpportunity ? (
             <IncomingOrderCard
@@ -84,9 +101,8 @@ export default function RiderDashboard() {
             />
           ) : (
             <div className="flex items-center justify-center border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
-              {currentStatus === "online"
-                ? "No incoming orders right now — we'll notify you the moment one comes in."
-                : "You're offline. Go online to start receiving delivery opportunities."}
+              No nearby incoming orders right now — we will notify you when one
+              comes in.
             </div>
           )}
 
@@ -95,6 +111,8 @@ export default function RiderDashboard() {
             isEarningsLoading={isEarningsLoading}
           />
         </div>
+
+        <RiderReviewsCard />
       </main>
     </div>
   );

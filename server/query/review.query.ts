@@ -30,3 +30,14 @@ WHERE rv.restaurant_id = $1
 ORDER BY rv.created_at DESC
 LIMIT 20;
 `;
+
+export const GET_RIDER_REVIEWS = `
+SELECT rv.id, rv.order_id, rv.rider_rating AS rating, rv.comment,
+  rv.created_at, u.name AS customer_name, r.name AS restaurant_name
+FROM reviews rv
+JOIN users u ON u.id = rv.user_id
+JOIN restaurants r ON r.id = rv.restaurant_id
+WHERE rv.rider_id = $1 AND rv.rider_rating IS NOT NULL
+ORDER BY rv.created_at DESC
+LIMIT 20;
+`;

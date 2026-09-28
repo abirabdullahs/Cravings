@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Bell, ShoppingBagIcon } from "lucide-react";
+import { ShoppingBagIcon } from "lucide-react";
 
 import { Logo } from "@/components/brand/logo";
 import { LocationAddress } from "@/components/common/location-address";
@@ -9,6 +9,7 @@ import { getCurrentUser } from "@/lib/auth-helper";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { NavLinks } from "./NavLinks";
 import { getCartItems } from "@/server/service/cart.service";
+import { NotificationLink } from "./NotificationLink";
 
 type SiteHeaderProps = {
   searchValue?: string;
@@ -48,8 +49,7 @@ export async function SiteHeader({
       });
       resolvedCartCount = carts.reduce(
         (total, cart) =>
-          total +
-          cart.cartItems.reduce((sum, item) => sum + item.quantity, 0),
+          total + cart.cartItems.reduce((sum, item) => sum + item.quantity, 0),
         0,
       );
     } catch {
@@ -147,15 +147,7 @@ export async function SiteHeader({
           )}
 
           {/* Notifications */}
-          {user && (
-            <Link
-              href="/notifications"
-              aria-label="Notifications"
-              className="flex size-9 items-center justify-center rounded-full border border-border bg-card text-foreground transition hover:bg-muted"
-            >
-              <Bell className="size-4" />
-            </Link>
-          )}
+          {user && <NotificationLink />}
 
           {/* Auth Actions */}
           {isGuest ? (

@@ -1,6 +1,8 @@
 // components/admin/RoleRequestsTable.tsx
 "use client";
 
+import { useState } from "react";
+
 export type RoleRequest = {
   id: number;
   requested_role: string;
@@ -19,9 +21,17 @@ export function RoleRequestsTable({
   disabled = false,
 }: {
   requests: RoleRequest[];
-  onReview: (id: number, status: "APPROVED" | "REJECTED") => void;
+  onReview: (
+    id: number,
+    status: "APPROVED" | "REJECTED",
+    rejectionReason?: string,
+  ) => void;
   disabled?: boolean;
 }) {
+  const [rejectionReasons, setRejectionReasons] = useState<
+    Record<number, string>
+  >({});
+
   if (!requests.length) return null;
 
   return (
@@ -88,8 +98,16 @@ export function RoleRequestsTable({
                         Approve
                       </button>
                       <button
-                        onClick={() => onReview(request.id, "REJECTED")}
-                        disabled={disabled}
+                        onClick={() =>
+                          onReview(
+                            request.id,
+                            "REJECTED",
+                            rejectionReasons[request.id]?.trim(),
+                          )
+                        }
+                        disabled={
+                          disabled || !rejectionReasons[request.id]?.trim()
+                        }
                         className="rounded-lg bg-destructive px-3 py-1.5 text-xs font-bold text-white transition hover:bg-destructive/90 disabled:opacity-50"
                       >
                         Reject
@@ -98,6 +116,25 @@ export function RoleRequestsTable({
                   )}
                 </div>
               </div>
+
+              {request.status === "PENDING" && (
+                <label className="mt-4 block text-xs font-semibold text-muted-foreground">
+                  Rejection reason
+                  <textarea
+                    value={rejectionReasons[request.id] ?? ""}
+                    onChange={(event) =>
+                      setRejectionReasons((current) => ({
+                        ...current,
+                        [request.id]: event.target.value,
+                      }))
+                    }
+                    rows={2}
+                    maxLength={500}
+                    placeholder="Required only when rejecting this application"
+                    className="mt-1 w-full resize-y rounded border border-border bg-background px-3 py-2 text-sm font-normal text-foreground"
+                  />
+                </label>
+              )}
 
               {/* Request Details */}
               {request.details && (

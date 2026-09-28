@@ -7,7 +7,7 @@ import {
   FIND_CART_ITEMS,
 } from "../query/cart.query";
 import type { CartItem } from "@/types/order";
-import { withTransaction } from "@/lib/dblib";
+import { executeDml, withTransaction } from "@/lib/dblib";
 import { AppError } from "@/lib/errors/AppError";
 import { ErrorCode } from "@/lib/errors/errorCodes";
 
@@ -95,7 +95,7 @@ export const deleteCartItem = async ({
   menuItemId: number;
   cartId: number;
 }) => {
-  const data = await pool.query(DELETE_CART_ITEM, [cartId, menuItemId]);
+  const data = await executeDml(DELETE_CART_ITEM, [cartId, menuItemId]);
   return data.rows[0] ?? null;
 };
 

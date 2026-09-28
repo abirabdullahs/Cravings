@@ -80,10 +80,24 @@ ORDER BY u.name
 `;
 
 export const UPDATE_RIDER_STATUS_BY_ADMIN = `
-UPDATE riders
-SET status = $2, updated_at = NOW()
-WHERE user_id = $1
-RETURNING user_id AS id, status
+UPDATE riders rider
+SET status = $2::rider_status_enum, updated_at = NOW()
+WHERE rider.user_id = $1
+  AND (
+    $2::rider_status_enum = 'busy'
+    OR NOT EXISTS (
+      SELECT 1
+      FROM deliveries delivery
+      WHERE delivery.rider_id = rider.user_id
+        AND delivery.status IN (
+          'accepted',
+          'arrived_at_store',
+          'picked_up',
+          'arrived_at_destination'
+        )
+    )
+  )
+RETURNING rider.user_id AS id, rider.status
 `;
 
 export const GET_ADMIN_USERS = `

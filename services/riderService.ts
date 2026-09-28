@@ -5,11 +5,19 @@ import type {
   RiderDutyStatus,
   RiderEarningsSummary,
   RiderProfile,
+  RiderReview,
 } from "@/types/rider";
 
 export const fetchAvailableRequests = async (): Promise<
   DeliveryOpportunity[]
-> => apiRequest<DeliveryOpportunity[]>("/api/rider/requests");
+> => {
+  const location = await getCurrentCoordinates();
+  const params = new URLSearchParams({
+    latitude: String(location.latitude),
+    longitude: String(location.longitude),
+  });
+  return apiRequest<DeliveryOpportunity[]>(`/api/rider/requests?${params}`);
+};
 
 export const fetchRiderProfile = async (): Promise<RiderProfile> =>
   apiRequest<RiderProfile>("/api/rider/profile");
@@ -18,6 +26,9 @@ export const fetchRiderEarnings = async (
   date: string,
 ): Promise<RiderEarningsSummary> =>
   apiRequest<RiderEarningsSummary>(`/api/rider/earnings?date=${date}`);
+
+export const fetchRiderReviews = async (): Promise<RiderReview[]> =>
+  apiRequest<RiderReview[]>("/api/rider/reviews");
 
 async function getCurrentCoordinates() {
   if (typeof navigator === "undefined" || !navigator.geolocation) {
@@ -28,7 +39,7 @@ async function getCurrentCoordinates() {
     navigator.geolocation.getCurrentPosition(resolve, reject, {
       enableHighAccuracy: true,
       timeout: 10000,
-      maximumAge: 0,
+      maximumAge: 30000,
     }),
   ).catch((error: GeolocationPositionError) => {
     if (error.code === error.PERMISSION_DENIED) {

@@ -8,6 +8,7 @@ import {
   Popup,
   TileLayer,
   useMap,
+  ZoomControl,
 } from "react-leaflet";
 import L from "leaflet";
 import type { DeliveryTracking } from "@/types/delivery-tracking";
@@ -20,6 +21,7 @@ type LocationPoint = {
   position: [number, number];
   label: string;
   color: string;
+  shortLabel: string;
 };
 
 const FALLBACK_CENTER: [number, number] = [23.8103, 90.4125];
@@ -40,13 +42,13 @@ function coordinatePair(
   return [Number(latitude), Number(longitude)];
 }
 
-function markerIcon(color: string) {
+function markerIcon(color: string, shortLabel: string) {
   return L.divIcon({
     className: "delivery-map-marker",
-    html: `<span style="background:${color};border:2px solid white;border-radius:9999px;box-shadow:0 1px 4px rgba(0,0,0,.4);display:block;height:18px;width:18px"></span>`,
-    iconSize: [18, 18],
-    iconAnchor: [9, 9],
-    popupAnchor: [0, -10],
+    html: `<span style="align-items:center;background:${color};border:3px solid white;border-radius:50% 50% 50% 0;box-shadow:0 4px 14px rgba(40,31,23,.32);color:white;display:flex;font-family:system-ui,sans-serif;font-size:11px;font-weight:800;height:34px;justify-content:center;transform:rotate(-45deg);width:34px"><span style="transform:rotate(45deg)">${shortLabel}</span></span>`,
+    iconSize: [34, 34],
+    iconAnchor: [17, 34],
+    popupAnchor: [0, -34],
   });
 }
 
@@ -91,17 +93,28 @@ export default function LeafletDeliveryMap({
 
   const points: LocationPoint[] = [
     restaurant
-      ? { position: restaurant, label: "Restaurant", color: "#1f6f5b" }
+      ? {
+          position: restaurant,
+          label: "Restaurant",
+          color: "#1f6f5b",
+          shortLabel: "S",
+        }
       : null,
     destination
       ? {
           position: destination,
           label: "Delivery destination",
           color: "#b83b2f",
+          shortLabel: "D",
         }
       : null,
     rider
-      ? { position: rider, label: "Rider - latest location", color: "#244f80" }
+      ? {
+          position: rider,
+          label: "Rider - latest location",
+          color: "#244f80",
+          shortLabel: "R",
+        }
       : null,
   ].filter((point): point is LocationPoint => point !== null);
 
@@ -188,37 +201,62 @@ export default function LeafletDeliveryMap({
         : [startPoint, endPoint]
       : [];
 
+  const routeLabel =
+    tracking.deliveryStatus === "delivered"
+      ? "Delivery completed"
+      : tracking.deliveryStatus === "arrived_at_destination"
+        ? "Rider at destination"
+        : !rider
+          ? "Waiting for rider"
+          : headingToCustomer
+            ? "Rider to destination"
+            : "Rider to restaurant";
+
   return (
-    <div className="h-[400px] overflow-hidden border border-border">
+    <div className="relative h-[400px] overflow-hidden">
       <MapContainer
-        className="h-full w-full"
+        className="delivery-map h-full w-full"
         center={FALLBACK_CENTER}
         zoom={12}
         scrollWheelZoom
+        zoomControl={false}
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          maxZoom={19}
         />
+        <ZoomControl position="bottomright" />
         <MapViewport points={points} />
         {points.map((point) => (
           <Marker
             key={`${point.label}-${point.position.join(",")}`}
             position={point.position}
-            icon={markerIcon(point.color)}
+            icon={markerIcon(point.color, point.shortLabel)}
           >
             <Popup>{point.label}</Popup>
           </Marker>
         ))}
 
-        {/* Render actual road polyline */}
         {displayedRoute.length > 0 && (
-          <Polyline
-            positions={displayedRoute}
-            pathOptions={{ color: "#c4512d", weight: 4, opacity: 0.8 }}
-          />
+          <>
+            <Polyline
+              positions={displayedRoute}
+              pathOptions={{ color: "#ffffff", weight: 8, opacity: 0.9 }}
+            />
+            <Polyline
+              positions={displayedRoute}
+              pathOptions={{ color: "#c4512d", weight: 4, opacity: 0.95 }}
+            />
+          </>
         )}
       </MapContainer>
+      <div className="pointer-events-none absolute left-3 top-3 z-[500] border border-white/80 bg-card/95 px-3 py-2 shadow-md backdrop-blur-sm">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+          Current route
+        </p>
+        <p className="text-xs font-bold text-foreground">{routeLabel}</p>
+      </div>
     </div>
   );
 }

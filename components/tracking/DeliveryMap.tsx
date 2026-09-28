@@ -28,7 +28,7 @@ export function DeliveryMap({ tracking }: DeliveryMapProps) {
 
   return (
     <div className="border border-border bg-card p-4">
-      <div className="mb-3 flex items-center justify-between">
+      <div className="mb-3 flex items-center justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
             Delivery map
@@ -48,7 +48,9 @@ export function DeliveryMap({ tracking }: DeliveryMapProps) {
         )}
       </div>
 
-      <LeafletDeliveryMap tracking={tracking} />
+      <div className="overflow-hidden border border-border bg-muted shadow-sm">
+        <LeafletDeliveryMap tracking={tracking} />
+      </div>
 
       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground">
         <span className="inline-flex items-center gap-1">

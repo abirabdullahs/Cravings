@@ -1,4 +1,5 @@
 import { pool } from "@/lib/db";
+import { executeDml } from "@/lib/dblib";
 import { GET_ALL_RIDERS, UPDATE_RIDER_STATUS_BY_ADMIN } from "@/server/query/admin.query";
 import { adminApiError, requireAdmin } from "../_lib";
 
@@ -25,8 +26,13 @@ export async function PATCH(request: Request) {
     if (!Number.isInteger(riderId) || !["offline", "idle", "busy"].includes(status)) {
       return Response.json({ error: "Rider id and valid status are required" }, { status: 400 });
     }
-    const result = await pool.query(UPDATE_RIDER_STATUS_BY_ADMIN, [riderId, status]);
-    if (!result.rows[0]) return Response.json({ error: "Rider not found" }, { status: 404 });
+    const result = await executeDml(UPDATE_RIDER_STATUS_BY_ADMIN, [riderId, status]);
+    if (!result.rows[0]) {
+      return Response.json(
+        { error: "A rider with an active delivery must remain busy" },
+        { status: 409 },
+      );
+    }
     return Response.json({ rider: result.rows[0] });
   } catch (error) {
     return adminApiError(error);

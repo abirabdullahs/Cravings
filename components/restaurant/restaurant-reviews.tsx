@@ -25,7 +25,21 @@ export function RestaurantReviews({ restaurantId }: { restaurantId: number }) {
       </div>
 
       {isLoading ? (
-        <p className="mt-5 text-sm text-muted-foreground">Loading reviews...</p>
+        <div className="mt-5 grid gap-3 sm:grid-cols-2" aria-label="Loading reviews">
+          {[1, 2].map((item) => (
+            <div
+              key={item}
+              className="animate-pulse space-y-3 border border-border bg-card p-4"
+            >
+              <div className="flex justify-between gap-3">
+                <div className="h-4 w-28 bg-muted" />
+                <div className="h-4 w-12 bg-muted" />
+              </div>
+              <div className="h-4 w-full bg-muted" />
+              <div className="h-3 w-20 bg-muted" />
+            </div>
+          ))}
+        </div>
       ) : reviews.length ? (
         <div className="mt-5 grid gap-3 sm:grid-cols-2">
           {reviews.map((review) => (

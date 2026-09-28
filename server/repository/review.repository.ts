@@ -1,5 +1,10 @@
 import { pool } from "@/lib/db";
-import { GET_RESTAURANT_REVIEWS, INSERT_REVIEW } from "../query/review.query";
+import { executeDml } from "@/lib/dblib";
+import {
+  GET_RESTAURANT_REVIEWS,
+  GET_RIDER_REVIEWS,
+  INSERT_REVIEW,
+} from "../query/review.query";
 import { toCamelCase } from "@/lib/case";
 
 export interface CreateReviewParams {
@@ -23,12 +28,18 @@ export async function insertReview(params: CreateReviewParams) {
     params.riderRating ?? null,
     params.comment ?? null,
   ];
-  const { rows } = await pool.query(INSERT_REVIEW, values);
+  const { rows } = await executeDml(INSERT_REVIEW, values);
   return rows[0];
 }
 
 export async function findRestaurantReviews(restaurantId: number) {
   return toCamelCase(
     (await pool.query(GET_RESTAURANT_REVIEWS, [restaurantId])).rows,
+  );
+}
+
+export async function findRiderReviews(riderId: number) {
+  return toCamelCase(
+    (await pool.query(GET_RIDER_REVIEWS, [riderId])).rows,
   );
 }

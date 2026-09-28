@@ -1,4 +1,5 @@
 import { pool } from "@/lib/db";
+import { executeDml } from "@/lib/dblib";
 import {
   FIND_USER_ADDRESSES,
   INSERT_ADDRESS,
@@ -79,7 +80,7 @@ export const insertAddress = async ({
   latitude?: number;
   longitude?: number;
 }) => {
-  const data = await pool.query(INSERT_ADDRESS, [
+  const data = await executeDml<AddressRow>(INSERT_ADDRESS, [
     userId,
     label ?? null,
     address,
@@ -116,7 +117,7 @@ export const updateAddress = async ({
   latitude?: number;
   longitude?: number;
 }) => {
-  const data = await pool.query(UPDATE_ADDRESS, [
+  const data = await executeDml<AddressRow>(UPDATE_ADDRESS, [
     addressId,
     label ?? null,
     address,
@@ -135,6 +136,6 @@ export const deleteAddress = async (
   addressId: number | string,
   userId: number | string,
 ) => {
-  const data = await pool.query(DELETE_ADDRESS, [addressId, userId]);
+  const data = await executeDml(DELETE_ADDRESS, [addressId, userId]);
   return data.rows[0] ? data.rows[0].id : null;
 };

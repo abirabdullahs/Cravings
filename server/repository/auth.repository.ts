@@ -5,7 +5,9 @@ import {
   INSERT_USER,
   COMPLETE_USER,
   INSERT_ROLE_REQUEST,
-  FIND_ACTIVE_ROLE_REQUEST_BY_USER,
+  FIND_APPROVED_ROLE_REQUEST_FOR_CURRENT_ROLE,
+  FIND_PENDING_ROLE_REQUEST_BY_USER_AND_ROLE,
+  FIND_ROLE_REQUEST_FOR_PROFILE,
   LIST_ROLE_REQUESTS,
   UPDATE_ROLE_REQUEST_STATUS,
   APPROVE_ROLE_REQUEST,
@@ -15,7 +17,7 @@ import {
   INSERT_RESTAURANT_OWNER_PROFILE,
 } from "../query/auth.query";
 import { User } from "../../types/user";
-import { withTransaction } from "@/lib/dblib";
+import { executeDml, withTransaction } from "@/lib/dblib";
 
 export const findUserByEmail = async (email: string) => {
   const result = await pool.query(FIND_USER_BY_EMAIL, [email]);
@@ -29,9 +31,43 @@ export const findUserById = async (id: string) => {
 
 export const createUser = async (user: User) => {
   const data = [user.email, user.name, user.password, user.phone, user.role];
-  const result = await pool.query(INSERT_USER, data);
+  const result = await executeDml(INSERT_USER, data);
   return result.rows[0];
 };
+
+type NewRoleRequest = {
+  currentRole: string;
+  requestedRole: string;
+  details?: string;
+  verificationData?: Record<string, unknown>;
+};
+
+export const createUserWithRoleRequest = async (
+  user: User,
+  roleRequest?: NewRoleRequest,
+) =>
+  withTransaction(async (client) => {
+    const userResult = await client.query(INSERT_USER, [
+      user.email,
+      user.name,
+      user.password,
+      user.phone,
+      user.role,
+    ]);
+    const createdUser = userResult.rows[0];
+
+    if (roleRequest) {
+      await client.query(INSERT_ROLE_REQUEST, [
+        createdUser.id,
+        roleRequest.currentRole,
+        roleRequest.requestedRole,
+        roleRequest.details ?? "",
+        roleRequest.verificationData ?? {},
+      ]);
+    }
+
+    return createdUser;
+  });
 
 export const completeUser = async ({
   role,
@@ -43,9 +79,38 @@ export const completeUser = async ({
   id: string;
 }) => {
   const data = [role, phone, id];
-  const result = await pool.query(COMPLETE_USER, data);
+  const result = await executeDml(COMPLETE_USER, data);
   return result.rows[0];
 };
+
+export const completeUserWithRoleRequest = async ({
+  role,
+  phone,
+  id,
+  roleRequest,
+}: {
+  phone: string;
+  role: string;
+  id: string;
+  roleRequest?: NewRoleRequest;
+}) =>
+  withTransaction(async (client) => {
+    const userResult = await client.query(COMPLETE_USER, [role, phone, id]);
+    const completedUser = userResult.rows[0];
+    if (!completedUser) return null;
+
+    if (roleRequest) {
+      await client.query(INSERT_ROLE_REQUEST, [
+        id,
+        roleRequest.currentRole,
+        roleRequest.requestedRole,
+        roleRequest.details ?? "",
+        roleRequest.verificationData ?? {},
+      ]);
+    }
+
+    return completedUser;
+  });
 
 export const insertRiderProfile = async ({
   userId,
@@ -57,12 +122,12 @@ export const insertRiderProfile = async ({
   licensePlate: string | null;
 }) => {
   const data = [userId, vehicleType, licensePlate];
-  const result = await pool.query(INSERT_RIDER_PROFILE, data);
+  const result = await executeDml(INSERT_RIDER_PROFILE, data);
   return result.rows[0];
 };
 
 export const insertRestaurantOwnerProfile = async (userId: string) => {
-  const result = await pool.query(INSERT_RESTAURANT_OWNER_PROFILE, [userId]);
+  const result = await executeDml(INSERT_RESTAURANT_OWNER_PROFILE, [userId]);
   return result.rows[0];
 };
 
@@ -79,7 +144,7 @@ export const createRoleRequest = async ({
   details?: string;
   verificationData?: Record<string, unknown>;
 }) => {
-  const result = await pool.query(INSERT_ROLE_REQUEST, [
+  const result = await executeDml(INSERT_ROLE_REQUEST, [
     userId,
     currentRole,
     requestedRole,
@@ -89,13 +154,27 @@ export const createRoleRequest = async ({
   return result.rows[0];
 };
 
-export const findActiveRoleRequestByUser = async (userId: string) => {
-  const result = await pool.query(FIND_ACTIVE_ROLE_REQUEST_BY_USER, [userId]);
+export const findApprovedRoleRequestForCurrentRole = async (userId: string) => {
+  const result = await pool.query(FIND_APPROVED_ROLE_REQUEST_FOR_CURRENT_ROLE, [
+    userId,
+  ]);
   return result.rows[0];
 };
 
-export const findRoleRequestByUser = async (userId: string) => {
-  return await findActiveRoleRequestByUser(userId);
+export const findPendingRoleRequestByUserAndRole = async (
+  userId: string,
+  requestedRole: "owner" | "rider",
+) => {
+  const result = await pool.query(FIND_PENDING_ROLE_REQUEST_BY_USER_AND_ROLE, [
+    userId,
+    requestedRole,
+  ]);
+  return result.rows[0];
+};
+
+export const findRoleRequestForProfile = async (userId: string) => {
+  const result = await pool.query(FIND_ROLE_REQUEST_FOR_PROFILE, [userId]);
+  return result.rows[0];
 };
 
 export const listRoleRequests = async () => {
@@ -121,7 +200,7 @@ export const updateRoleRequestStatus = async ({
   reviewNote?: string;
   rejectionReason?: string;
 }) => {
-  const result = await pool.query(UPDATE_ROLE_REQUEST_STATUS, [
+  const result = await executeDml(UPDATE_ROLE_REQUEST_STATUS, [
     status,
     reviewedBy,
     reviewNote ?? "",
@@ -138,7 +217,7 @@ export const approveRoleRequest = async ({
   userId: string;
   requestedRole: string;
 }) => {
-  const result = await pool.query(APPROVE_ROLE_REQUEST, [
+  const result = await executeDml(APPROVE_ROLE_REQUEST, [
     userId,
     requestedRole,
   ]);
@@ -166,16 +245,20 @@ export const approveRoleRequestWithProfile = async ({
     const nid = String(
       verificationData.nid_number ?? verificationData.nid ?? "",
     )
-      .replace(/\s+/g, "")
+      .replace(/[^a-zA-Z0-9]/g, "")
       .toLowerCase();
     if (nid) {
+      await client.query(
+        `SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`,
+        [nid],
+      );
       const duplicate = await client.query(
         `SELECT id
          FROM role_requests
          WHERE id <> $1
            AND user_id <> $3
            AND status = 'APPROVED'
-           AND LOWER(REGEXP_REPLACE(COALESCE(verification_data->>'nid_number', ''), '\\s+', '', 'g')) = $2
+           AND LOWER(REGEXP_REPLACE(COALESCE(verification_data->>'nid_number', verification_data->>'nid', ''), '[^a-zA-Z0-9]', '', 'g')) = $2
          LIMIT 1`,
         [requestId, nid, request.user_id],
       );
@@ -198,15 +281,21 @@ export const approveRoleRequestWithProfile = async ({
             `RIDER-${request.user_id}`,
         ),
         String(verificationData.license_number ?? verificationData.licence_number ?? ""),
-        String(verificationData.nid_number ?? ""),
+        String(verificationData.nid_number ?? verificationData.nid ?? ""),
       ]);
     } else if (requestedRole === "owner") {
       await client.query(INSERT_RESTAURANT_OWNER_PROFILE, [
         String(request.user_id),
-        String(verificationData.nid_number ?? ""),
-        String(verificationData.business_name ?? ""),
+        String(verificationData.nid_number ?? verificationData.nid ?? ""),
+        String(
+          verificationData.business_name ??
+            verificationData.restaurant_name ??
+            "",
+        ),
         String(verificationData.trade_licence ?? verificationData.trade_license ?? ""),
-        String(verificationData.address ?? ""),
+        String(
+          verificationData.address ?? verificationData.business_address ?? "",
+        ),
       ]);
     }
 
@@ -236,7 +325,7 @@ export const updateUserProfile = async ({
   phone?: string;
   profileImage?: string;
 }) => {
-  const result = await pool.query(UPDATE_USER_PROFILE, [
+  const result = await executeDml(UPDATE_USER_PROFILE, [
     id,
     name ?? null,
     phone ?? null,

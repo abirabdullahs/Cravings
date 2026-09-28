@@ -8,7 +8,7 @@ import Credentials from "next-auth/providers/credentials";
 import { getUserByEmail, createAccount } from "./server/service/auth.service";
 
 export const { handlers, auth, signIn, signOut, unstable_update } = NextAuth({
-  session: { strategy: "jwt", maxAge: 15 * 60 },
+  session: { strategy: "jwt", maxAge: 60 * 60  },
   secret: process.env.AUTH_SECRET,
   providers: [
     Google({
@@ -135,3 +135,4 @@ export const { handlers, auth, signIn, signOut, unstable_update } = NextAuth({
     },
   },
 });
+                                                                                                                                          

@@ -52,11 +52,40 @@ export const INSERT_ROLE_REQUEST = `
   RETURNING *;
 `;
 
-export const FIND_ACTIVE_ROLE_REQUEST_BY_USER = `
+export const FIND_APPROVED_ROLE_REQUEST_FOR_CURRENT_ROLE = `
+  SELECT rr.*
+  FROM role_requests rr
+  JOIN users u ON u.id = rr.user_id
+  WHERE rr.user_id = $1
+    AND rr.status = 'APPROVED'
+    AND rr.requested_role = u.role
+  ORDER BY rr.reviewed_at DESC NULLS LAST, rr.created_at DESC
+  LIMIT 1;
+`;
+
+export const FIND_PENDING_ROLE_REQUEST_BY_USER_AND_ROLE = `
   SELECT *
   FROM role_requests
   WHERE user_id = $1
+    AND requested_role = $2
+    AND status = 'PENDING'
   ORDER BY created_at DESC
+  LIMIT 1;
+`;
+
+export const FIND_ROLE_REQUEST_FOR_PROFILE = `
+  SELECT rr.*
+  FROM role_requests rr
+  JOIN users u ON u.id = rr.user_id
+  WHERE rr.user_id = $1
+    AND (
+      rr.status = 'PENDING'
+      OR (rr.status = 'APPROVED' AND rr.requested_role = u.role)
+      OR (rr.status = 'REJECTED' AND u.role = 'customer')
+    )
+  ORDER BY
+    CASE rr.status WHEN 'PENDING' THEN 0 WHEN 'APPROVED' THEN 1 ELSE 2 END,
+    rr.created_at DESC
   LIMIT 1;
 `;
 

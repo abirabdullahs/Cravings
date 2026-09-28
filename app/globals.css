@@ -178,3 +178,22 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer components {
+  .delivery-map .leaflet-control-zoom {
+    border: 1px solid color-mix(in oklab, var(--border) 85%, transparent);
+    box-shadow: 0 4px 14px rgb(40 31 23 / 14%);
+  }
+
+  .delivery-map .leaflet-control-zoom a {
+    border-color: var(--border);
+    background: color-mix(in oklab, var(--card) 94%, transparent);
+    color: var(--foreground);
+  }
+
+  .delivery-map .leaflet-control-attribution {
+    background: color-mix(in oklab, var(--card) 88%, transparent);
+    color: var(--muted-foreground);
+    font-size: 9px;
+  }
+}

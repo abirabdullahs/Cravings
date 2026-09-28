@@ -1,5 +1,5 @@
 import { pool } from "@/lib/db";
-import { withTransaction } from "@/lib/dblib";
+import { executeDml, withTransaction } from "@/lib/dblib";
 import {
   ACCEPT_REQUEST,
   GET_AVAILABLE_REQUESTS,
@@ -26,8 +26,15 @@ import { AppError } from "@/lib/errors/AppError";
 import { ErrorCode } from "@/lib/errors/errorCodes";
 import { toCamelCase } from "@/lib/case";
 
-export const findAvailableRequests = async () => {
-  return toCamelCase((await pool.query(GET_AVAILABLE_REQUESTS)).rows);
+export const findAvailableRequests = async (
+  riderId: number,
+  latitude: number,
+  longitude: number,
+) => {
+  return toCamelCase(
+    (await pool.query(GET_AVAILABLE_REQUESTS, [riderId, latitude, longitude]))
+      .rows,
+  );
 };
 
 export const acceptRequest = async (
@@ -261,7 +268,7 @@ export const setRiderStatus = async (
   riderId: number,
   status: "offline" | "idle",
 ) => {
-  const result = await pool.query(SET_RIDER_DUTY_STATUS, [riderId, status]);
+  const result = await executeDml(SET_RIDER_DUTY_STATUS, [riderId, status]);
   if (result.rowCount !== 1) {
     throw new AppError(
       ErrorCode.STATUS_CONFLICT,

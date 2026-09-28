@@ -212,6 +212,9 @@ CREATE TRIGGER trg_riders_updated_at
   BEFORE UPDATE ON riders
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
+CREATE UNIQUE INDEX uq_riders_nid_normalized
+  ON riders ((NULLIF(LOWER(REGEXP_REPLACE(nid_number, '[^a-zA-Z0-9]', '', 'g')), '')));
+
 CREATE TABLE restaurant_owners (
   id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
   user_id INT NOT NULL UNIQUE,
@@ -227,6 +230,9 @@ CREATE TABLE restaurant_owners (
 CREATE TRIGGER trg_restaurant_owners_updated_at
   BEFORE UPDATE ON restaurant_owners
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+CREATE UNIQUE INDEX uq_restaurant_owners_nid_normalized
+  ON restaurant_owners ((NULLIF(LOWER(REGEXP_REPLACE(nid_number, '[^a-zA-Z0-9]', '', 'g')), '')));
 
 CREATE TABLE coupons (
   id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -437,6 +443,9 @@ CREATE TABLE role_requests (
 
 CREATE INDEX ix_role_requests_user ON role_requests (user_id, status, created_at);
 CREATE INDEX ix_role_requests_status ON role_requests (status, requested_role);
+CREATE UNIQUE INDEX uq_role_requests_pending_user_role
+  ON role_requests (user_id, requested_role)
+  WHERE status = 'PENDING';
 
 CREATE TRIGGER trg_role_requests_updated_at
   BEFORE UPDATE ON role_requests

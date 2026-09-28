@@ -118,6 +118,7 @@ export default function AdminOperationsPage() {
   async function reviewRequest(
     requestId: number,
     status: "APPROVED" | "REJECTED",
+    rejectionReason?: string,
   ) {
     setError("");
     setPendingAction(`request-${requestId}`);
@@ -130,16 +131,15 @@ export default function AdminOperationsPage() {
             requestId,
             status,
             reviewNote: "Reviewed by admin",
-            rejectionReason:
-              status === "REJECTED"
-                ? "Verification details did not pass review"
-                : "",
+            rejectionReason: status === "REJECTED" ? rejectionReason : "",
           }),
         },
       );
       setRequests((current) =>
         current.map((request) =>
-          request.id === requestId ? payload.request : request,
+          request.id === requestId
+            ? { ...request, ...payload.request }
+            : request,
         ),
       );
     } catch (reviewError) {
@@ -248,7 +248,9 @@ export default function AdminOperationsPage() {
       </div>
       <RoleRequestsTable
         requests={visibleRequests}
-        onReview={(id, status) => void reviewRequest(id, status)}
+        onReview={(id, status, rejectionReason) =>
+          void reviewRequest(id, status, rejectionReason)
+        }
         disabled={pendingAction !== null}
       />
       <ListPager page={requestPage} total={requests.length} onPage={setRequestPage} />

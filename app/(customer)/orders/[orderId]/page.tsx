@@ -30,13 +30,14 @@ export default function OrderTrackingPage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-10">
+    <div className="mx-auto px-2 pb-16 pt-8 sm:px-14">
       <ActiveOrderView
         viewer="customer"
         tracking={tracking}
         receipt={receipt}
         onCancel={async () => {
-          if (!window.confirm("Cancel this order? This cannot be undone.")) return;
+          if (!window.confirm("Cancel this order? This cannot be undone."))
+            return;
           await cancelOrder();
         }}
         isCancelling={isCancelling}

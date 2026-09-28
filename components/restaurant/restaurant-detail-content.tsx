@@ -14,14 +14,12 @@ export function RestaurantDetailContent({
   cartId,
   restaurantId,
   onAddItem,
-  isLoading = false,
 }: {
   menu?: RestaurantMenu;
   cartItems?: CartItem[];
   cartId?: number;
   restaurantId?: number;
   onAddItem?: (item: MenuItem, quantity: number) => Promise<void>;
-  isLoading?: boolean;
 }) {
   const [activeCategory, setActiveCategory] = useState<number | null>(null);
   const [search, setSearch] = useState("");
@@ -55,9 +53,8 @@ export function RestaurantDetailContent({
     menu?.categories.find((category) => category.id === activeCategory)?.name ??
     "Menu";
 
-  if (isLoading || !menu || !restaurantId || !onAddItem) {
-    // return <RestaurantDetailSkeleton />;
-    return <>lodaing</>;
+  if (!menu || !restaurantId || !onAddItem) {
+    return null;
   }
 
   async function addItem(item: MenuItem) {

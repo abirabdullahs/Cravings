@@ -1,0 +1,102 @@
+[
+  {
+    "query": "Customer order history",
+    "indexes": "ix_orders_user, ix_order_items_order",
+    "sql": "SELECT o.id, o.restaurant_id, r.name AS restaurant_name, o.total_amount,\n  o.order_status, o.created_at, COUNT(oi.id)::int AS total_items,\n  d.rider_id, rider.name AS rider_name,\n  EXISTS (SELECT 1 FROM reviews review WHERE review.order_id = o.id) AS is_reviewed\nFROM orders o\nJOIN restaurants r ON r.id = o.restaurant_id\nLEFT JOIN order_items oi ON oi.order_id = o.id\nLEFT JOIN deliveries d ON d.order_id = o.id\nLEFT JOIN users rider ON rider.id = d.rider_id\nWHERE o.user_id = 777\nGROUP BY o.id, r.name, d.rider_id, rider.name\nORDER BY o.created_at DESC",
+    "median_ms": 127.361,
+    "min_ms": 115.156,
+    "max_ms": 163.357,
+    "plan": "Seq Scan + Bitmap Heap Scan + Bitmap Index Scan (uq_orders_user_idempotency) + Index Scan (users_pkey)",
+    "buffers": 13030
+  },
+  {
+    "query": "Restaurant active kitchen queue",
+    "indexes": "ix_orders_restaurant, ix_order_items_order",
+    "sql": "SELECT o.id, u.name AS customer_name, o.total_amount, o.order_status,\n  o.created_at, o.delivery_instructions,\n  COALESCE(SUM(oi.quantity), 0)::int AS total_items,\n  COALESCE(\n    json_agg(\n      json_build_object(\n        'id', oi.id,\n        'name', mi.item_name,\n        'quantity', oi.quantity\n      ) ORDER BY oi.id\n    ) FILTER (WHERE oi.id IS NOT NULL),\n    '[]'::json\n  ) AS items\nFROM orders o\nJOIN users u ON u.id = o.user_id\nLEFT JOIN order_items oi ON oi.order_id = o.id\nLEFT JOIN menu_items mi ON mi.id = oi.menu_item_id\nWHERE o.restaurant_id = 42\n  AND o.order_status IN ('pending', 'confirmed', 'preparing', 'ready')\nGROUP BY o.id, u.name\nORDER BY o.created_at DESC",
+    "median_ms": 75.994,
+    "min_ms": 67.217,
+    "max_ms": 137.535,
+    "plan": "Seq Scan + Index Scan (users_pkey) + Index Scan (menu_items_pkey)",
+    "buffers": 10943
+  },
+  {
+    "query": "Items of one order",
+    "indexes": "ix_order_items_order, ix_payments_order",
+    "sql": "SELECT o.id AS order_id, oi.id AS item_id, mi.item_name, oi.quantity,\n  oi.unit_price, oi.subtotal AS item_subtotal,\n  COALESCE(SUM(oi.subtotal) OVER (), 0)::NUMERIC(10,2) AS subtotal,\n  o.discount, o.delivery_fee,\n  ROUND(COALESCE(SUM(oi.subtotal) OVER (), 0) * 0.03, 2) AS tax,\n  ROUND(GREATEST(\n    o.total_amount - COALESCE(SUM(oi.subtotal) OVER (), 0) + o.discount\n      - o.delivery_fee\n      - ROUND(COALESCE(SUM(oi.subtotal) OVER (), 0) * 0.03, 2),\n    0\n  ), 2) AS platform_fee,\n  o.total_amount, p.paid_at, p.transaction_id, o.delivery_instructions\nFROM orders o\nLEFT JOIN order_items oi ON oi.order_id = o.id\nLEFT JOIN menu_items mi ON mi.id = oi.menu_item_id\nLEFT JOIN payments p ON p.order_id = o.id\nWHERE o.id = 150000 AND o.user_id = 777\nORDER BY oi.id",
+    "median_ms": 56.722,
+    "min_ms": 50.93,
+    "max_ms": 150.759,
+    "plan": "Index Scan (orders_pkey) + Seq Scan + Index Scan (menu_items_pkey)",
+    "buffers": 8841
+  },
+  {
+    "query": "Restaurant menu",
+    "indexes": "ix_menu_items_restaurant_archived",
+    "sql": "SELECT mi.id, mi.item_name, mi.description, mi.price, mi.item_img AS image,\n  mi.is_available, mi.category_id, c.name AS category_name, mi.archived_at\nFROM menu_items mi\nLEFT JOIN categories c ON c.id = mi.category_id\nWHERE mi.restaurant_id = 42 AND mi.archived_at IS NULL\nORDER BY c.name NULLS LAST, mi.item_name",
+    "median_ms": 1.187,
+    "min_ms": 1.142,
+    "max_ms": 1.24,
+    "plan": "Seq Scan",
+    "buffers": 147
+  },
+  {
+    "query": "Latest customer notifications",
+    "indexes": "ix_notifications_user",
+    "sql": "SELECT id, user_id, order_id, title, message, is_read, created_at\nFROM notifications\nWHERE user_id = 777\nORDER BY created_at DESC\nLIMIT 20",
+    "median_ms": 31.835,
+    "min_ms": 24.702,
+    "max_ms": 138.349,
+    "plan": "Seq Scan",
+    "buffers": 2537
+  },
+  {
+    "query": "Rider active delivery lookup",
+    "indexes": "ix_deliveries_rider, ix_order_items_order, ix_payments_order, ix_delivery_location_history_delivery_time",
+    "sql": "SELECT o.id AS order_id, o.order_status, d.id AS delivery_id,\n  d.status AS delivery_status, d.assigned_at,\n  r.id AS restaurant_id, r.name AS restaurant_name,\n  r.address AS restaurant_address, r.phone AS restaurant_phone,\n  r.latitude AS restaurant_latitude, r.longitude AS restaurant_longitude,\n  u.name AS customer_name, u.phone AS customer_phone,\n  ua.address AS dropoff_address, ua.latitude AS dropoff_latitude,\n  ua.longitude AS dropoff_longitude,\n  dlh.latitude AS rider_latitude, dlh.longitude AS rider_longitude,\n  dlh.recorded_at AS rider_location_recorded_at,\n  CASE\n    WHEN r.latitude IS NOT NULL AND r.longitude IS NOT NULL\n      AND ua.latitude IS NOT NULL AND ua.longitude IS NOT NULL\n    THEN calculate_distance_km(r.latitude, r.longitude, ua.latitude, ua.longitude)\n    WHEN dlh.latitude IS NOT NULL AND dlh.longitude IS NOT NULL\n      AND ua.latitude IS NOT NULL AND ua.longitude IS NOT NULL\n    THEN calculate_distance_km(dlh.latitude, dlh.longitude, ua.latitude, ua.longitude)\n    ELSE NULL\n  END AS distance_km,\n  o.total_amount, p.payment_method,\n  (SELECT COALESCE(SUM(oi.quantity), 0)::int\n   FROM order_items oi WHERE oi.order_id = o.id) AS item_count\nFROM deliveries d\nJOIN orders o ON o.id = d.order_id\nJOIN restaurants r ON r.id = o.restaurant_id\nJOIN users u ON u.id = o.user_id\nJOIN user_addresses ua ON ua.id = o.address_id\nLEFT JOIN payments p ON p.order_id = o.id\nLEFT JOIN delivery_location_history dlh\n  ON dlh.delivery_id = d.id\n  AND dlh.recorded_at = (\n    SELECT MAX(dlh2.recorded_at)\n    FROM delivery_location_history dlh2\n    WHERE dlh2.delivery_id = d.id\n  )\nWHERE d.rider_id = 600\n  AND d.status IN ('accepted', 'arrived_at_store', 'picked_up', 'arrived_at_destination')\nORDER BY d.assigned_at DESC NULLS LAST\nLIMIT 1",
+    "median_ms": 409.76,
+    "min_ms": 385.05,
+    "max_ms": 442.554,
+    "plan": "Seq Scan + Index Scan (orders_pkey) + Index Scan (users_pkey) + Index Scan (user_addresses_pkey)",
+    "buffers": 28168
+  },
+  {
+    "query": "Latest GPS point of a delivery",
+    "indexes": "ix_delivery_location_history_delivery_time",
+    "sql": "SELECT id, delivery_id, latitude, longitude, event, recorded_at\nFROM delivery_location_history\nWHERE delivery_id = 150000\nORDER BY recorded_at DESC, id DESC\nLIMIT 1",
+    "median_ms": 49.286,
+    "min_ms": 43.207,
+    "max_ms": 150.48,
+    "plan": "Seq Scan",
+    "buffers": 5614
+  },
+  {
+    "query": "Restaurant reviews",
+    "indexes": "ix_reviews_restaurant",
+    "sql": "SELECT rv.id, rv.rating, rv.comment, rv.created_at, u.name AS customer_name\nFROM reviews rv\nJOIN users u ON u.id = rv.user_id\nWHERE rv.restaurant_id = 42\nORDER BY rv.created_at DESC\nLIMIT 20",
+    "median_ms": 8.925,
+    "min_ms": 8.824,
+    "max_ms": 9.817,
+    "plan": "Seq Scan",
+    "buffers": 1100
+  },
+  {
+    "query": "Customer saved addresses",
+    "indexes": "ix_user_addresses_user",
+    "sql": "SELECT id, label, address, street, apartment_name, city, postal_code,\n  latitude, longitude\nFROM user_addresses\nWHERE user_id = 777\nORDER BY id ASC",
+    "median_ms": 2.194,
+    "min_ms": 2.154,
+    "max_ms": 2.243,
+    "plan": "Seq Scan",
+    "buffers": 458
+  },
+  {
+    "query": "Owner restaurant list",
+    "indexes": "ix_restaurants_owner_archived",
+    "sql": "SELECT id, name, description, phone, email, address, area, latitude, longitude,\n  opening_time, closing_time, delivery_fee, minimum_order, active_status,\n  image, rating, cuisines, archived_at\nFROM restaurants\nWHERE owner_id = 42\n  AND ((FALSE::boolean = FALSE AND archived_at IS NULL)\n    OR (FALSE::boolean = TRUE AND archived_at IS NOT NULL))\nORDER BY created_at DESC",
+    "median_ms": 0.112,
+    "min_ms": 0.11,
+    "max_ms": 0.123,
+    "plan": "Seq Scan",
+    "buffers": 13
+  }
+]

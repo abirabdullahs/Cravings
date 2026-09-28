@@ -1,5 +1,6 @@
 import { toCamelCase } from "@/lib/case";
 import { pool } from "@/lib/db";
+import { executeDml } from "@/lib/dblib";
 import {
   INSERT_NOTIFICATION,
   FIND_NOTIFICATIONS,
@@ -28,7 +29,7 @@ export const insertNotification = async (
   title: string,
   message: string,
 ) => {
-  const result = await pool.query(INSERT_NOTIFICATION, [
+  const result = await executeDml(INSERT_NOTIFICATION, [
     userId,
     orderId,
     title,
@@ -38,10 +39,10 @@ export const insertNotification = async (
 };
 
 export const markRead = async (notificationId: number, userId: number) => {
-  const result = await pool.query(MARK_READ, [notificationId, userId]);
+  const result = await executeDml(MARK_READ, [notificationId, userId]);
   return toCamelCase(result.rows[0]);
 };
 
 export const markAllRead = async (userId: number) => {
-  await pool.query(MARK_ALL_READ, [userId]);
+  await executeDml(MARK_ALL_READ, [userId]);
 };

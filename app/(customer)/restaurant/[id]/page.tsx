@@ -8,6 +8,7 @@ import { useOrder, useCartItems, useRestaurantDetails } from "@/hooks/useOrder";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { RestaurantReviews } from "@/components/restaurant/restaurant-reviews";
+import { RestaurantDetailSkeleton } from "@/components/restaurant/restaurant-detail-skeleton";
 
 export default function RestaurantPage({
   params,
@@ -26,7 +27,12 @@ export default function RestaurantPage({
   );
   const cartItems = cartData?.[0]?.cartItems;
   const cartId = cartData?.[0]?.id;
-  if (!isLoading && (isError || !data)) {
+
+  if (isLoading) {
+    return <RestaurantDetailSkeleton />;
+  }
+
+  if (isError || !data) {
     notFound();
   }
   const handleAddCartItem = async (item: MenuItem, quantity: number) => {
@@ -43,19 +49,18 @@ export default function RestaurantPage({
 
   return (
     <main className="bg-background">
-      {data && <RestaurantDetailHero restaurant={data.restaurant} />}
+      <RestaurantDetailHero restaurant={data.restaurant} />
       <RestaurantDetailContent
         key={cartItems
           ?.map((item) => `${item.id}:${item.quantity}`)
           .join("|") ?? "empty-cart"}
-        menu={data?.menu}
+        menu={data.menu}
         cartItems={cartItems}
         cartId={cartId}
-        restaurantId={data?.restaurant.id}
+        restaurantId={data.restaurant.id}
         onAddItem={handleAddCartItem}
-        isLoading={isLoading}
       />
-      {data && <RestaurantReviews restaurantId={data.restaurant.id} />}
+      <RestaurantReviews restaurantId={data.restaurant.id} />
     </main>
   );
 }

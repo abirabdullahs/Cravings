@@ -1,17 +1,41 @@
 export const GET_AVAILABLE_REQUESTS = `
-SELECT 
+WITH eligible_rider AS (
+  SELECT 1
+  FROM riders rider
+  WHERE rider.user_id = $1
+    AND rider.status = 'idle'
+    AND NOT EXISTS (
+      SELECT 1
+      FROM deliveries active_delivery
+      WHERE active_delivery.rider_id = rider.user_id
+        AND active_delivery.status IN (
+          'accepted',
+          'arrived_at_store',
+          'picked_up',
+          'arrived_at_destination'
+        )
+    )
+)
+SELECT
   o.id AS order_id, 
   o.restaurant_id, 
   r.name AS restaurant_name, 
   o.total_amount,
+  o.delivery_fee,
+  ROUND(calculate_distance_km($2, $3, r.latitude, r.longitude), 2)::DOUBLE PRECISION
+    AS pickup_distance_km,
+  ROUND(calculate_distance_km(r.latitude, r.longitude, ua.latitude, ua.longitude), 2)::DOUBLE PRECISION
+    AS delivery_distance_km,
   o.created_at
 FROM orders o
 JOIN restaurants r ON r.id = o.restaurant_id
+JOIN user_addresses ua ON ua.id = o.address_id
 JOIN deliveries d ON d.order_id = o.id
+CROSS JOIN eligible_rider
 WHERE o.order_status IN ('pending', 'confirmed', 'ready', 'preparing')
   AND d.status = 'unassigned'
   AND d.rider_id IS NULL
-ORDER BY o.created_at ASC
+ORDER BY pickup_distance_km ASC NULLS LAST, o.created_at ASC
 LIMIT 10;`;
 
 export const ACCEPT_REQUEST = `

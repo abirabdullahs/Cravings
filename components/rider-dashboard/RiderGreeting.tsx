@@ -32,7 +32,7 @@ export function RiderGreeting({
           <button
             disabled={busy}
             onClick={() => onToggle("online")}
-            className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
+            className={`rounded-full px-4 py-1.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${
               isOnline
                 ? "bg-emerald-600 text-white"
                 : "text-muted-foreground hover:text-foreground"
@@ -43,7 +43,7 @@ export function RiderGreeting({
           <button
             disabled={busy}
             onClick={() => onToggle("offline")}
-            className={`rounded-full px-4 py-1.5 text-sm font-semibold transition ${
+            className={`rounded-full px-4 py-1.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50 ${
               !isOnline
                 ? "bg-secondary text-secondary-foreground"
                 : "text-muted-foreground hover:text-foreground"

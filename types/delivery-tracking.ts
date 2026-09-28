@@ -24,9 +24,9 @@ export type OrderStatus =
 
 
 export const DELIVERY_STEPS: { key: DeliveryStep; label: string }[] = [
-  { key: "accepted", label: "Heading to restaurant" },
+  { key: "accepted", label: "Order accepted" },
   { key: "arrived_at_store", label: "Arrived at restaurant" },
-  { key: "picked_up", label: "Picked up and on the way" },
+  { key: "picked_up", label: "Food picked up" },
   { key: "arrived_at_destination", label: "Arrived at destination" },
   { key: "delivered", label: "Delivered to customer" },
 ];

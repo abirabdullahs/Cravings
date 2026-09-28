@@ -53,10 +53,14 @@ export default function ProfilePage() {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [error, setError] = useState("");
   const [form, setForm] = useState({ name: "", phone: "", profile_image: "" });
+  const [applicationForm, setApplicationForm] = useState<
+    Record<string, string>
+  >({});
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [ownerRestaurants, setOwnerRestaurants] = useState<Restaurant[]>([]);
   const { data: notificationData } = useNotifications();
   const notifications = notificationData?.items ?? [];
+  const recentNotifications = notifications.slice(0, 3);
   const markNotification = useMarkNotificationRead();
 
   useEffect(() => {
@@ -71,6 +75,13 @@ export default function ProfilePage() {
           phone: payload.profile.phone ?? "",
           profile_image: payload.profile.profile_image ?? "",
         });
+        setApplicationForm(
+          Object.fromEntries(
+            Object.entries(
+              payload.profile.application?.verification_data ?? {},
+            ).map(([key, value]) => [key, String(value ?? "")]),
+          ),
+        );
       } catch (loadError) {
         setError(
           loadError instanceof Error
@@ -143,7 +154,7 @@ export default function ProfilePage() {
         body: JSON.stringify({
           requestedRole: profile.application.requested_role,
           details: "Role request resubmitted for review.",
-          verificationData: profile.application.verification_data ?? {},
+          verificationData: applicationForm,
         }),
       });
 
@@ -206,6 +217,20 @@ export default function ProfilePage() {
           : "Customer";
   const applicationStatus = profile.application?.status?.toUpperCase();
   const roleDetails = Object.entries(profile.role_details ?? {});
+  const applicationFields =
+    profile.application?.requested_role === "rider"
+      ? [
+          ["nid_number", "NID / National ID"],
+          ["vehicle_type", "Vehicle type"],
+          ["vehicle_plate", "Vehicle plate"],
+          ["license_number", "Driving licence number"],
+        ]
+      : [
+          ["nid_number", "NID / National ID"],
+          ["restaurant_name", "Restaurant / business name"],
+          ["business_address", "Business address"],
+          ["trade_license", "Trade licence"],
+        ];
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
@@ -253,19 +278,38 @@ export default function ProfilePage() {
               {profile.application.status}
             </span>
           </div>
-          {applicationStatus === "REJECTED" &&
-            profile.application.rejection_reason && (
-              <div className="mt-3 rounded border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
-                Rejection reason: {profile.application.rejection_reason}
-              </div>
-            )}
           {applicationStatus === "REJECTED" && (
-            <div className="mt-3 flex flex-wrap gap-3">
+            <div className="mt-3 rounded border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+              Rejection reason: {profile.application.rejection_reason || "No reason was provided."}
+            </div>
+          )}
+          {applicationStatus === "REJECTED" && (
+            <div className="mt-4">
+              <p className="text-sm text-muted-foreground">
+                Correct the application details before submitting a new request.
+              </p>
+              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                {applicationFields.map(([key, label]) => (
+                  <label key={key} className="text-xs font-semibold text-muted-foreground">
+                    {label}
+                    <input
+                      value={applicationForm[key] ?? ""}
+                      onChange={(event) =>
+                        setApplicationForm((current) => ({
+                          ...current,
+                          [key]: event.target.value,
+                        }))
+                      }
+                      className="mt-1 h-10 w-full rounded border border-border bg-background px-3 text-sm font-normal text-foreground"
+                    />
+                  </label>
+                ))}
+              </div>
               <button
                 type="button"
                 onClick={() => void resubmitRoleRequest()}
                 disabled={resubmitting}
-                className="rounded bg-primary px-4 py-2 text-xs font-bold uppercase tracking-wide text-primary-foreground disabled:opacity-50"
+                className="mt-4 rounded bg-primary px-4 py-2 text-xs font-bold uppercase tracking-wide text-primary-foreground disabled:opacity-50"
               >
                 {resubmitting ? "Resubmitting..." : "Re-submit application"}
               </button>
@@ -456,12 +500,20 @@ export default function ProfilePage() {
           <section className="rounded border border-border bg-card p-6">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="font-serif text-2xl font-bold">Notifications</h2>
-              <span className="text-xs uppercase tracking-wide text-muted-foreground">
-                {notificationData?.unreadCount ?? 0} unread
-              </span>
+              <div className="flex items-center gap-3 text-xs">
+                <span className="uppercase tracking-wide text-muted-foreground">
+                  {notificationData?.unreadCount ?? 0} unread
+                </span>
+                <Link
+                  href="/notifications"
+                  className="font-semibold text-primary hover:underline"
+                >
+                  View all
+                </Link>
+              </div>
             </div>
             <div className="space-y-3">
-              {notifications.map((notification) => (
+              {recentNotifications.map((notification) => (
                 <article
                   key={notification.id}
                   className={`border p-4 ${notification.isRead ? "border-border bg-background" : "border-primary/40 bg-primary/5"}`}
@@ -487,7 +539,7 @@ export default function ProfilePage() {
                   </p>
                 </article>
               ))}
-              {!notifications.length && (
+              {!recentNotifications.length && (
                 <p className="text-sm text-muted-foreground">
                   No notifications yet.
                 </p>

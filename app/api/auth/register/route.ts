@@ -39,7 +39,7 @@ export const POST = async (request: Request) => {
     data.role = validation.normalized.role;
     const user = await createAccount({
       ...data,
-      role: "customer",
+      role: validation.normalized.role,
       verificationData: data.verificationData ?? data.verification_data ?? {},
     });
     return NextResponse.json(toSafeUserDTO(user), { status: 201 });
