@@ -252,16 +252,7 @@ export default function RegisterPage() {
             <span className="h-px flex-1 bg-border" />
           </div>
 
-          <button
-            type="button"
-            onClick={() =>
-              signIn("google", { callbackUrl: "/complete-profile" })
-            }
-            className="h-11 w-full rounded-sm border border-border bg-background px-4 text-sm font-semibold text-foreground transition hover:border-primary hover:text-primary"
-          >
-            Continue with Google
-          </button>
-
+       
           <p className="mt-7 text-center text-sm text-muted-foreground">
             Already have an account?{" "}
             <Link
