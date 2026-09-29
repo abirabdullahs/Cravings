@@ -27,6 +27,7 @@ export function Hero() {
             src="/food/hero-spread.png"
             alt="A spread of Dhaka favorites — cheeseburger, kacchi biryani, and grilled kebabs"
             fill
+            sizes="(min-width: 1024px) 50vw, 100vw"
             priority
             className="object-cover"
           />

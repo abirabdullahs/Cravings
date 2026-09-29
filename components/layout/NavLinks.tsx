@@ -18,7 +18,7 @@ export function NavLinks({
     <div
       className={
         mobile
-          ? "flex items-center gap-4 overflow-x-auto text-sm font-medium"
+          ? "flex items-center gap-6 overflow-x-auto text-sm font-medium"
           : "hidden items-center gap-6 text-sm font-medium md:flex"
       }
     >
