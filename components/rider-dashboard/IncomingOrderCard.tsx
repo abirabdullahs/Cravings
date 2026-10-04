@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Bike, Clock, MapPin, Store } from "lucide-react";
 import type { DeliveryOpportunity } from "@/types/rider";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 interface IncomingOrderCardProps {
   opportunity: DeliveryOpportunity;
@@ -94,7 +95,7 @@ export function IncomingOrderCard({
           disabled={busy}
           className="flex-1 bg-primary py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:opacity-50"
         >
-          Accept Order
+          {busy ? <LoadingSpinner label="Accepting…" /> : "Accept Order"}
         </button>
         <button
           onClick={onDecline}

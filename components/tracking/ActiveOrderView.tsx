@@ -9,6 +9,7 @@ import type {
   DeliveryTracking
 } from "@/types/delivery-tracking";
 import type { OrderDetail } from "@/types/order";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 const CUSTOMER_KITCHEN_STEPS = [
   { key: "placed", label: "Order placed" },
@@ -263,7 +264,11 @@ export function ActiveOrderView({
             disabled={isAdvancing || !canAdvance}
             className="mt-4 w-full bg-primary py-3 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:opacity-50"
           >
-            {nextStep.label}
+            {isAdvancing ? (
+              <LoadingSpinner label="Updating status…" />
+            ) : (
+              nextStep.label
+            )}
           </button>
         )}
 
@@ -286,7 +291,7 @@ export function ActiveOrderView({
             className="mt-2 w-full border border-destructive py-2.5 text-sm font-semibold text-destructive disabled:opacity-50"
           >
             {isCancelling
-              ? "Cancelling..."
+              ? <LoadingSpinner label="Cancelling…" />
               : viewer === "rider"
                 ? "Cancel delivery"
                 : "Cancel order"}

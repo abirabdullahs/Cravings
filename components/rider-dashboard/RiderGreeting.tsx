@@ -3,13 +3,17 @@ interface RiderGreetingProps {
   dutyStatus: "online" | "offline";
   busy: boolean;
   onToggle: (next: "online" | "offline") => void;
+  pendingStatus?: "online" | "offline" | null;
 }
+
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 export function RiderGreeting({
   firstName,
   dutyStatus,
   busy,
   onToggle,
+  pendingStatus,
 }: RiderGreetingProps) {
   const isOnline = dutyStatus === "online";
 
@@ -17,7 +21,7 @@ export function RiderGreeting({
     <div className="flex flex-col justify-between gap-6 sm:flex-row sm:items-end">
       <div>
         <h1 className="font-serif text-4xl font-bold text-foreground">
-          As-salamu alaykum, {firstName}!
+          Welcome, {firstName}!
         </h1>
         <p className="mt-2 text-muted-foreground">
           Hope you have a safe and rewarding shift on the roads of Dhaka today.
@@ -38,7 +42,11 @@ export function RiderGreeting({
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            Online
+            {pendingStatus === "online" ? (
+              <LoadingSpinner label="Going online…" />
+            ) : (
+              "Online"
+            )}
           </button>
           <button
             disabled={busy}
@@ -49,7 +57,11 @@ export function RiderGreeting({
                 : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            Offline
+            {pendingStatus === "offline" ? (
+              <LoadingSpinner label="Going offline…" />
+            ) : (
+              "Offline"
+            )}
           </button>
         </div>
       </div>

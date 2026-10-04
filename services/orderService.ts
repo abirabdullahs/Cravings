@@ -10,6 +10,7 @@ import {
   OrderDetail,
   Coupon,
   OrderQuote,
+  ReorderResult,
 } from "@/types/order";
 import { Restaurant, RestaurantMenu } from "@/types/restaurant";
 
@@ -81,3 +82,8 @@ export const fetchOrderDetail = async (
 export const cancelCustomerOrder = async (orderId: number): Promise<void> => {
   await apiRequest(`/api/orders/${orderId}`, { method: "DELETE" });
 };
+
+export const reorderCustomerOrder = async (
+  orderId: number,
+): Promise<ReorderResult> =>
+  apiRequest<ReorderResult>(`/api/orders/${orderId}`, { method: "POST" });

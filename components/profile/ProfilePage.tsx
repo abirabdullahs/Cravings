@@ -10,6 +10,7 @@ import {
 } from "@/hooks/useNotifications";
 import type { Restaurant } from "@/types/restaurant";
 import { apiRequest, toErrorMessage } from "@/lib/http";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 type Role = "admin" | "owner" | "rider" | "customer";
 
@@ -311,7 +312,11 @@ export default function ProfilePage() {
                 disabled={resubmitting}
                 className="mt-4 rounded bg-primary px-4 py-2 text-xs font-bold uppercase tracking-wide text-primary-foreground disabled:opacity-50"
               >
-                {resubmitting ? "Resubmitting..." : "Re-submit application"}
+                {resubmitting ? (
+                  <LoadingSpinner label="Resubmitting…" />
+                ) : (
+                  "Re-submit application"
+                )}
               </button>
             </div>
           )}
@@ -626,7 +631,11 @@ export default function ProfilePage() {
                   disabled={saving || uploadingImage}
                   className="rounded bg-primary px-4 py-2 font-semibold text-primary-foreground disabled:opacity-50"
                 >
-                  {saving ? "Saving..." : "Save profile"}
+                  {saving ? (
+                    <LoadingSpinner label="Saving…" />
+                  ) : (
+                    "Save profile"
+                  )}
                 </button>
               </div>
             </form>

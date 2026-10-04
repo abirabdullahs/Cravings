@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { NextResponse } from "next/server";
 import { listRequests, reviewRoleRequest } from "@/server/service/auth.service";
 import { handleApiError } from "@/lib/errors/handleApiError";
+import { getPagination } from "../_lib";
 
 export async function GET(request: Request) {
   try{
@@ -14,7 +15,13 @@ export async function GET(request: Request) {
   const status = url.searchParams.get("status") ?? undefined;
   const requestedRole = url.searchParams.get("requestedRole") ?? url.searchParams.get("requested_role") ?? undefined;
   const rows = await listRequests({ status, requestedRole });
-  return NextResponse.json({ requests: rows });
+  const { page, limit, offset } = getPagination(request);
+  return NextResponse.json({
+    requests: rows.slice(offset, offset + limit),
+    page,
+    limit,
+    total: rows.length,
+  });
 }catch(error){
   return handleApiError(error);
 }

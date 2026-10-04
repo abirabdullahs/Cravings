@@ -3,6 +3,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { getSession, signIn } from "next-auth/react";
 import { ArrowRightIcon } from "lucide-react";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
@@ -119,7 +120,7 @@ export default function LoginPage() {
               disabled={loading}
               className="inline-flex h-11 items-center justify-center gap-2 rounded-sm bg-primary px-4 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {loading ? "Signing in..." : "Sign in"}
+              {loading ? <LoadingSpinner label="Signing in…" /> : "Sign in"}
               {!loading && (
                 <ArrowRightIcon className="size-4" aria-hidden="true" />
               )}

@@ -2,7 +2,8 @@ export const GET_ALL_RESTAURANTS_WITH_OWNER = `
 SELECT r.id, r.name, r.address, r.active_status, r.created_at,
        u.name AS owner_name, u.phone AS owner_phone,
        COUNT(DISTINCT mi.id) AS product_count,
-       COUNT(DISTINCT o.id) AS order_count
+       COUNT(DISTINCT o.id) AS order_count,
+       COUNT(*) OVER()::int AS total_count
 FROM restaurants r
 JOIN users u ON u.id = r.owner_id
 LEFT JOIN menu_items mi ON mi.restaurant_id = r.id
@@ -10,14 +11,7 @@ LEFT JOIN orders o ON o.restaurant_id = r.id
 WHERE r.archived_at IS NULL
 GROUP BY r.id, u.name, u.phone
 ORDER BY r.name
-`;
-
-export const UPDATE_RESTAURANT_STATUS_BY_ADMIN = `
-UPDATE restaurants
-SET active_status = $2,
-    updated_at = NOW()
-WHERE id = $1 AND archived_at IS NULL
-RETURNING id, active_status
+LIMIT $1 OFFSET $2
 `;
 
 export const GET_RESTAURANT_PRODUCT_SALES = `
@@ -48,13 +42,14 @@ LIMIT 100
 export const GET_ADMIN_REVIEWS = `
 SELECT rv.id, rv.rating, rv.comment, rv.created_at,
        u.name AS customer_name, u.email AS customer_email,
-       r.name AS restaurant_name, rv.order_id
+       r.name AS restaurant_name, rv.order_id,
+       COUNT(*) OVER()::int AS total_count
 FROM reviews rv
 JOIN users u ON u.id = rv.user_id
 JOIN restaurants r ON r.id = rv.restaurant_id
 WHERE ($1::int = 0 OR rv.rating = $1)
 ORDER BY rv.created_at DESC
-LIMIT $2
+LIMIT $2 OFFSET $3
 `;
 
 export const GET_ADMIN_ANALYTICS = `
@@ -72,32 +67,13 @@ WHERE created_at >= (
 `;
 
 export const GET_ALL_RIDERS = `
-SELECT u.id, u.name, u.phone, r.vehicle_type, r.vehicle_plate AS vehicle_number, r.status
+SELECT u.id, u.name, u.phone, r.vehicle_type, r.vehicle_plate AS vehicle_number, r.status,
+       COUNT(*) OVER()::int AS total_count
 FROM users u
 JOIN riders r ON r.user_id = u.id
 WHERE u.role = 'rider'
 ORDER BY u.name
-`;
-
-export const UPDATE_RIDER_STATUS_BY_ADMIN = `
-UPDATE riders rider
-SET status = $2::rider_status_enum, updated_at = NOW()
-WHERE rider.user_id = $1
-  AND (
-    $2::rider_status_enum = 'busy'
-    OR NOT EXISTS (
-      SELECT 1
-      FROM deliveries delivery
-      WHERE delivery.rider_id = rider.user_id
-        AND delivery.status IN (
-          'accepted',
-          'arrived_at_store',
-          'picked_up',
-          'arrived_at_destination'
-        )
-    )
-  )
-RETURNING rider.user_id AS id, rider.status
+LIMIT $1 OFFSET $2
 `;
 
 export const GET_ADMIN_USERS = `
@@ -232,23 +208,6 @@ WHERE oi.order_id = $1
 ORDER BY oi.id
 `;
 
-export const UPDATE_ADMIN_ORDER_STATUS = `
-UPDATE orders
-SET order_status = $2, updated_at = NOW()
-WHERE id = $1
-RETURNING id, order_status
-`;
-
-export const ASSIGN_ADMIN_ORDER_RIDER = `
-UPDATE deliveries
-SET rider_id = $2,
-    status = CASE WHEN $2 IS NULL THEN 'unassigned'::delivery_status_enum ELSE 'accepted'::delivery_status_enum END,
-    assigned_at = CASE WHEN $2 IS NULL THEN NULL ELSE COALESCE(assigned_at, NOW()) END,
-    updated_at = NOW()
-WHERE order_id = $1
-RETURNING order_id, rider_id, status
-`;
-
 export const REQUEUE_ADMIN_ORDER = `
 WITH eligible AS (
   SELECT d.id, d.rider_id
@@ -286,17 +245,6 @@ WHERE r.user_id = $1
       )
   )
 RETURNING r.user_id, r.status
-`;
-
-export const UPDATE_ADMIN_PAYMENT_STATUS = `
-UPDATE payments
-SET status = $2,
-    paid_at = CASE
-      WHEN $2 = 'completed' THEN COALESCE(paid_at, NOW())
-      ELSE paid_at
-    END
-WHERE order_id = $1
-RETURNING order_id, status, paid_at, transaction_id
 `;
 
 export const GET_WEEKLY_PLATFORM_PROFIT = `

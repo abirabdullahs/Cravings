@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ClockIcon, MinusIcon, PlusIcon, TagIcon } from "lucide-react";
+import { MinusIcon, PlusIcon, TagIcon } from "lucide-react";
 import { use, useEffect, useRef, useState } from "react";
 
 import { AddressButton } from "@/components/address/AddressSelection";
@@ -16,6 +16,7 @@ import {
   useUserCoupons,
 } from "@/hooks/useOrder";
 import type { CartItem } from "@/types/order";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 const formatPrice = (amount: number) => `৳${amount.toFixed(2)}`;
 
@@ -226,8 +227,8 @@ export function CheckoutPage({
 
   if (isCartLoading || isAddressLoading || isCouponsLoading) {
     return (
-      <div className="px-4 py-20 text-center text-sm text-muted-foreground">
-        Loading checkout...
+      <div className="flex justify-center px-4 py-20 text-sm text-primary">
+        <LoadingSpinner label="Loading checkout…" />
       </div>
     );
   }
@@ -474,6 +475,12 @@ export function CheckoutPage({
                     </option>
                   ))}
                 </select>
+                {isAddingCoupon && (
+                  <LoadingSpinner
+                    label="Applying coupon…"
+                    className="mt-2 text-xs text-primary"
+                  />
+                )}
               </section>
 
               {/* Payment Method Section */}
@@ -582,13 +589,15 @@ export function CheckoutPage({
                 onClick={handlePlaceOrder}
                 className="w-full bg-primary py-3.5 text-xs font-bold text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {isPlacingOrder
-                  ? "Placing order..."
-                  : hasPendingQuantityChanges
-                    ? "Updating cart..."
-                  : isQuoteFetching
-                    ? "Calculating total..."
-                    : `Place Order (Payable ${formatPrice(total)})`}
+                {isPlacingOrder ? (
+                  <LoadingSpinner label="Placing order…" />
+                ) : hasPendingQuantityChanges ? (
+                  <LoadingSpinner label="Updating cart…" />
+                ) : isQuoteFetching ? (
+                  <LoadingSpinner label="Calculating total…" />
+                ) : (
+                  `Place Order (Payable ${formatPrice(total)})`
+                )}
               </button>
             </div>
           </aside>

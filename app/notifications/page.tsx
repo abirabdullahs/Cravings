@@ -6,6 +6,7 @@ import {
   useMarkAllNotificationsRead,
 } from "@/hooks/useNotifications";
 import { Bell, CheckCheck, Loader2 } from "lucide-react";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 export default function NotificationsPage() {
   const { data, isLoading } = useNotifications();
@@ -35,8 +36,14 @@ export default function NotificationsPage() {
             disabled={markAllRead.isPending}
             className="flex items-center gap-1.5 text-sm font-medium text-primary hover:underline bg-primary/10 px-3 py-1.5 rounded-lg transition"
           >
-            <CheckCheck className="w-4 h-4" />
-            Mark all as read
+            {markAllRead.isPending ? (
+              <LoadingSpinner label="Marking…" />
+            ) : (
+              <>
+                <CheckCheck className="w-4 h-4" />
+                Mark all as read
+              </>
+            )}
           </button>
         )}
       </div>

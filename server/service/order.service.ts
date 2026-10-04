@@ -9,6 +9,7 @@ import {
   markOrderReady,
   findOrderQuote,
   cancelOrder,
+  restoreOrderToCart,
 } from "../repository/order.repository";
 
 const paymentMethods = new Set([
@@ -100,6 +101,13 @@ export const getOrderTrackingForCustomer = async (
 ) => await findOrderTrackingForCustomer(orderId, customerId);
 
 export const getUserOrders = (customerId: number) => findUserOrders(customerId);
+
+export const reorderCustomerOrder = (orderId: number, customerId: number) => {
+  if (!Number.isInteger(orderId) || orderId < 1) {
+    throw new AppError(ErrorCode.INVALID_INPUT, "Invalid order ID");
+  }
+  return restoreOrderToCart(orderId, customerId);
+};
 
 export const getOrderDetail = (orderId: number, customerId: number) =>
   findOrderDetail(orderId, customerId);

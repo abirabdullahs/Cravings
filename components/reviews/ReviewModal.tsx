@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Star } from "lucide-react";
 import { useOrder } from "@/hooks/useOrder";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 interface ReviewModalProps {
   orderId: number;
@@ -109,7 +110,11 @@ export function ReviewModal({
               disabled={isSubmittingReview}
               className="w-1/2 bg-primary py-2.5 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 disabled:opacity-50"
             >
-              {isSubmittingReview ? "Submitting..." : "Submit Review"}
+              {isSubmittingReview ? (
+                <LoadingSpinner label="Submitting…" />
+              ) : (
+                "Submit Review"
+              )}
             </button>
           </div>
         </form>

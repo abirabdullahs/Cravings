@@ -5,6 +5,7 @@ import { FormField } from "@/components/ui/FormField";
 import { UploadButton } from "@/lib/uploadthing";
 import { LocationPicker } from "@/components/address/LocationPicker";
 import type { RestaurantInput } from "@/types/restaurant";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 interface RestaurantFormDialogProps {
   initialValue: RestaurantInput;
@@ -235,7 +236,7 @@ export function RestaurantFormDialog({
             className="bg-primary px-5 py-2 text-sm font-semibold text-primary-foreground disabled:opacity-50"
           >
             {busy
-              ? "Saving..."
+              ? <LoadingSpinner label="Saving…" />
               : isEditing
                 ? "Save changes"
                 : "Create restaurant"}

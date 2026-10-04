@@ -1,10 +1,10 @@
 export const FIND_AVAILABLE_USER_COUPONS = `
-SELECT assignment.id, coupon.code, coupon.discount_type,
+SELECT uc.id, coupon.code, coupon.discount_type,
        coupon.discount_value, coupon.minimum_order, coupon.expiry_date
-FROM user_coupons assignment
-JOIN coupons coupon ON coupon.id = assignment.coupon_id
-WHERE assignment.user_id = $1
-  AND assignment.used = FALSE
+FROM user_coupons uc
+JOIN coupons coupon ON coupon.id = uc.coupon_id
+WHERE uc.user_id = $1
+  AND uc.used = FALSE
   AND (coupon.expiry_date IS NULL OR coupon.expiry_date >= CURRENT_DATE)
 ORDER BY coupon.expiry_date NULLS LAST, coupon.id DESC;
 `;
@@ -17,11 +17,11 @@ WHERE c.id = $1
   AND (
     $3::int IS NULL OR EXISTS (
       SELECT 1
-      FROM user_coupons assignment
-      JOIN coupons coupon ON coupon.id = assignment.coupon_id
-      WHERE assignment.id = $3
-        AND assignment.user_id = $2
-        AND assignment.used = FALSE
+      FROM user_coupons uc
+      JOIN coupons coupon ON coupon.id = uc.coupon_id
+      WHERE uc.id = $3
+        AND uc.user_id = $2
+        AND uc.used = FALSE
         AND (coupon.expiry_date IS NULL OR coupon.expiry_date >= CURRENT_DATE)
     )
   )

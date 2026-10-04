@@ -29,3 +29,19 @@ export function getPlatformFee() {
   const value = Number(process.env.PLATFORM_FEE ?? 0);
   return Number.isFinite(value) && value >= 0 ? value : 0;
 }
+
+export function getPagination(
+  request: Request,
+  defaultLimit = 10,
+  maxLimit = 50,
+) {
+  const params = new URL(request.url).searchParams;
+  const requestedPage = Number(params.get("page") ?? 1);
+  const requestedLimit = Number(params.get("limit") ?? defaultLimit);
+  const page = Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
+  const limit = Number.isInteger(requestedLimit)
+    ? Math.min(Math.max(requestedLimit, 1), maxLimit)
+    : defaultLimit;
+
+  return { page, limit, offset: (page - 1) * limit };
+}

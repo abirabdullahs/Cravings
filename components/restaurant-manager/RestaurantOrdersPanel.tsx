@@ -1,15 +1,28 @@
 import { Check, Clock3 } from "lucide-react";
+import { useState } from "react";
 import type { RestaurantOrder } from "@/types/order";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 interface RestaurantOrdersPanelProps {
   orders: RestaurantOrder[];
-  onReady: (orderId: number) => void;
+  onReady: (orderId: number) => unknown | Promise<unknown>;
 }
 
 export function RestaurantOrdersPanel({
   orders,
   onReady,
 }: RestaurantOrdersPanelProps) {
+  const [pendingOrderId, setPendingOrderId] = useState<number | null>(null);
+
+  async function markReady(orderId: number) {
+    setPendingOrderId(orderId);
+    try {
+      await onReady(orderId);
+    } finally {
+      setPendingOrderId(null);
+    }
+  }
+
   return (
     <section className="border-t border-border pt-7">
       <div className="flex items-end justify-between gap-4">
@@ -34,6 +47,7 @@ export function RestaurantOrdersPanel({
         <div className="mt-5 grid gap-3">
           {orders.map((order) => {
             const isReady = order.orderStatus === "ready";
+            const isSaving = pendingOrderId === order.id;
             return (
               <article
                 key={order.id}
@@ -68,16 +82,18 @@ export function RestaurantOrdersPanel({
                 </div>
                 <button
                   type="button"
-                  disabled={isReady}
-                  onClick={() => onReady(order.id)}
+                  disabled={isReady || pendingOrderId !== null}
+                  onClick={() => void markReady(order.id)}
                   className="inline-flex items-center justify-center gap-2 bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
                 >
-                  {isReady ? (
+                  {isSaving ? (
+                    <LoadingSpinner label="Marking ready…" />
+                  ) : isReady ? (
                     <Check className="size-3.5" />
                   ) : (
                     <Clock3 className="size-3.5" />
                   )}
-                  {isReady ? "Ready" : "Mark ready"}
+                  {!isSaving && (isReady ? "Ready" : "Mark ready")}
                 </button>
               </article>
             );

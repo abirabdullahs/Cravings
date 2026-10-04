@@ -2,12 +2,20 @@
 
 import { useEffect, useState } from "react";
 import type { AdminReview, Coupon, Customer } from "@/types/admin-types";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { AdminPagination } from "@/components/admin/AdminPagination";
+
+const PAGE_SIZE = 10;
 
 export default function AdminMarketingPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [reviews, setReviews] = useState<AdminReview[]>([]);
   const [rating, setRating] = useState("0");
+  const [couponPage, setCouponPage] = useState(1);
+  const [couponTotal, setCouponTotal] = useState(0);
+  const [reviewPage, setReviewPage] = useState(1);
+  const [reviewTotal, setReviewTotal] = useState(0);
   const [notification, setNotification] = useState({
     title: "",
     message: "",
@@ -24,30 +32,41 @@ export default function AdminMarketingPage() {
     userIds: [] as number[],
   });
   const [message, setMessage] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [pendingAction, setPendingAction] = useState<
+    "notification" | "coupon" | null
+  >(null);
 
   useEffect(() => {
     async function load() {
-      const response = await fetch("/api/admin/coupons");
+      const response = await fetch(
+        `/api/admin/coupons?page=${couponPage}&limit=${PAGE_SIZE}`,
+      );
       if (response.ok) {
         const payload = await response.json();
         setCoupons(payload.coupons ?? []);
         setCustomers(payload.users ?? []);
+        setCouponTotal(Number(payload.total ?? 0));
       }
     }
     void load();
-  }, []);
+  }, [couponPage]);
   useEffect(() => {
     async function load() {
-      const response = await fetch(`/api/admin/reviews?rating=${rating}`);
-      if (response.ok) setReviews((await response.json()).reviews ?? []);
+      const response = await fetch(
+        `/api/admin/reviews?rating=${rating}&page=${reviewPage}&limit=${PAGE_SIZE}`,
+      );
+      if (response.ok) {
+        const payload = await response.json();
+        setReviews(payload.reviews ?? []);
+        setReviewTotal(Number(payload.total ?? 0));
+      }
     }
     void load();
-  }, [rating]);
+  }, [rating, reviewPage]);
 
   async function sendNotification(event: React.FormEvent) {
     event.preventDefault();
-    setLoading(true);
+    setPendingAction("notification");
     try {
       const response = await fetch("/api/admin/notifications", {
         method: "POST",
@@ -65,12 +84,12 @@ export default function AdminMarketingPage() {
     } catch {
       setMessage("Could not send notification. Check your connection and try again.");
     } finally {
-      setLoading(false);
+      setPendingAction(null);
     }
   }
   async function createCoupon(event: React.FormEvent) {
     event.preventDefault();
-    setLoading(true);
+    setPendingAction("coupon");
     try {
       const response = await fetch("/api/admin/coupons", {
         method: "POST",
@@ -84,6 +103,8 @@ export default function AdminMarketingPage() {
           : payload.error || "Could not create coupon",
       );
       if (response.ok) {
+        setCouponPage(1);
+        setCouponTotal((current) => current + 1);
         setCoupons((current) => [
           {
             ...payload.coupon,
@@ -93,7 +114,7 @@ export default function AdminMarketingPage() {
                 : coupon.userIds.length,
           },
           ...current,
-        ]);
+        ].slice(0, PAGE_SIZE));
         setCoupon({
           code: "",
           discountType: "percentage",
@@ -107,7 +128,7 @@ export default function AdminMarketingPage() {
     } catch {
       setMessage("Could not create coupon. Check your connection and try again.");
     } finally {
-      setLoading(false);
+      setPendingAction(null);
     }
   }
 
@@ -191,8 +212,15 @@ export default function AdminMarketingPage() {
                 ))}
               </select>
             )}
-            <button className="bg-primary px-4 py-2 text-sm font-bold text-primary-foreground">
-              {loading ? "Sending..." : "Send notification"}
+            <button
+              disabled={pendingAction !== null}
+              className="bg-primary px-4 py-2 text-sm font-bold text-primary-foreground disabled:cursor-wait disabled:opacity-60"
+            >
+              {pendingAction === "notification" ? (
+                <LoadingSpinner label="Sending…" />
+              ) : (
+                "Send notification"
+              )}
             </button>
           </form>
         </section>
@@ -243,8 +271,15 @@ export default function AdminMarketingPage() {
               }
               className="w-full border border-border bg-background px-3 py-2 text-sm"
             />
-            <button className="bg-primary px-4 py-2 text-sm font-bold text-primary-foreground">
-              {loading ? "Saving..." : "Create coupon"}
+            <button
+              disabled={pendingAction !== null}
+              className="bg-primary px-4 py-2 text-sm font-bold text-primary-foreground disabled:cursor-wait disabled:opacity-60"
+            >
+              {pendingAction === "coupon" ? (
+                <LoadingSpinner label="Saving…" />
+              ) : (
+                "Create coupon"
+              )}
             </button>
           </form>
         </section>
@@ -254,7 +289,10 @@ export default function AdminMarketingPage() {
           <h2 className="font-serif text-2xl font-bold">Reviews</h2>
           <select
             value={rating}
-            onChange={(event) => setRating(event.target.value)}
+            onChange={(event) => {
+              setRating(event.target.value);
+              setReviewPage(1);
+            }}
             className="h-10 border border-border bg-card px-3 text-sm"
           >
             <option value="0">All ratings</option>
@@ -287,6 +325,12 @@ export default function AdminMarketingPage() {
             </p>
           )}
         </div>
+        <AdminPagination
+          page={reviewPage}
+          total={reviewTotal}
+          pageSize={PAGE_SIZE}
+          onPage={setReviewPage}
+        />
       </section>
       <section className="mt-10">
         <h2 className="mb-4 font-serif text-2xl font-bold">Coupons</h2>
@@ -303,6 +347,12 @@ export default function AdminMarketingPage() {
             </div>
           ))}
         </div>
+        <AdminPagination
+          page={couponPage}
+          total={couponTotal}
+          pageSize={PAGE_SIZE}
+          onPage={setCouponPage}
+        />
       </section>
     </div>
   );

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { UserManagementTable } from "@/components/admin/UserManagementTable";
 import type { AdminUser } from "@/types/admin-types";
+import { AdminPagination } from "@/components/admin/AdminPagination";
 
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -13,7 +14,7 @@ export default function AdminUsersPage() {
   const [selected, setSelected] = useState<AdminUser | null>(null);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
-  const limit = 50;
+  const limit = 12;
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -76,13 +77,13 @@ export default function AdminUsersPage() {
         selected={selected}
         onSelect={setSelected}
       />
-      <div className="mt-4 flex items-center justify-between text-sm">
-        <span className="text-muted-foreground">Page {page} of {Math.max(Math.ceil(total / limit), 1)}</span>
-        <div className="flex gap-2">
-          <button type="button" disabled={page === 1 || loading} onClick={() => setPage((current) => current - 1)} className="border border-border px-3 py-2 disabled:opacity-50">Previous</button>
-          <button type="button" disabled={page >= Math.ceil(total / limit) || loading} onClick={() => setPage((current) => current + 1)} className="border border-border px-3 py-2 disabled:opacity-50">Next</button>
-        </div>
-      </div>
+      <AdminPagination
+        page={page}
+        total={total}
+        pageSize={limit}
+        onPage={setPage}
+        disabled={loading}
+      />
     </div>
   );
 }

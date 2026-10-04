@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { SearchIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { useToast } from "@/components/ui/toast-provider"
 
 type SearchBarProps = {
   defaultValue?: string
@@ -21,10 +22,12 @@ export function SearchBar({
 }: SearchBarProps) {
   const router = useRouter()
   const [value, setValue] = useState(defaultValue)
+  const { showToast } = useToast()
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     const q = value.trim()
+    showToast(q ? `Searching for “${q}”…` : "Showing all restaurants.")
     router.push(q ? `/search?q=${encodeURIComponent(q)}` : "/search")
   }
 

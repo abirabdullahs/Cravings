@@ -1,8 +1,3 @@
-DROP FUNCTION IF EXISTS fn_calculate_discount(
-  NUMERIC,
-  discount_type_enum,
-  NUMERIC
-);
 
 CREATE FUNCTION fn_calculate_discount(
   p_discount_value NUMERIC,
@@ -136,33 +131,9 @@ BEGIN
 END;
 $$;
 
-DROP PROCEDURE IF EXISTS creation_of_order(
-  INT,
-  INT,
-  INT,
-  INT,
-  VARCHAR,
-  INT
-);
 
-DROP PROCEDURE IF EXISTS creation_of_order(
-  INT,
-  INT,
-  INT,
-  VARCHAR,
-  UUID,
-  TEXT,
-  INT
-);
 
-DROP PROCEDURE IF EXISTS creation_of_order(
-  INT,
-  INT,
-  INT,
-  VARCHAR,
-  UUID,
-  INT
-);
+
 
 CREATE OR REPLACE PROCEDURE creation_of_order(
   p_user_id INT,

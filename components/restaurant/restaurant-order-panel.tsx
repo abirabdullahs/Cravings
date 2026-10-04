@@ -1,8 +1,10 @@
 "use client";
 
 import { MinusIcon, PlusIcon, ShoppingBagIcon } from "lucide-react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useTransition } from "react";
 import type { MenuItem } from "@/types/restaurant";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 type OrderLine = MenuItem & { quantity: number };
 
@@ -10,7 +12,7 @@ type RestaurantOrderPanelProps = {
   items: OrderLine[];
   cartId?: number;
   restaurantId: number;
-  onChange: (item: MenuItem, amount: number) => Promise<void>;
+  onChange: (item: MenuItem, amount: number) => void | Promise<void>;
 };
 
 export function RestaurantOrderPanel({
@@ -19,6 +21,8 @@ export function RestaurantOrderPanel({
   restaurantId,
   onChange,
 }: RestaurantOrderPanelProps) {
+  const router = useRouter();
+  const [isReviewing, startReviewTransition] = useTransition();
   const subtotal = items.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0,
@@ -84,14 +88,26 @@ export function RestaurantOrderPanel({
                 <span>৳{subtotal.toFixed(2)}</span>
               </div>
             </div>
-            <Link
-              href={
-                restaurantId ? `/cart/restaurant/${restaurantId}` : `/cart/${cartId}`
+            <button
+              type="button"
+              disabled={isReviewing}
+              onClick={() =>
+                startReviewTransition(() =>
+                  router.push(
+                    restaurantId
+                      ? `/cart/restaurant/${restaurantId}`
+                      : `/cart/${cartId}`,
+                  ),
+                )
               }
-              className="mt-5 block w-full rounded-sm bg-primary px-4 py-3 text-center text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+              className="mt-5 block w-full rounded-sm bg-primary px-4 py-3 text-center text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-wait disabled:opacity-70"
             >
-              Review order
-            </Link>
+              {isReviewing ? (
+                <LoadingSpinner label="Opening checkout…" />
+              ) : (
+                "Review order"
+              )}
+            </button>
           </div>
         ) : (
           <div className="px-5 py-10 text-center">

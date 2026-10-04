@@ -13,10 +13,12 @@ export function SearchResults({
   query,
   city = "Dhaka",
   initialCuisine = "all",
+  initialSort = "recommended",
 }: {
   query: string;
   city?: string;
   initialCuisine?: string;
+  initialSort?: SortKey;
 }) {
   const [cuisine, setCuisine] = useState(
     CUISINES.some((option) => option.key === initialCuisine)
@@ -24,13 +26,14 @@ export function SearchResults({
       : "all",
   );
   const [area, setArea] = useState("all");
-  const [sort, setSort] = useState<SortKey>("recommended");
+  const [sort, setSort] = useState<SortKey>(initialSort);
 
   const { data: results = [], isLoading } = useRestaurants({
     search: query || undefined,
     cuisine: cuisine === "all" ? undefined : cuisine,
     area: area === "all" ? undefined : area,
     sort: sort === "recommended" ? undefined : sort,
+    limit: 100,
   });
 
   const cuisineOptions = useMemo(
@@ -74,7 +77,7 @@ export function SearchResults({
           <span className="font-medium text-foreground">
             {results.length} establishment{results.length === 1 ? "" : "s"}
           </span>{" "}
-          currently available in {city}
+          matching your filters across {city}
         </p>
         <span className="hidden h-px flex-1 bg-border sm:block" />
       </div>

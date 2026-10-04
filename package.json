@@ -8,6 +8,9 @@
     "start": "next start",
     "lint": "eslint",
     "db:seed": "node scripts/db-seed.mjs",
+    "db:prepare-rider-demo": "node scripts/db-prepare-rider-demo.mjs",
+    "db:update-deliveries": "node scripts/db-update-deliveries.mjs",
+    "db:update-demo-food-images": "node scripts/db-update-demo-food-images.mjs",
     "db:reset": "node scripts/db-reset.mjs"
   },
   "dependencies": {

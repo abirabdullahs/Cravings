@@ -1,11 +1,12 @@
 import { Archive, Pencil } from "lucide-react";
 import type { Restaurant } from "@/types/restaurant";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 interface RestaurantHeaderProps {
   restaurant: Restaurant;
   busy: boolean;
   onEdit: () => void;
-  onDelete: () => void;
+  onDelete: () => void | Promise<void>;
 }
 
 export function RestaurantHeader({
@@ -44,11 +45,17 @@ export function RestaurantHeader({
           <Pencil className="size-3.5" /> Edit details
         </button>
         <button
-          onClick={onDelete}
+          onClick={() => void onDelete()}
           disabled={busy}
           className="inline-flex items-center gap-1.5 border border-destructive/30 px-3 py-2 text-xs font-semibold text-destructive hover:bg-destructive/10"
         >
-          <Archive className="size-3.5" /> Archive
+          {busy ? (
+            <LoadingSpinner label="Archiving…" />
+          ) : (
+            <>
+              <Archive className="size-3.5" /> Archive
+            </>
+          )}
         </button>
       </div>
     </div>

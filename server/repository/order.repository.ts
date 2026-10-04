@@ -15,7 +15,10 @@ import {
   GET_ORDER_TRACKING_FOR_CUSTOMER,
   MARK_ORDER_READY,
   GET_ORDER_QUOTE,
+  FIND_REORDER_SOURCE,
+  RESTORE_ORDER_ITEMS_TO_CART,
 } from "../query/order.query";
+import { INSERT_CART } from "../query/cart.query";
 import { INSERT_ORDER_NOTIFICATION } from "../query/notification.query";
 
 const getPlatformFee = () => {
@@ -135,6 +138,38 @@ export const findUserOrders = async (userId: number) => {
   const rows = (await pool.query(GET_USER_ORDERS, [userId])).rows;
   return toCamelCase(rows);
 };
+
+export const restoreOrderToCart = async (orderId: number, userId: number) =>
+  withTransaction(async (client) => {
+    const source = await client.query(FIND_REORDER_SOURCE, [orderId, userId]);
+    const restaurantId = Number(source.rows[0]?.restaurant_id);
+
+    if (!Number.isInteger(restaurantId)) {
+      throw new AppError(ErrorCode.ORDER_NOT_FOUND, "Order not found");
+    }
+
+    const cartResult = await client.query(INSERT_CART, [userId, restaurantId]);
+    const cartId = Number(cartResult.rows[0]?.id);
+    if (!Number.isInteger(cartId)) {
+      throw new AppError(
+        ErrorCode.RESTAURANT_NOT_FOUND,
+        "This restaurant is no longer available",
+      );
+    }
+
+    const items = await client.query(RESTORE_ORDER_ITEMS_TO_CART, [
+      orderId,
+      cartId,
+    ]);
+    if (!items.rowCount) {
+      throw new AppError(
+        ErrorCode.INVALID_INPUT,
+        "None of the items in this order are available right now",
+      );
+    }
+
+    return { cartId, restaurantId, addedItems: items.rowCount };
+  });
 
 export const findRestaurantOrders = async (restaurantId: number) => {
   const rows = (await pool.query(GET_RESTAURANT_ORDERS, [restaurantId])).rows;

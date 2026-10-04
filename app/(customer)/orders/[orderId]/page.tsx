@@ -1,6 +1,8 @@
 "use client";
+
 import { useParams } from "next/navigation";
 import { ActiveOrderView } from "@/components/tracking/ActiveOrderView";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { useOrderTracking } from "@/hooks/useDeliveryTracking";
 import { useCancelOrder, useOrderDetail } from "@/hooks/useOrder";
 
@@ -16,7 +18,9 @@ export default function OrderTrackingPage() {
 
   if (isLoading) {
     return (
-      <p className="p-10 text-center text-sm text-muted-foreground">Loading…</p>
+      <div className="flex justify-center p-10 text-sm text-primary">
+        <LoadingSpinner label="Loading order…" />
+      </div>
     );
   }
 

@@ -26,8 +26,8 @@ export default function AdminOverviewPage() {
     async function load() {
       try {
         const responses = await Promise.all([
-          fetch("/api/admin/restaurants"),
-          fetch("/api/admin/riders"),
+          fetch("/api/admin/restaurants?page=1&limit=1"),
+          fetch("/api/admin/riders?page=1&limit=1"),
           fetch(`/api/admin/profit?range=${range}`),
           fetch(`/api/admin/analytics?range=${range}`),
         ]);
@@ -36,8 +36,8 @@ export default function AdminOverviewPage() {
         const restaurantPayload = await responses[0].json();
         const riderPayload = await responses[1].json();
         setStats({
-          restaurants: restaurantPayload.restaurants?.length ?? 0,
-          riders: riderPayload.riders?.length ?? 0,
+          restaurants: Number(restaurantPayload.total ?? 0),
+          riders: Number(riderPayload.total ?? 0),
           profit: await responses[2].json(),
           analytics: await responses[3].json(),
         });

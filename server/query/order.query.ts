@@ -27,6 +27,29 @@ GROUP BY o.id, r.name, d.rider_id, rider.name
 ORDER BY o.created_at DESC;
 `;
 
+export const FIND_REORDER_SOURCE = `
+SELECT o.restaurant_id
+FROM orders o
+JOIN restaurants r ON r.id = o.restaurant_id
+WHERE o.id = $1
+  AND o.user_id = $2
+  AND r.archived_at IS NULL
+LIMIT 1;
+`;
+
+export const RESTORE_ORDER_ITEMS_TO_CART = `
+INSERT INTO cart_items (menu_item_id, quantity, cart_id)
+SELECT oi.menu_item_id, oi.quantity, $2
+FROM order_items oi
+JOIN menu_items mi ON mi.id = oi.menu_item_id
+WHERE oi.order_id = $1
+  AND mi.is_available = TRUE
+  AND mi.archived_at IS NULL
+ON CONFLICT (cart_id, menu_item_id)
+DO UPDATE SET quantity = EXCLUDED.quantity
+RETURNING id;
+`;
+
 export const GET_RESTAURANT_ORDERS = `
 SELECT 
   o.id, 

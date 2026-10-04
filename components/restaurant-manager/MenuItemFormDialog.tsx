@@ -4,6 +4,7 @@ import { Check, X, Trash2 } from "lucide-react";
 import { FormField } from "@/components/ui/FormField";
 import { UploadButton } from "@/lib/uploadthing";
 import type { MenuCategory, MenuItemInput } from "@/types/restaurant";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 interface MenuItemFormDialogProps {
   initialValue: MenuItemInput;
@@ -155,7 +156,13 @@ export function MenuItemFormDialog({
           disabled={busy || uploading}
           className="inline-flex items-center gap-2 bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground disabled:opacity-50"
         >
-          <Check className="size-3.5" /> {busy ? "Saving..." : "Save item"}
+          {busy ? (
+            <LoadingSpinner label="Saving…" />
+          ) : (
+            <>
+              <Check className="size-3.5" /> Save item
+            </>
+          )}
         </button>
         <button
           type="button"

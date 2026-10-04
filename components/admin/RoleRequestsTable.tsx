@@ -2,6 +2,7 @@
 "use client";
 
 import { useState } from "react";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 export type RoleRequest = {
   id: number;
@@ -19,6 +20,8 @@ export function RoleRequestsTable({
   requests,
   onReview,
   disabled = false,
+  pendingAction,
+  total,
 }: {
   requests: RoleRequest[];
   onReview: (
@@ -27,6 +30,8 @@ export function RoleRequestsTable({
     rejectionReason?: string,
   ) => void;
   disabled?: boolean;
+  pendingAction?: string | null;
+  total?: number;
 }) {
   const [rejectionReasons, setRejectionReasons] = useState<
     Record<number, string>
@@ -39,7 +44,7 @@ export function RoleRequestsTable({
       <div className="mb-4 flex items-center justify-between">
         <h2 className="font-serif text-2xl font-bold">Role requests</h2>
         <span className="text-sm text-muted-foreground">
-          {requests.length} active
+          {total ?? requests.length} pending
         </span>
       </div>
 
@@ -95,7 +100,11 @@ export function RoleRequestsTable({
                         disabled={disabled}
                         className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-emerald-700 disabled:opacity-50"
                       >
-                        Approve
+                        {pendingAction === `request-${request.id}-APPROVED` ? (
+                          <LoadingSpinner label="Approving…" />
+                        ) : (
+                          "Approve"
+                        )}
                       </button>
                       <button
                         onClick={() =>
@@ -110,7 +119,11 @@ export function RoleRequestsTable({
                         }
                         className="rounded-lg bg-destructive px-3 py-1.5 text-xs font-bold text-white transition hover:bg-destructive/90 disabled:opacity-50"
                       >
-                        Reject
+                        {pendingAction === `request-${request.id}-REJECTED` ? (
+                          <LoadingSpinner label="Rejecting…" />
+                        ) : (
+                          "Reject"
+                        )}
                       </button>
                     </>
                   )}

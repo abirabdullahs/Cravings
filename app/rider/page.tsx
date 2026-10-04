@@ -33,13 +33,21 @@ export default function RiderDashboard() {
     useRider();
 
   const [dismissedIds, setDismissedIds] = useState<Set<number>>(new Set());
+  const [pendingDutyStatus, setPendingDutyStatus] = useState<
+    "online" | "offline" | null
+  >(null);
 
   const currentStatus: "online" | "offline" =
     profile?.status === "offline" ? "offline" : "online";
 
   async function handleDutyToggle(next: "online" | "offline") {
     if (next === currentStatus) return;
-    await setDutyStatus(next);
+    setPendingDutyStatus(next);
+    try {
+      await setDutyStatus(next);
+    } finally {
+      setPendingDutyStatus(null);
+    }
   }
 
   const visibleOpportunity = requests?.find(
@@ -61,6 +69,7 @@ export default function RiderDashboard() {
           firstName={profile.name.split(" ")[0]}
           dutyStatus={currentStatus}
           busy={isUpdatingDuty || profile.status === "busy"}
+          pendingStatus={pendingDutyStatus}
           onToggle={handleDutyToggle}
         />
 

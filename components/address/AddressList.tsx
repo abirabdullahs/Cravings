@@ -5,6 +5,7 @@ import { useAddressManager } from "@/hooks/useAddressManager";
 import type { UserAddress } from "@/types/order";
 import { AddressFormDialog } from "./AddressFormDialog";
 import { MapPin, Pencil, Plus, Trash2 } from "lucide-react";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 interface AddressListProps {
   onSelectAddress?: (address: UserAddress) => void;
@@ -31,6 +32,7 @@ export function AddressList({
   const [editingAddress, setEditingAddress] = useState<UserAddress | undefined>(
     undefined,
   );
+  const [deletingAddressId, setDeletingAddressId] = useState<number | null>(null);
 
   const handleOpenDialog = (address?: UserAddress) => {
     setEditingAddress(address);
@@ -53,7 +55,12 @@ export function AddressList({
   const handleDelete = async (id: number | undefined) => {
     if (!id) return;
     if (confirm("Are you sure you want to delete this address?")) {
-      await deleteAddress(id);
+      setDeletingAddressId(id);
+      try {
+        await deleteAddress(id);
+      } finally {
+        setDeletingAddressId(null);
+      }
     }
   };
 
@@ -149,8 +156,14 @@ export function AddressList({
                       disabled={isDeleting || isUpdating}
                       className="inline-flex flex-1 items-center justify-center gap-2 border border-destructive/40 px-3 py-2 text-xs font-semibold text-destructive hover:bg-destructive/10 disabled:opacity-50"
                     >
-                      <Trash2 className="size-3.5" aria-hidden="true" />
-                      Delete
+                      {deletingAddressId === address.id ? (
+                        <LoadingSpinner label="Deleting…" />
+                      ) : (
+                        <>
+                          <Trash2 className="size-3.5" aria-hidden="true" />
+                          Delete
+                        </>
+                      )}
                     </button>
                   </div>
                 )}

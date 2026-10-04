@@ -84,6 +84,12 @@ export interface OrderHistoryItem {
   isReviewed: boolean;
 }
 
+export interface ReorderResult {
+  cartId: number;
+  restaurantId: number;
+  addedItems: number;
+}
+
 export interface OrderDetailItem {
   id: number;
   name: string;

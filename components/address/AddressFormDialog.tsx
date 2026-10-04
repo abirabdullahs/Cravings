@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { UserAddress } from "@/types/order";
 import { LocationPicker } from "./LocationPicker";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 interface AddressFormDialogProps {
   isOpen: boolean;
@@ -25,23 +26,30 @@ const EMPTY_FORM: UserAddress = {
 
 export function AddressFormDialog({
   isOpen,
+  ...props
+}: AddressFormDialogProps) {
+  if (!isOpen) return null;
+
+  return (
+    <AddressFormDialogContent
+      key={props.initialAddress?.id ?? "new-address"}
+      {...props}
+      isOpen={isOpen}
+    />
+  );
+}
+
+function AddressFormDialogContent({
   onClose,
   onSubmit,
   initialAddress,
   isLoading = false,
 }: AddressFormDialogProps) {
-  const [formData, setFormData] = useState<UserAddress>(EMPTY_FORM);
+  const [formData, setFormData] = useState<UserAddress>(() =>
+    initialAddress ? { ...EMPTY_FORM, ...initialAddress } : EMPTY_FORM,
+  );
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLocating, setIsLocating] = useState(false);
-
-  useEffect(() => {
-    if (isOpen) {
-      setFormData(
-        initialAddress ? { ...EMPTY_FORM, ...initialAddress } : EMPTY_FORM,
-      );
-      setErrors({});
-    }
-  }, [isOpen, initialAddress]);
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -117,8 +125,6 @@ export function AddressFormDialog({
     }
   };
 
-  if (!isOpen) return null;
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4 backdrop-blur-sm">
       <div className="w-full max-w-md border border-border bg-card p-6 shadow-lg max-h-[90vh] overflow-y-auto">
@@ -132,7 +138,11 @@ export function AddressFormDialog({
             disabled={isLocating || isLoading}
             className="border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary/20 disabled:opacity-50"
           >
-            {isLocating ? "Locating..." : "📍 Detect Location"}
+            {isLocating ? (
+              <LoadingSpinner label="Locating…" />
+            ) : (
+              "📍 Detect Location"
+            )}
           </button>
         </div>
 
@@ -267,7 +277,11 @@ export function AddressFormDialog({
               disabled={isLoading || isLocating}
               className="flex-1 bg-primary py-2 font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
             >
-              {isLoading ? "Saving..." : "Save Address"}
+              {isLoading ? (
+                <LoadingSpinner label="Saving…" />
+              ) : (
+                "Save Address"
+              )}
             </button>
           </div>
         </form>

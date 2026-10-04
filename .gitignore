@@ -45,3 +45,8 @@ crap
 /crap
 
 problems.md
+
+# Local demo recorder (published separately)
+/promo-studio-site/
+/public/demo-recorder.html
+/components/demo/DemoRecorderBridge.tsx

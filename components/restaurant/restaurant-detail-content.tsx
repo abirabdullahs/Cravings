@@ -1,7 +1,7 @@
 "use client";
 
 import { Search } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Chip } from "@/components/common/chip";
 import type { MenuItem, RestaurantMenu } from "@/types/restaurant";
 import { RestaurantMenuSection } from "@/components/restaurant/restaurant-menu-section";
@@ -24,6 +24,14 @@ export function RestaurantDetailContent({
   const [activeCategory, setActiveCategory] = useState<number | null>(null);
   const [search, setSearch] = useState("");
   const [cartError, setCartError] = useState<string | null>(null);
+  const initialQuantities = () =>
+    new Map(cartItems?.map((item) => [item.menuItemId, item.quantity]) ?? []);
+  const optimisticQuantities = useRef<Map<number, number>>(initialQuantities());
+  const confirmedQuantities = useRef<Map<number, number>>(initialQuantities());
+  const mutationChains = useRef<Map<number, Promise<void>>>(new Map());
+  const persistenceTimers = useRef<Map<number, ReturnType<typeof setTimeout>>>(
+    new Map(),
+  );
   const [order, setOrder] = useState<Array<MenuItem & { quantity: number }>>(
     cartItems?.map((item) => ({
       id: item.menuItemId,
@@ -53,43 +61,83 @@ export function RestaurantDetailContent({
     menu?.categories.find((category) => category.id === activeCategory)?.name ??
     "Menu";
 
+  useEffect(
+    () => () => {
+      for (const timer of persistenceTimers.current.values()) {
+        clearTimeout(timer);
+      }
+    },
+    [],
+  );
+
   if (!menu || !restaurantId || !onAddItem) {
     return null;
   }
 
-  async function addItem(item: MenuItem) {
-    const quantity =
-      (order.find((line) => line.id === item.id)?.quantity || 0) + 1;
-    setCartError(null);
-    try {
-      await onAddItem!(item, quantity);
-      setOrder((current) => {
-        const existing = current.find((line) => line.id === item.id);
-        return existing
-          ? current.map((line) =>
-              line.id === item.id ? { ...line, quantity } : line,
-            )
-          : [...current, { ...item, quantity }];
-      });
-    } catch (error) {
-      setCartError(error instanceof Error ? error.message : "Unable to update cart");
-    }
+  function updateOrder(item: MenuItem, quantity: number) {
+    setOrder((current) => {
+      const existing = current.find((line) => line.id === item.id);
+      const next = existing
+        ? current.map((line) =>
+            line.id === item.id ? { ...line, quantity } : line,
+          )
+        : [...current, { ...item, quantity }];
+      return next.filter((line) => line.quantity > 0);
+    });
   }
 
-  async function changeItem(item: MenuItem, amount: number) {
+  function persistItem(item: MenuItem, quantity: number) {
+    const previous = mutationChains.current.get(item.id) ?? Promise.resolve();
+    const request = previous
+      .catch(() => undefined)
+      .then(() => onAddItem!(item, quantity));
+
+    mutationChains.current.set(item.id, request);
+    void request
+      .then(() => {
+        confirmedQuantities.current.set(item.id, quantity);
+      })
+      .catch((error) => {
+        if (optimisticQuantities.current.get(item.id) === quantity) {
+          const confirmedQuantity = confirmedQuantities.current.get(item.id) ?? 0;
+          optimisticQuantities.current.set(item.id, confirmedQuantity);
+          updateOrder(item, confirmedQuantity);
+          setCartError(
+            error instanceof Error ? error.message : "Unable to update cart",
+          );
+        }
+      })
+      .finally(() => {
+        if (mutationChains.current.get(item.id) === request) {
+          mutationChains.current.delete(item.id);
+        }
+      });
+  }
+
+  function schedulePersistence(item: MenuItem, quantity: number) {
+    const currentTimer = persistenceTimers.current.get(item.id);
+    if (currentTimer) clearTimeout(currentTimer);
+
+    const timer = setTimeout(() => {
+      persistenceTimers.current.delete(item.id);
+      persistItem(item, quantity);
+    }, 200);
+    persistenceTimers.current.set(item.id, timer);
+  }
+
+  function addItem(item: MenuItem) {
+    const quantity = (optimisticQuantities.current.get(item.id) ?? 0) + 1;
     setCartError(null);
-    try {
-      await onAddItem!(item, amount);
-      setOrder((current) =>
-        current
-          .map((line) =>
-            line.id === item.id ? { ...line, quantity: amount } : line,
-          )
-          .filter((line) => line.quantity > 0),
-      );
-    } catch (error) {
-      setCartError(error instanceof Error ? error.message : "Unable to update cart");
-    }
+    optimisticQuantities.current.set(item.id, quantity);
+    updateOrder(item, quantity);
+    schedulePersistence(item, quantity);
+  }
+
+  function changeItem(item: MenuItem, amount: number) {
+    setCartError(null);
+    optimisticQuantities.current.set(item.id, amount);
+    updateOrder(item, amount);
+    schedulePersistence(item, amount);
   }
 
   return (

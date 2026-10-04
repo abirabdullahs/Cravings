@@ -9,6 +9,7 @@ import {
   placeOrder,
   submitReview,
   cancelCustomerOrder,
+  reorderCustomerOrder,
 } from "@/services/orderService";
 import type { Cart, CartItemInput, CreateOrderInput, OrderQuote, SubmitReviewInput } from "@/types/order";
 import { Restaurant, RestaurantMenu } from "@/types/restaurant";
@@ -69,6 +70,22 @@ export function useCancelOrder(orderId: number) {
     },
   });
   return { cancelOrder: mutation.mutateAsync, isCancelling: mutation.isPending };
+}
+
+export function useReorder() {
+  const queryClient = useQueryClient();
+  const mutation = useMutation({
+    mutationFn: (orderId: number) => reorderCustomerOrder(orderId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["cart"] });
+    },
+  });
+
+  return {
+    reorder: mutation.mutateAsync,
+    isReordering: mutation.isPending,
+    reorderingOrderId: mutation.variables ?? null,
+  };
 }
 
 export function useOrderQuote(

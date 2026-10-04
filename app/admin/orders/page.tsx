@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import type { AdminOrder } from "@/types/admin-types";
 import { apiRequest, toErrorMessage } from "@/lib/http";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { AdminPagination } from "@/components/admin/AdminPagination";
 
 type OrderDetails = {
   order: AdminOrder & {
@@ -37,10 +39,9 @@ export default function AdminOrdersPage() {
   const [error, setError] = useState("");
   const [details, setDetails] = useState<OrderDetails | null>(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
-  const limit = 50;
+  const limit = 12;
 
   async function openDetails(orderId: number) {
     setDetailsLoading(true);
@@ -50,52 +51,6 @@ export default function AdminOrdersPage() {
     if (response.ok) setDetails(payload);
     else setError(payload.error || "Could not load order details.");
     setDetailsLoading(false);
-  }
-
-  async function updateOrder(orderId: number, payload: Record<string, string>) {
-    setSaving(true);
-    setError("");
-    const response = await fetch(`/api/admin/orders/${orderId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    const result = await response.json();
-    if (!response.ok) {
-      setError(result.error || "Could not update order.");
-      setSaving(false);
-      return;
-    }
-    setOrders((current) =>
-      current.map((order) =>
-        order.id === orderId
-          ? {
-              ...order,
-              ...(result.order ?? {}),
-              ...(result.payment
-                ? { payment_status: result.payment.status }
-                : {}),
-            }
-          : order,
-      ),
-    );
-    if (details?.order.id === orderId) {
-      setDetails((current) =>
-        current
-          ? {
-              ...current,
-              order: {
-                ...current.order,
-                ...(result.order ?? {}),
-                ...(result.payment
-                  ? { payment_status: result.payment.status }
-                  : {}),
-              },
-            }
-          : current,
-      );
-    }
-    setSaving(false);
   }
 
   useEffect(() => {
@@ -295,9 +250,11 @@ export default function AdminOrdersPage() {
                         onClick={() => void requeueOrder(order.id)}
                         className="text-xs font-semibold text-primary hover:underline disabled:opacity-50"
                       >
-                        {pendingAction === `requeue-${order.id}`
-                          ? "Requeueing..."
-                          : "Requeue rider"}
+                        {pendingAction === `requeue-${order.id}` ? (
+                          <LoadingSpinner label="Requeueing…" />
+                        ) : (
+                          "Requeue rider"
+                        )}
                       </button>
                     ) : null}
                     {["unassigned", "accepted", "arrived_at_store"].includes(
@@ -312,9 +269,11 @@ export default function AdminOrdersPage() {
                         onClick={() => void cancelOrder(order.id)}
                         className="text-xs font-semibold text-destructive hover:underline disabled:opacity-50"
                       >
-                        {pendingAction === `cancel-${order.id}`
-                          ? "Cancelling..."
-                          : "Cancel order"}
+                        {pendingAction === `cancel-${order.id}` ? (
+                          <LoadingSpinner label="Cancelling…" />
+                        ) : (
+                          "Cancel order"
+                        )}
                       </button>
                     )}
                   </div>
@@ -334,20 +293,24 @@ export default function AdminOrdersPage() {
           </tbody>
         </table>
         {loading && (
-          <p className="p-4 text-sm text-muted-foreground">Loading orders...</p>
+          <div className="p-4 text-sm text-primary">
+            <LoadingSpinner label="Loading orders…" />
+          </div>
         )}
       </div>
-      <div className="mt-4 flex items-center justify-between text-sm">
-        <span className="text-muted-foreground">Page {page} of {Math.max(Math.ceil(total / limit), 1)}</span>
-        <div className="flex gap-2">
-          <button type="button" disabled={page === 1 || loading} onClick={() => setPage((current) => current - 1)} className="border border-border px-3 py-2 disabled:opacity-50">Previous</button>
-          <button type="button" disabled={page >= Math.ceil(total / limit) || loading} onClick={() => setPage((current) => current + 1)} className="border border-border px-3 py-2 disabled:opacity-50">Next</button>
-        </div>
-      </div>
+      <AdminPagination
+        page={page}
+        total={total}
+        pageSize={limit}
+        onPage={setPage}
+        disabled={loading}
+      />
       {(detailsLoading || details) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <section className="max-h-[90vh] w-full max-w-2xl overflow-y-auto border border-border bg-card p-6 shadow-xl">
-            {detailsLoading && <p className="text-sm">Loading order details...</p>}
+            {detailsLoading && (
+              <LoadingSpinner label="Loading order details…" className="text-sm text-primary" />
+            )}
             {details && (
               <>
                 <div className="flex items-start justify-between gap-4">
@@ -359,34 +322,23 @@ export default function AdminOrdersPage() {
                     Close
                   </button>
                 </div>
-                <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                  <label className="text-sm">
-                    Order status
-                    <select
-                      value={details.order.order_status}
-                      disabled={saving}
-                      onChange={(event) => void updateOrder(details.order.id, { orderStatus: event.target.value })}
-                      className="mt-1 w-full border border-border bg-background px-3 py-2"
-                    >
-                      {['pending', 'confirmed', 'preparing', 'ready', 'out_for_delivery', 'delivered', 'cancelled'].map((status) => (
-                        <option key={status} value={status}>{status}</option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="text-sm">
-                    Payment status
-                    <select
-                      value={details.order.payment_status ?? ""}
-                      disabled={saving || !details.order.payment_status}
-                      onChange={(event) => void updateOrder(details.order.id, { paymentStatus: event.target.value })}
-                      className="mt-1 w-full border border-border bg-background px-3 py-2"
-                    >
-                      {['pending', 'completed', 'failed', 'refunded'].map((status) => (
-                        <option key={status} value={status}>{status}</option>
-                      ))}
-                    </select>
-                  </label>
+                <div className="mt-5 grid gap-3 text-sm sm:grid-cols-3">
+                  <div className="border border-border bg-background p-3">
+                    <span className="block text-xs text-muted-foreground">Order status</span>
+                    <strong className="mt-1 block capitalize">{details.order.order_status.replaceAll("_", " ")}</strong>
+                  </div>
+                  <div className="border border-border bg-background p-3">
+                    <span className="block text-xs text-muted-foreground">Payment status</span>
+                    <strong className="mt-1 block capitalize">{details.order.payment_status?.replaceAll("_", " ") || "Not recorded"}</strong>
+                  </div>
+                  <div className="border border-border bg-background p-3">
+                    <span className="block text-xs text-muted-foreground">Delivery status</span>
+                    <strong className="mt-1 block capitalize">{details.order.delivery_status?.replaceAll("_", " ") || "Not recorded"}</strong>
+                  </div>
                 </div>
+                <p className="mt-3 text-xs text-muted-foreground">
+                  Statuses are read-only here and advance through the restaurant, rider, and payment workflows.
+                </p>
                 <div className="mt-5 border-t border-border pt-4">
                   {details.items.map((item) => (
                     <div key={item.id} className="flex justify-between gap-4 py-2 text-sm">

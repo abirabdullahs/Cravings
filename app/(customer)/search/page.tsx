@@ -1,14 +1,20 @@
 import { SearchResults } from "@/components/search/search-results";
+import type { SortKey } from "@/components/search/results-toolbar";
 
 
 export default async function SearchPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; cuisine?: string }>;
+  searchParams: Promise<{ q?: string; cuisine?: string; sort?: string }>;
 }) {
-  const { q, cuisine } = await searchParams;
+  const { q, cuisine, sort } = await searchParams;
   const query = (q ?? "").trim();
   const selectedCuisine = (cuisine ?? "all").trim();
+  const selectedSort: SortKey = ["top-rated", "fastest", "cheapest"].includes(
+    sort ?? "",
+  )
+    ? (sort as SortKey)
+    : "recommended";
   const city = "Dhaka";
 
   return (
@@ -34,6 +40,7 @@ export default async function SearchPage({
         query={query}
         city={city}
         initialCuisine={selectedCuisine}
+        initialSort={selectedSort}
       />
     </div>
   );

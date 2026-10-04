@@ -1,21 +1,36 @@
 import { FormEvent, useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { LoaderCircleIcon, Plus, Trash2 } from "lucide-react";
 import type { MenuCategory } from "@/types/restaurant";
 
 interface CategoryPanelProps {
   categories: MenuCategory[];
   onAdd: (name: string) => Promise<void>;
-  onDelete: (categoryId: number) => void;
+  onDelete: (categoryId: number) => void | Promise<void>;
 }
 
 export function CategoryPanel({ categories, onAdd, onDelete }: CategoryPanelProps) {
   const [name, setName] = useState("");
+  const [pendingAction, setPendingAction] = useState<string | null>(null);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     if (!name.trim()) return;
-    await onAdd(name);
-    setName("");
+    setPendingAction("add");
+    try {
+      await onAdd(name);
+      setName("");
+    } finally {
+      setPendingAction(null);
+    }
+  }
+
+  async function handleDelete(categoryId: number) {
+    setPendingAction(`delete-${categoryId}`);
+    try {
+      await onDelete(categoryId);
+    } finally {
+      setPendingAction(null);
+    }
   }
 
   return (
@@ -33,9 +48,14 @@ export function CategoryPanel({ categories, onAdd, onDelete }: CategoryPanelProp
         />
         <button
           aria-label="Add category"
+          disabled={pendingAction !== null}
           className="flex size-9 shrink-0 items-center justify-center bg-primary text-primary-foreground"
         >
-          <Plus className="size-4" />
+          {pendingAction === "add" ? (
+            <LoaderCircleIcon className="size-4 animate-spin" />
+          ) : (
+            <Plus className="size-4" />
+          )}
         </button>
       </form>
       <div className="mt-4 grid gap-2">
@@ -46,11 +66,16 @@ export function CategoryPanel({ categories, onAdd, onDelete }: CategoryPanelProp
           >
             <span>{category.name}</span>
             <button
-              onClick={() => onDelete(category.id)}
+              onClick={() => void handleDelete(category.id)}
+              disabled={pendingAction !== null}
               aria-label={`Delete ${category.name}`}
               className="text-muted-foreground hover:text-destructive"
             >
-              <Trash2 className="size-3.5" />
+              {pendingAction === `delete-${category.id}` ? (
+                <LoaderCircleIcon className="size-3.5 animate-spin" />
+              ) : (
+                <Trash2 className="size-3.5" />
+              )}
             </button>
           </div>
         ))}
