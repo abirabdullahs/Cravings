@@ -9,6 +9,7 @@ import {
   useMarkNotificationRead,
 } from "@/hooks/useNotifications";
 import type { Restaurant } from "@/types/restaurant";
+import type { Coupon } from "@/types/order";
 import { apiRequest, toErrorMessage } from "@/lib/http";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
@@ -35,15 +36,6 @@ type UserProfile = {
     rejection_reason?: string;
     created_at?: string;
   } | null;
-};
-
-type Coupon = {
-  id: number;
-  code: string;
-  discount_type: string;
-  discount_value: string;
-  minimum_order: string;
-  expiry_date: string | null;
 };
 
 export default function ProfilePage() {
@@ -480,15 +472,15 @@ export default function ProfilePage() {
                     <div className="flex items-center justify-between gap-3">
                       <strong className="tracking-wide">{coupon.code}</strong>
                       <span className="text-sm font-bold text-primary">
-                        {coupon.discount_type === "percentage"
-                          ? `${coupon.discount_value}% off`
-                          : `৳${coupon.discount_value} off`}
+                        {coupon.discountType === "percentage"
+                          ? `${coupon.discountValue}% off`
+                          : `৳${coupon.discountValue} off`}
                       </span>
                     </div>
                     <p className="mt-2 text-xs text-muted-foreground">
-                      Minimum order ৳{coupon.minimum_order}
-                      {coupon.expiry_date
-                        ? ` · Expires ${new Date(coupon.expiry_date).toLocaleDateString()}`
+                      Minimum order ৳{coupon.minimumOrder}
+                      {coupon.expiryDate
+                        ? ` · Expires ${new Date(coupon.expiryDate).toLocaleDateString()}`
                         : ""}
                     </p>
                   </div>
